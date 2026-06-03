@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createMapEngine } from '../map/engineFactory';
 import { mapEngineLabel, selectedMapEngine } from '../map/mapConfig';
 import type { MapEngine } from '../map/MapEngine';
+import LayerManager from './LayerManager';
 import './MapCanvas.css';
 
 const defaultOptions = {
@@ -12,7 +13,7 @@ const defaultOptions = {
 export default function MapCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<MapEngine | null>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+  const [engineState, setEngineState] = useState<MapEngine | null>(null);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -21,6 +22,7 @@ export default function MapCanvas() {
 
     const engine = createMapEngine();
     engineRef.current = engine;
+    setEngineState(engine);
     engine.initialize(containerRef.current, defaultOptions);
 
     const handleResize = () => engine.resize?.();
@@ -29,40 +31,11 @@ export default function MapCanvas() {
     return () => {
       window.removeEventListener('resize', handleResize);
       engine.destroy();
+      setEngineState(null);
     };
   }, []);
 
-  const handleStartDrawing = () => {
-    if (engineRef.current) {
-      engineRef.current.startPolygonDraw((coordinates) => {
-        console.log('Polygon drawn with coordinates:', coordinates);
-        // Auto-add the polygon after drawing
-        engineRef.current?.addPolygon({
-          coordinates,
-          color: '#3388ff',
-          fillOpacity: 0.3,
-          weight: 2,
-        });
-        setIsDrawing(false);
-      });
-      setIsDrawing(true);
-    }
-  };
-
-  const handleFinishDrawing = () => {
-    if (engineRef.current && isDrawing) {
-      const coordinates = engineRef.current.finishPolygonDraw();
-      console.log('Drawing finished:', coordinates);
-      setIsDrawing(false);
-    }
-  };
-
-  const handleCancelDrawing = () => {
-    if (engineRef.current && isDrawing) {
-      engineRef.current.cancelPolygonDraw();
-      setIsDrawing(false);
-    }
-  };
+  // LayerManager will handle drawing interactions
 
   return (
     <div className="map-canvas-wrapper">
@@ -70,34 +43,7 @@ export default function MapCanvas() {
         <span className="map-label">Selected engine:</span>
         <strong>{mapEngineLabel[selectedMapEngine]}</strong>
       </div>
-      <div className="map-controls">
-        <button
-          onClick={handleStartDrawing}
-          disabled={isDrawing}
-          className="btn btn-primary"
-          title="Click to start drawing a polygon"
-        >
-          ✏️ Draw
-        </button>
-        {isDrawing && (
-          <>
-            <button
-              onClick={handleFinishDrawing}
-              className="btn btn-success"
-              title="Finish drawing and create the polygon"
-            >
-              ✓ Finish
-            </button>
-            <button
-              onClick={handleCancelDrawing}
-              className="btn btn-danger"
-              title="Cancel drawing and discard vertices"
-            >
-              ✗ Cancel
-            </button>
-          </>
-        )}
-      </div>
+      <LayerManager engine={engineState} />
       <div ref={containerRef} className="map-canvas" />
     </div>
   );

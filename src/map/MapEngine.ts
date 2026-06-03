@@ -13,13 +13,20 @@ export interface PolygonOptions {
   weight?: number;
 }
 
+export interface PolygonDrawHelpers {
+  enableDrawing(onClick: (coordinates: [number, number]) => void): void;
+  disableDrawing(): void;
+  setCursor(cursor: string): void;
+  updatePreview(coordinates: [number, number][]): void;
+  clearPreview(): void;
+}
+
 export interface MapEngine {
   initialize(container: HTMLElement, options: MapEngineOptions): void;
   resize?(): void;
   destroy(): void;
   addPolygon(options: PolygonOptions): void;
-  startPolygonDraw(onFinish?: (coordinates: [number, number][]) => void): void;
-  finishPolygonDraw(): [number, number][];
-  cancelPolygonDraw(): void;
-  isDrawing(): boolean;
+  createPolygonDrawHelpers(): PolygonDrawHelpers;
+  // Returns the underlying native map instance for advanced operations
+  getNativeMap?(): any;
 }

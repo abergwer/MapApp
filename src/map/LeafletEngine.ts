@@ -1,14 +1,10 @@
 import L from 'leaflet';
-import type { MapEngine, MapEngineOptions, PolygonOptions } from './MapEngine';
+import type { MapEngine, MapEngineOptions, PolygonOptions, PolygonDrawHelpers } from './MapEngine';
 import 'leaflet/dist/leaflet.css';
 
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;
-  private isDrawingMode = false;
-  private drawCoordinates: [number, number][] = [];
-  private drawMarkers: L.CircleMarker[] = [];
-  private drawLine?: L.Polyline;
-  private onDrawFinish?: (coordinates: [number, number][]) => void;
+  // drawing handled by LayerManager now
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = L.map(container, {
@@ -28,7 +24,7 @@ export class LeafletEngine implements MapEngine {
   }
 
   destroy(): void {
-    this.cancelPolygonDraw();
+    this.map?.off();
     this.map?.remove();
     this.map = undefined;
   }
@@ -46,87 +42,76 @@ export class LeafletEngine implements MapEngine {
     polygon.addTo(this.map);
   }
 
-  startPolygonDraw(onFinish?: (coordinates: [number, number][]) => void): void {
-    if (!this.map) return;
+  createPolygonDrawHelpers(): PolygonDrawHelpers {
+    const map = this.map;
+    let markers: L.CircleMarker[] = [];
+    let previewLine: L.Polyline | undefined;
+    let clickCallback: (coordinates: [number, number]) => void = () => {};
 
-    this.isDrawingMode = true;
-    this.drawCoordinates = [];
-    this.drawMarkers = [];
-    this.onDrawFinish = onFinish;
+    const handleMapClick = (e: L.LeafletMouseEvent) => {
+      clickCallback([e.latlng.lng, e.latlng.lat]);
+    };
 
-    this.map.on('click', this.handleMapClick);
-    this.map.getContainer().style.cursor = 'crosshair';
+    return {
+      enableDrawing(onClick) {
+        if (!map) return;
+        clickCallback = onClick;
+        map.on('click', handleMapClick);
+      },
+      disableDrawing() {
+        if (!map) return;
+        map.off('click', handleMapClick);
+      },
+      setCursor(cursor) {
+        if (!map) return;
+        map.getContainer().style.cursor = cursor;
+      },
+      updatePreview(coordinates) {
+        if (!map) return;
+
+        markers.forEach((marker) => marker.remove());
+        markers = [];
+        if (previewLine) {
+          previewLine.remove();
+          previewLine = undefined;
+        }
+
+        if (coordinates.length === 0) return;
+
+        coordinates.forEach(([lng, lat]) => {
+          const marker = L.circleMarker([lat, lng], {
+            radius: 5,
+            fillColor: '#3388ff',
+            color: '#003366',
+            weight: 2,
+            opacity: 1,
+            fillOpacity: 0.8,
+          }).addTo(map);
+          markers.push(marker);
+        });
+
+        if (coordinates.length >= 2) {
+          const closedCoords = [...coordinates, coordinates[0]];
+          previewLine = L.polyline(closedCoords.map(([lng, lat]) => [lat, lng] as [number, number]), {
+            color: '#3388ff',
+            weight: 2,
+            opacity: 0.7,
+            dashArray: '5,5',
+          }).addTo(map);
+        }
+      },
+      clearPreview() {
+        markers.forEach((marker) => marker.remove());
+        markers = [];
+        if (previewLine) {
+          previewLine.remove();
+          previewLine = undefined;
+        }
+      },
+    };
   }
 
-  finishPolygonDraw(): [number, number][] {
-    if (this.drawCoordinates.length < 3) {
-      console.warn('Polygon must have at least 3 coordinates');
-      return [];
-    }
-
-    this.cancelPolygonDraw();
-
-    if (this.onDrawFinish) {
-      this.onDrawFinish(this.drawCoordinates);
-    }
-
-    const result = [...this.drawCoordinates];
-    this.drawCoordinates = [];
-    return result;
+  getNativeMap() {
+    return this.map;
   }
-
-  cancelPolygonDraw(): void {
-    if (!this.map) return;
-
-    this.isDrawingMode = false;
-    this.map.off('click', this.handleMapClick);
-    this.map.getContainer().style.cursor = '';
-
-    this.drawMarkers.forEach((marker) => marker.remove());
-    this.drawMarkers = [];
-
-    if (this.drawLine) {
-      this.drawLine.remove();
-      this.drawLine = undefined;
-    }
-
-    this.drawCoordinates = [];
-    this.onDrawFinish = undefined;
-  }
-
-  isDrawing(): boolean {
-    return this.isDrawingMode;
-  }
-
-  private handleMapClick = (e: L.LeafletMouseEvent) => {
-    if (!this.map) return;
-
-    const lngLat: [number, number] = [e.latlng.lng, e.latlng.lat];
-    this.drawCoordinates.push(lngLat);
-
-    // Add marker for the vertex
-    const marker = L.circleMarker(e.latlng, {
-      radius: 5,
-      fillColor: '#3388ff',
-      color: '#003366',
-      weight: 2,
-      opacity: 1,
-      fillOpacity: 0.8,
-    }).addTo(this.map);
-
-    this.drawMarkers.push(marker);
-
-    // Update preview line
-    if (this.drawLine) {
-      this.drawLine.remove();
-    }
-
-    const closedCoords = [...this.drawCoordinates, this.drawCoordinates[0]];
-    this.drawLine = L.polyline(closedCoords, {
-      color: '#3388ff',
-      weight: 2,
-      opacity: 0.7,
-      dashArray: '5, 5',
-    }).addTo(this.map);
-  };
 }

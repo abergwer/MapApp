@@ -1,10 +1,10 @@
 import './App.css'
-import MapEngine from './Components/MapEngine'
+import MapWrapper from './Components/MapEngine'
 
 function App() {
   return (
     <>
-      <MapEngine />
+      <MapWrapper />
     </>
   )
 }

@@ -1,16 +1,11 @@
 import maplibregl from 'maplibre-gl/dist/maplibre-gl.js';
-import type { MapEngine, MapEngineOptions, PolygonOptions } from './MapEngine';
+import type { MapEngine, MapEngineOptions, PolygonOptions, PolygonDrawHelpers } from './MapEngine';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
 export class MapLibreEngine implements MapEngine {
   private map?: maplibregl.Map;
   private polygonCounter = 0;
-  private isDrawingMode = false;
-  private drawCoordinates: [number, number][] = [];
-  private drawSourceId = 'draw-source';
-  private drawLineLayerId = 'draw-line-layer';
-  private drawPointsLayerId = 'draw-points-layer';
-  private onDrawFinish?: (coordinates: [number, number][]) => void;
+  // drawing handled by LayerManager now
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = new maplibregl.Map({
@@ -26,7 +21,7 @@ export class MapLibreEngine implements MapEngine {
   }
 
   destroy(): void {
-    this.cancelPolygonDraw();
+    // no global event handlers to remove here
     this.map?.remove();
     this.map = undefined;
   }
@@ -83,123 +78,164 @@ export class MapLibreEngine implements MapEngine {
     }
   }
 
-  startPolygonDraw(onFinish?: (coordinates: [number, number][]) => void): void {
-    if (!this.map || this.isDrawingMode) return;
+  createPolygonDrawHelpers(): PolygonDrawHelpers {
+    const map = this.map;
+    if (!map) {
+      return {
+        enableDrawing: () => {},
+        disableDrawing: () => {},
+        setCursor: () => {},
+        updatePreview: () => {},
+        clearPreview: () => {},
+      };
+    }
 
-    this.isDrawingMode = true;
-    this.drawCoordinates = [];
-    this.onDrawFinish = onFinish;
+    const sourceId = 'layermanager-draw-source';
+    const lineLayerId = 'layermanager-draw-line';
+    const pointsLayerId = 'layermanager-draw-points';
+    let clickCallback: (coordinates: [number, number]) => void = () => {};
 
-    this.map.getCanvas().style.cursor = 'crosshair';
+    let pendingCoords: [number, number][] | null = null;
 
-    // Create drawing source and layers if not exists
-    if (!this.map.getSource(this.drawSourceId)) {
-      this.map.addSource(this.drawSourceId, {
-        type: 'geojson',
-        data: {
+    const addLayers = () => {
+      if (!map.getSource(sourceId)) {
+        map.addSource(sourceId, {
+          type: 'geojson',
+          data: {
+            type: 'FeatureCollection',
+            features: [],
+          },
+        });
+      }
+
+      if (!map.getLayer(lineLayerId)) {
+        map.addLayer({
+          id: lineLayerId,
+          type: 'line',
+          source: sourceId,
+          paint: {
+            'line-color': '#3388ff',
+            'line-width': 2,
+            'line-dasharray': [5, 5],
+          },
+        });
+      }
+
+      if (!map.getLayer(pointsLayerId)) {
+        map.addLayer({
+          id: pointsLayerId,
+          type: 'circle',
+          source: sourceId,
+          paint: {
+            'circle-radius': 5,
+            'circle-color': '#3388ff',
+            'circle-stroke-color': '#003366',
+            'circle-stroke-width': 2,
+          },
+        });
+      }
+
+      if (pendingCoords) {
+        const source = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
+        source?.setData({
           type: 'FeatureCollection',
-          features: [],
-        },
-      });
+          features: [
+            {
+              type: 'Feature' as const,
+              geometry: {
+                type: 'LineString' as const,
+                coordinates: [...pendingCoords, pendingCoords[0]],
+              },
+              properties: {},
+            },
+            {
+              type: 'Feature' as const,
+              geometry: {
+                type: 'MultiPoint' as const,
+                coordinates: pendingCoords,
+              },
+              properties: {},
+            },
+          ],
+        });
+      }
+    };
 
-      this.map.addLayer({
-        id: this.drawLineLayerId,
-        type: 'line',
-        source: this.drawSourceId,
-        paint: {
-          'line-color': '#3388ff',
-          'line-width': 2,
-          'line-dasharray': [5, 5],
-        },
-      });
+    const ensureDrawSource = () => {
+      if (map.getSource(sourceId)) {
+        return;
+      }
 
-      this.map.addLayer({
-        id: this.drawPointsLayerId,
-        type: 'circle',
-        source: this.drawSourceId,
-        paint: {
-          'circle-radius': 5,
-          'circle-color': '#3388ff',
-          'circle-stroke-color': '#003366',
-          'circle-stroke-width': 2,
-        },
-      });
-    }
+      if ((map as any).isStyleLoaded && !(map as any).isStyleLoaded()) {
+        map.once('load', addLayers);
+      } else {
+        addLayers();
+      }
+    };
 
-    this.map.on('click', this.handleMapClick);
-  }
+    const handleMapClick = (e: maplibregl.MapMouseEvent) => {
+      clickCallback([e.lngLat.lng, e.lngLat.lat]);
+    };
 
-  finishPolygonDraw(): [number, number][] {
-    if (this.drawCoordinates.length < 3) {
-      console.warn('Polygon must have at least 3 coordinates');
-      return [];
-    }
-
-    const result = [...this.drawCoordinates];
-    this.cancelPolygonDraw();
-
-    if (this.onDrawFinish) {
-      this.onDrawFinish(result);
-    }
-
-    return result;
-  }
-
-  cancelPolygonDraw(): void {
-    if (!this.map) return;
-
-    this.isDrawingMode = false;
-    this.map.off('click', this.handleMapClick);
-    this.map.getCanvas().style.cursor = '';
-
-    if (this.map.getSource(this.drawSourceId)) {
-      this.map.removeLayer(this.drawLineLayerId);
-      this.map.removeLayer(this.drawPointsLayerId);
-      this.map.removeSource(this.drawSourceId);
-    }
-
-    this.drawCoordinates = [];
-    this.onDrawFinish = undefined;
-  }
-
-  isDrawing(): boolean {
-    return this.isDrawingMode;
-  }
-
-  private handleMapClick = (e: maplibregl.MapMouseEvent) => {
-    if (!this.map || !this.isDrawingMode) return;
-
-    const lngLat: [number, number] = [e.lngLat.lng, e.lngLat.lat];
-    this.drawCoordinates.push(lngLat);
-
-    // Update GeoJSON features
-    const closedCoords = [...this.drawCoordinates, this.drawCoordinates[0]];
-
-    const features = [
-      {
-        type: 'Feature' as const,
-        geometry: {
-          type: 'LineString' as const,
-          coordinates: closedCoords,
-        },
-        properties: {},
+    return {
+      enableDrawing(onClick) {
+        clickCallback = onClick;
+        ensureDrawSource();
+        map.on('click', handleMapClick);
       },
-      {
-        type: 'Feature' as const,
-        geometry: {
-          type: 'MultiPoint' as const,
-          coordinates: this.drawCoordinates,
-        },
-        properties: {},
+      disableDrawing() {
+        map.off('click', handleMapClick);
       },
-    ];
+      setCursor(cursor) {
+        map.getCanvas().style.cursor = cursor;
+      },
+      updatePreview(coordinates) {
+        if (!map.getSource(sourceId)) {
+          pendingCoords = coordinates;
+          ensureDrawSource();
+          return;
+        }
 
-    const source = this.map.getSource(this.drawSourceId) as maplibregl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData({
-        type: 'FeatureCollection',
-        features,
-      });
-    }
-  };
+        const closedCoords = coordinates.length > 0 ? [...coordinates, coordinates[0]] : [];
+        const features = [
+          {
+            type: 'Feature' as const,
+            geometry: {
+              type: 'LineString' as const,
+              coordinates: closedCoords,
+            },
+            properties: {},
+          },
+          {
+            type: 'Feature' as const,
+            geometry: {
+              type: 'MultiPoint' as const,
+              coordinates: coordinates,
+            },
+            properties: {},
+          },
+        ];
+
+        const source = map.getSource(sourceId) as maplibregl.GeoJSONSource | undefined;
+        source?.setData({ type: 'FeatureCollection', features });
+      },
+      clearPreview() {
+        if (map.getSource(sourceId)) {
+          try {
+            map.removeLayer(pointsLayerId);
+          } catch {}
+          try {
+            map.removeLayer(lineLayerId);
+          } catch {}
+          try {
+            map.removeSource(sourceId);
+          } catch {}
+        }
+      },
+    };
+  }
+
+  getNativeMap() {
+    return this.map;
+  }
 }
