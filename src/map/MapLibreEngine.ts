@@ -1,4 +1,4 @@
-import maplibregl from 'maplibre-gl';
+import maplibregl from 'maplibre-gl/dist/maplibre-gl.js';
 import type { MapEngine, MapEngineOptions } from './MapEngine';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -9,7 +9,7 @@ export class MapLibreEngine implements MapEngine {
     this.map = new maplibregl.Map({
       container,
       style: 'https://demotiles.maplibre.org/style.json',
-      center: options.center,
+      center:  [34.7818, 32.0853],//options.center,
       zoom: options.zoom,
     });
   }

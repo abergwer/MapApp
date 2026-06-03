@@ -19,7 +19,11 @@ export default function MapCanvas() {
     const engine = createMapEngine();
     engine.initialize(containerRef.current, defaultOptions);
 
+    const handleResize = () => engine.resize?.();
+    window.addEventListener('resize', handleResize);
+
     return () => {
+      window.removeEventListener('resize', handleResize);
       engine.destroy();
     };
   }, []);
