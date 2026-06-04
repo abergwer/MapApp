@@ -1,6 +1,6 @@
 import { PathLayer } from '@deck.gl/layers';
 
-export const missiles: any = [
+const missiles: any = [
   {
     id: "m1",
     path: [
@@ -68,7 +68,7 @@ export const  createMissilesLayer = new PathLayer({
     getColor: [255, 80, 0],
 
     widthMinPixels: 2,
-    widthMaxPixels: 4,
+    widthMaxPixels: 14,
 
     rounded: true,
   });
