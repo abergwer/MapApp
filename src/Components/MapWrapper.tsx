@@ -8,7 +8,7 @@ const defaultOptions = {
   zoom: 13,
 };
 
-export default function MapCanvas() {
+export default function MapWrapper() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

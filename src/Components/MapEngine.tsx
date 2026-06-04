@@ -1,4 +1,4 @@
-import MapCanvas from './MapCanvas';
+import MapWrapper from './MapWrapper';
 import { mapEngineLabel, selectedMapEngine } from '../map/mapConfig';
 
 export default function MapEngine() {
@@ -8,7 +8,7 @@ export default function MapEngine() {
       <p>
         This app uses <strong>{mapEngineLabel[selectedMapEngine]}</strong> as the selected map engine.
       </p>
-      <MapCanvas />
+      <MapWrapper />
     </main>
   );
 }
