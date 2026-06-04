@@ -5,8 +5,18 @@ export interface MapEngineOptions {
   zoom: number;
 }
 
+export interface MapViewState {
+  longitude: number;
+  latitude: number;
+  zoom: number;
+  pitch: number;
+  bearing: number;
+}
+
 export interface MapEngine {
   initialize(container: HTMLElement, options: MapEngineOptions): void;
   resize?(): void;
   destroy(): void;
+  getViewState(): MapViewState;
+  onViewChange(callback: (viewState: MapViewState) => void): void;
 }
