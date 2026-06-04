@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { createMapEngine } from '../map/engineFactory';
 import { mapEngineLabel, selectedMapEngine } from '../map/mapConfig';
-import './MapCanvas.css';
+import './MapWrapper.css';
 
 const defaultOptions = {
   center: [51.505, -0.09] as [number, number],
