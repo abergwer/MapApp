@@ -1,6 +1,7 @@
 import L from 'leaflet';
 import type { MapEngine, MapEngineOptions } from './MapEngine';
 import 'leaflet/dist/leaflet.css';
+import config from '../../config.json';
 
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;
@@ -12,7 +13,7 @@ export class LeafletEngine implements MapEngine {
       zoomControl: true,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer(config.LeafletTilesURL, {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(this.map);

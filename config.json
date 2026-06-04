@@ -1,0 +1,4 @@
+{
+  "MapLibreTilesURL": "https://demotiles.maplibre.org/style.json",
+  "LeafletTilesURL": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+}
