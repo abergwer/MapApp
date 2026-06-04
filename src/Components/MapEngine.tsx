@@ -1,4 +1,5 @@
 import MapWrapper from './MapWrapper';
+import LayerManager from './LayerManager';
 import { mapEngineLabel, selectedMapEngine } from '../map/mapConfig';
 
 export default function MapEngine() {
@@ -8,7 +9,9 @@ export default function MapEngine() {
       <p>
         This app uses <strong>{mapEngineLabel[selectedMapEngine]}</strong> as the selected map engine.
       </p>
-      <MapWrapper />
+      <MapWrapper>
+        <LayerManager />
+      </MapWrapper>
     </main>
   );
 }
