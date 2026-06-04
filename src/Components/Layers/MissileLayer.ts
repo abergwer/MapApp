@@ -67,7 +67,7 @@ export const  createMissilesLayer = new PathLayer({
 
     getColor: [255, 80, 0],
 
-    widthMinPixels: 2,
+    widthMinPixels: 4,
     widthMaxPixels: 14,
 
     rounded: true,
