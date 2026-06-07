@@ -20,7 +20,7 @@
 
 .map-canvas {
   flex: 1;
-  min-height: 420px;
+  min-height: 600px;
   border-radius: 10px;
   overflow: hidden;
   background: #f0f0f0;
