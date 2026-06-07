@@ -1,11 +1,19 @@
 import './App.css'
-import MapEngine from './Components/MapEngine'
+import LayerManager from './Components/LayerManager'
+import MapWrapper from './Components/MapWrapper'
+import { mapEngineLabel, selectedMapEngine } from './map/mapConfig'
 
 function App() {
   return (
-    <>
-      <MapEngine />
-    </>
+    <main>
+      <h1>Map Engine Orchestrator</h1>
+      <p>
+        This app uses <strong>{mapEngineLabel[selectedMapEngine]}</strong> as the selected map engine.
+      </p>
+      <MapWrapper>
+        <LayerManager />
+      </MapWrapper>
+    </main>
   )
 }
 
