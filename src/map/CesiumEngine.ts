@@ -60,8 +60,9 @@ export class CesiumEngine implements MapEngine {
       destination: Cesium.Cartesian3.fromDegrees(lng, lat, zoomToHeight(options.zoom)),
     });
 
-    // postRender fires after every rendered frame → smooth Deck.gl overlay sync
-    this.viewer.scene.postRender.addEventListener(() => {
+    // Fire only when the camera actually moves, not every rendered frame
+    this.viewer.camera.percentageChanged = 0.005; // sensitivity: 0.1% change triggers event
+    this.viewer.camera.changed.addEventListener(() => {
       this.viewChangeCallback?.(this.getViewState());
     });
   }
@@ -77,7 +78,7 @@ export class CesiumEngine implements MapEngine {
     // In SCENE2D the camera uses an orthographic frustum.
     // frustum.right − frustum.left = visible width in WebMercator metres.
     const frustum = camera.frustum as Cesium.OrthographicOffCenterFrustum;
-    const visibleWidthM = Math.max(frustum.right - frustum.left, 1);
+    const visibleWidthM = Math.max((frustum.right ?? 0) - (frustum.left ?? 0), 1);
     const canvasWidth = Math.max(this.viewer.canvas.clientWidth, 1);
 
     // deck.gl uses 512-px tiles: at zoom z, world width = 512 * 2^z px.
