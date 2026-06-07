@@ -6,6 +6,7 @@ import config from "../../config.json";
 export class MapLibreEngine implements MapEngine {
   private map?: maplibregl.Map;
   private viewChangeCallback?: (viewState: MapViewState) => void;
+  private clickCallback?: (lat: number, lng: number) => void;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = new maplibregl.Map({
@@ -30,6 +31,10 @@ export class MapLibreEngine implements MapEngine {
     this.map.on('move', () => {
       this.viewChangeCallback?.(this.getViewState());
     });
+
+    this.map.on('click', (e: maplibregl.MapMouseEvent) => {
+      this.clickCallback?.(e.lngLat.lat, e.lngLat.lng);
+    });
   }
 
   getViewState(): MapViewState {
@@ -45,6 +50,10 @@ export class MapLibreEngine implements MapEngine {
 
   onViewChange(callback: (viewState: MapViewState) => void): void {
     this.viewChangeCallback = callback;
+  }
+
+  onMapClick(callback: (lat: number, lng: number) => void): void {
+    this.clickCallback = callback;
   }
 
   resize(): void {

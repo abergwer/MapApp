@@ -7,10 +7,6 @@ import config from '../../config.json';
 // Deck.gl uses 512-px tile math → deckZoom = leafletZoom − 1.
 const ALT_AT_LEAFLET_ZOOM_ZERO = 591_657_550.5;
 
-function heightToZoom(height: number): number {
-  return Math.log2(ALT_AT_LEAFLET_ZOOM_ZERO / height) - 1;
-}
-
 function zoomToHeight(deckZoom: number): number {
   return ALT_AT_LEAFLET_ZOOM_ZERO / Math.pow(2, deckZoom + 1);
 }
@@ -18,6 +14,7 @@ function zoomToHeight(deckZoom: number): number {
 export class CesiumEngine implements MapEngine {
   private viewer?: Cesium.Viewer;
   private viewChangeCallback?: (viewState: MapViewState) => void;
+  private clickHandler?: Cesium.ScreenSpaceEventHandler;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     const [lat, lng] = options.center;
@@ -99,11 +96,31 @@ export class CesiumEngine implements MapEngine {
     this.viewChangeCallback = callback;
   }
 
+  onMapClick(callback: (lat: number, lng: number) => void): void {
+    this.clickHandler?.destroy();
+    if (!this.viewer) return;
+    this.clickHandler = new Cesium.ScreenSpaceEventHandler(this.viewer.canvas);
+    this.clickHandler.setInputAction((click: { position: Cesium.Cartesian2 }) => {
+      if (!this.viewer) return;
+      const ray = this.viewer.camera.getPickRay(click.position);
+      if (!ray) return;
+      const cartesian = this.viewer.scene.globe.pick(ray, this.viewer.scene);
+      if (!cartesian) return;
+      const carto = Cesium.Cartographic.fromCartesian(cartesian);
+      callback(
+        Cesium.Math.toDegrees(carto.latitude),
+        Cesium.Math.toDegrees(carto.longitude),
+      );
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+  }
+
   resize(): void {
     this.viewer?.resize();
   }
 
   destroy(): void {
+    this.clickHandler?.destroy();
+    this.clickHandler = undefined;
     this.viewer?.destroy();
     this.viewer = undefined;
   }

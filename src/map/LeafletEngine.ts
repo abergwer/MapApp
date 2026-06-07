@@ -6,6 +6,7 @@ import config from '../../config.json';
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;
   private viewChangeCallback?: (viewState: MapViewState) => void;
+  private clickCallback?: (lat: number, lng: number) => void;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = L.map(container, {
@@ -38,6 +39,10 @@ export class LeafletEngine implements MapEngine {
     // Guarantee final state is synced after animations settle
     this.map.on('zoomend', () => this.viewChangeCallback?.(this.getViewState()));
     this.map.on('moveend', () => this.viewChangeCallback?.(this.getViewState()));
+
+    this.map.on('click', (e: L.LeafletMouseEvent) => {
+      this.clickCallback?.(e.latlng.lat, e.latlng.lng);
+    });
   }
 
   getViewState(): MapViewState {
@@ -54,6 +59,10 @@ export class LeafletEngine implements MapEngine {
 
   onViewChange(callback: (viewState: MapViewState) => void): void {
     this.viewChangeCallback = callback;
+  }
+
+  onMapClick(callback: (lat: number, lng: number) => void): void {
+    this.clickCallback = callback;
   }
 
   resize(): void {
