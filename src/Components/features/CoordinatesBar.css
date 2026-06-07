@@ -1,0 +1,24 @@
+.coords-bar {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  padding: 6px 14px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  font-size: 0.82rem;
+  font-family: var(--mono, monospace);
+  border-radius: 6px;
+  width: fit-content;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+  user-select: none;
+}
+
+.coords-bar strong {
+  color: #a3e6a3;
+}
+
+.coords-bar__hint {
+  color: rgba(255, 255, 255, 0.55);
+  font-style: italic;
+}

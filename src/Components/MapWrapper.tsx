@@ -3,6 +3,7 @@ import { createMapEngine } from '../map/engineFactory';
 import { mapEngineLabel, selectedMapEngine } from '../map/mapConfig';
 import { MapContext } from '../map/MapContext';
 import type { MapEngine } from '../map/MapEngine';
+import CoordinatesBar from './features/CoordinatesBar';
 import './MapWrapper.css';
 
 const defaultOptions = {
@@ -45,7 +46,11 @@ export default function MapWrapper({ children }: MapWrapperProps) {
           <span className="map-label">Selected engine:</span>
           <strong>{mapEngineLabel[selectedMapEngine]}</strong>
         </div>
-        <div ref={containerRef} className="map-canvas" style={{ position: 'relative' }} />
+        <div ref={containerRef} className="map-canvas" style={{ position: 'relative' }}>
+          <div className="map-coords-overlay">
+            <CoordinatesBar />
+          </div>
+        </div>
         {children}
       </div>
     </MapContext.Provider>

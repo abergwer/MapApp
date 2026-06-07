@@ -24,4 +24,13 @@
   border-radius: 10px;
   overflow: hidden;
   background: #f0f0f0;
+  position: relative;
+}
+
+.map-coords-overlay {
+  position: absolute;
+  bottom: 12px;
+  left: 12px;
+  z-index: 1000;
+  pointer-events: none;
 }
