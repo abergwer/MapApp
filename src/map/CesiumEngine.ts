@@ -71,13 +71,24 @@ export class CesiumEngine implements MapEngine {
       return { longitude: 0, latitude: 0, zoom: 13, pitch: 0, bearing: 0 };
     }
 
-    const carto = this.viewer.camera.positionCartographic;
-    const height = Math.max(carto.height, 1); // guard against log(0)
+    const camera = this.viewer.camera;
+    const carto = camera.positionCartographic;
+
+    // In SCENE2D the camera uses an orthographic frustum.
+    // frustum.right − frustum.left = visible width in WebMercator metres.
+    const frustum = camera.frustum as Cesium.OrthographicOffCenterFrustum;
+    const visibleWidthM = Math.max(frustum.right - frustum.left, 1);
+    const canvasWidth = Math.max(this.viewer.canvas.clientWidth, 1);
+
+    // deck.gl uses 512-px tiles: at zoom z, world width = 512 * 2^z px.
+    // Solving for z: z = log2(WORLD_WIDTH_M * canvasWidth / (512 * visibleWidthM))
+    const WORLD_WIDTH_M = 2 * Math.PI * 6_378_137;
+    const zoom = Math.log2((WORLD_WIDTH_M * canvasWidth) / (512 * visibleWidthM));
 
     return {
       longitude: Cesium.Math.toDegrees(carto.longitude),
       latitude: Cesium.Math.toDegrees(carto.latitude),
-      zoom: heightToZoom(height),
+      zoom,
       pitch: 0,
       bearing: 0,
     };
