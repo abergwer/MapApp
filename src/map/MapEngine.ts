@@ -1,4 +1,4 @@
-export type MapEngineType = 'leaflet' | 'maplibre';
+export type MapEngineType = 'leaflet' | 'maplibre' | 'cesium';
 
 export interface MapEngineOptions {
   center: [number, number];

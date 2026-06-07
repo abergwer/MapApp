@@ -1,4 +1,5 @@
 {
   "MapLibreTilesURL": "https://demotiles.maplibre.org/style.json",
-  "LeafletTilesURL": "https://a.tile.opentopomap.org/{z}/{x}/{y}.png"
+    "LeafletTilesURL": "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
+    "CesiumTilesURL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 }
