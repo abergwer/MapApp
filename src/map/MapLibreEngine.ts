@@ -10,7 +10,18 @@ export class MapLibreEngine implements MapEngine {
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = new maplibregl.Map({
       container,
-      style: config.MapLibreTilesURL,
+      style: {
+        version: 8,
+        sources: {
+          'raster-tiles': {
+            type: 'raster',
+            tiles: [config.MapLibreTilesURL],
+            tileSize: 256,
+            attribution: '© OpenStreetMap contributors',
+          },
+        },
+        layers: [{ id: 'raster-layer', type: 'raster', source: 'raster-tiles' }],
+      },
       // MapLibre uses [lng, lat]; defaultOptions.center is [lat, lng] → swap
       center: [options.center[1], options.center[0]],
       zoom: options.zoom,
