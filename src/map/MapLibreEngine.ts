@@ -1,6 +1,8 @@
 import maplibregl from 'maplibre-gl/dist/maplibre-gl.js';
-import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import MeasuresControl from 'maplibre-gl-measures';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
 import config from "../../config.json";
 
 export class MapLibreEngine implements MapEngine {
@@ -24,9 +26,34 @@ export class MapLibreEngine implements MapEngine {
         layers: [{ id: 'raster-layer', type: 'raster', source: 'raster-tiles' }],
       },
       // MapLibre uses [lng, lat]; defaultOptions.center is [lat, lng] → swap
+      attributionControl: false,
       center: [options.center[1], options.center[0]],
       zoom: options.zoom,
+      
     });
+
+            // 2. Add Ruler Control
+    const measures = new MeasuresControl({
+      units: 'metric', // Options: 'metric', 'imperial'
+      style: {
+        // Optional custom styling
+        text: { color: '#FF0000' },
+      },
+    });
+
+    this.map.addControl(measures, 'top-left');    
+
+       // 2. Add your Scale Control
+    const scale = new maplibregl.ScaleControl({
+      maxWidth: 80,         // Maximum width of the control in pixels
+      unit: 'metric'        // Options: 'metric', 'imperial', 'nautical'
+    });
+
+    this.map.addControl(scale, 'bottom-right');
+
+    // 3. Optional: Add zoom controls to easily test the scale changes
+    const nav = new maplibregl.NavigationControl();
+    this.map.addControl(nav, 'top-right');
 
     this.map.on('move', () => {
       this.viewChangeCallback?.(this.getViewState());
