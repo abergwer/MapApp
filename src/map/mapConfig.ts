@@ -1,6 +1,6 @@
 import type { MapEngineType } from './MapEngine';
 
-export const selectedMapEngine: MapEngineType = 'cesium';
+export const selectedMapEngine: MapEngineType = 'maplibre'; // Change this value to switch engines (e.g. 'leaflet', 'cesium')
 
 export const mapEngineLabel = {
   leaflet: 'Leaflet',
