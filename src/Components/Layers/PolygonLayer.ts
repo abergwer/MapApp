@@ -1,6 +1,6 @@
 import { PolygonLayer } from '@deck.gl/layers';
 
-export const samplePolygonsLayer = new PolygonLayer({
+export const polygonLayer = new PolygonLayer({
   id: 'sample-polygons',
   data: [
   {
