@@ -42,12 +42,18 @@ export default function LayerManager({ layers }: LayerManagerProps) {
 
     deckRef.current = deck;
 
-    // Keep Deck.gl viewport in sync with whichever map engine is active
-    engine.onViewChange((vs) => {
-      deckRef.current?.setProps({ viewState: vs });
+    // Keep Deck.gl viewport in sync with whichever map engine is active.
+    // Forcing a synchronous redraw makes the overlay paint in the same frame as
+    // the basemap, preventing the one-frame lag that looks like "shaking".
+    const unsubscribe = engine.onViewChange((vs) => {
+      const deck = deckRef.current;
+      if (!deck) return;
+      deck.setProps({ viewState: vs });
+      deck.redraw('view-sync');
     });
 
     return () => {
+      unsubscribe();
       deck.finalize();
       canvas.remove();
       deckRef.current = null;

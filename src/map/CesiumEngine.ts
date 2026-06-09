@@ -92,8 +92,11 @@ export class CesiumEngine implements MapEngine {
     };
   }
 
-  onViewChange(callback: (viewState: MapViewState) => void): void {
+  onViewChange(callback: (viewState: MapViewState) => void): () => void {
     this.viewChangeCallback = callback;
+    return () => {
+      if (this.viewChangeCallback === callback) this.viewChangeCallback = undefined;
+    };
   }
 
   onMapClick(callback: (lat: number, lng: number) => void): void {

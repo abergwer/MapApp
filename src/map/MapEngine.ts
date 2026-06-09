@@ -18,6 +18,6 @@ export interface MapEngine {
   resize?(): void;
   destroy(): void;
   getViewState(): MapViewState;
-  onViewChange(callback: (viewState: MapViewState) => void): void;
+  onViewChange(callback: (viewState: MapViewState) => void): () => void;
   onMapClick?(callback: (lat: number, lng: number) => void): void;
 }

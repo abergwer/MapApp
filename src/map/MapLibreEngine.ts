@@ -29,10 +29,10 @@ export class MapLibreEngine implements MapEngine {
       attributionControl: false,
       center: [options.center[1], options.center[0]],
       zoom: options.zoom,
-      
+
     });
 
-            // 2. Add Ruler Control
+    // 2. Add Ruler Control
     const measures = new MeasuresControl({
       units: 'metric', // Options: 'metric', 'imperial'
       style: {
@@ -41,9 +41,9 @@ export class MapLibreEngine implements MapEngine {
       },
     });
 
-    this.map.addControl(measures, 'top-left');    
+    this.map.addControl(measures, 'top-left');
 
-       // 2. Add your Scale Control
+    // 2. Add your Scale Control
     const scale = new maplibregl.ScaleControl({
       maxWidth: 80,         // Maximum width of the control in pixels
       unit: 'metric'        // Options: 'metric', 'imperial', 'nautical'
@@ -75,8 +75,11 @@ export class MapLibreEngine implements MapEngine {
     };
   }
 
-  onViewChange(callback: (viewState: MapViewState) => void): void {
+  onViewChange(callback: (viewState: MapViewState) => void): () => void {
     this.viewChangeCallback = callback;
+    return () => {
+      if (this.viewChangeCallback === callback) this.viewChangeCallback = undefined;
+    };
   }
 
   onMapClick(callback: (lat: number, lng: number) => void): void {
