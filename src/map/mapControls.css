@@ -1,0 +1,88 @@
+/* Styling for MapLibre on-map controls (measure toolbar, navigation, scale). */
+
+/* --- Shared control shell --- */
+.map-canvas .maplibregl-ctrl-group {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+
+.map-canvas .maplibregl-ctrl-group button {
+  width: 46px;
+  height: 46px;
+  background: transparent;
+  transition: background-color 0.15s, transform 0.06s;
+}
+
+.map-canvas .maplibregl-ctrl-group button + button {
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.map-canvas .maplibregl-ctrl-group button:hover:not(:disabled) {
+  background: rgba(37, 99, 235, 0.08);
+}
+
+.map-canvas .maplibregl-ctrl-group button:active:not(:disabled) {
+  transform: scale(0.94);
+}
+
+.map-canvas .maplibregl-ctrl-group button:disabled {
+  opacity: 0.4;
+}
+
+/* --- Measure toolbar --- */
+.map-canvas .maplibregl-measures {
+  margin: 12px 0 0 12px;
+}
+
+.map-canvas .maplibregl-measures button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.map-canvas .maplibregl-measures button svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* Collapsed by default — only the toggle button is visible. */
+.map-canvas .maplibregl-measures button:not(.maplibregl-measures-toggle) {
+  display: none;
+}
+
+.map-canvas .maplibregl-measures.expanded button {
+  display: flex;
+}
+
+/* Active state for the toggle and the currently-selected tool. */
+.map-canvas .maplibregl-measures.expanded .maplibregl-measures-toggle,
+.map-canvas .maplibregl-measures button.active {
+  background: #2563eb;
+  color: #fff;
+}
+
+.map-canvas .maplibregl-measures button.active svg {
+  filter: brightness(0) invert(1);
+}
+
+/* --- Navigation control --- */
+.map-canvas .maplibregl-ctrl-top-right {
+  margin: 12px 12px 0 0;
+}
+
+/* --- Scale control --- */
+.map-canvas .maplibregl-ctrl-scale {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-top: none;
+  border-radius: 0 0 4px 4px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2933;
+  font: 600 11px/1.4 system-ui, -apple-system, sans-serif;
+  padding: 1px 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  backdrop-filter: blur(6px);
+}

@@ -1,7 +1,10 @@
 import L from 'leaflet';
 import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
 import 'leaflet/dist/leaflet.css';
+import '@geoman-io/leaflet-geoman-free';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import config from '../../config.json';
+import { showMeasurementOnLayer } from './leafletMeasurements';
 
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;
@@ -22,6 +25,29 @@ export class LeafletEngine implements MapEngine {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
     }).addTo(this.map);
+    L.control.scale({ position: 'bottomright' }).addTo(this.map);
+
+    this.map.pm.addControls({
+      position: 'topleft',
+      drawMarker: true,
+      drawPolygon: true,
+      drawPolyline: true,
+      drawRectangle: true,
+      drawCircle: true,
+      editMode: true,
+      dragMode: true,
+      cutPolygon: true,
+    });
+
+    this.map.on('pm:create', (e: { layer: L.Layer }) => {
+      showMeasurementOnLayer(e.layer);
+      // Re-label after the user finishes editing the shape
+      (e.layer as L.Layer & {
+        on: (ev: string, cb: () => void) => L.Layer;
+      }).on('pm:edit', () => showMeasurementOnLayer(e.layer));
+    });
+
+
 
     let ticking = false;
 
@@ -57,8 +83,11 @@ export class LeafletEngine implements MapEngine {
     };
   }
 
-  onViewChange(callback: (viewState: MapViewState) => void): void {
+  onViewChange(callback: (viewState: MapViewState) => void): () => void {
     this.viewChangeCallback = callback;
+    return () => {
+      if (this.viewChangeCallback === callback) this.viewChangeCallback = undefined;
+    };
   }
 
   onMapClick(callback: (lat: number, lng: number) => void): void {
