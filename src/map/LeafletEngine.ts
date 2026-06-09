@@ -18,6 +18,8 @@ export class LeafletEngine implements MapEngine {
       markerZoomAnimation: false,
     });
 
+    L.control.scale({ position: 'bottomright' }).addTo(this.map);
+
     L.tileLayer(config.LeafletTilesURL, {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
@@ -57,8 +59,11 @@ export class LeafletEngine implements MapEngine {
     };
   }
 
-  onViewChange(callback: (viewState: MapViewState) => void): void {
+  onViewChange(callback: (viewState: MapViewState) => void): () => void {
     this.viewChangeCallback = callback;
+    return () => {
+      if (this.viewChangeCallback === callback) this.viewChangeCallback = undefined;
+    };
   }
 
   onMapClick(callback: (lat: number, lng: number) => void): void {

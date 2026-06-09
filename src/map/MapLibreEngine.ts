@@ -23,10 +23,19 @@ export class MapLibreEngine implements MapEngine {
         },
         layers: [{ id: 'raster-layer', type: 'raster', source: 'raster-tiles' }],
       },
+      attributionControl: false,
       // MapLibre uses [lng, lat]; defaultOptions.center is [lat, lng] → swap
       center: [options.center[1], options.center[0]],
       zoom: options.zoom,
     });
+
+        // 2. Add your Scale Control
+    const scale = new maplibregl.ScaleControl({
+      maxWidth: 80,         // Maximum width of the control in pixels
+      unit: 'metric'        // Options: 'metric', 'imperial', 'nautical'
+    });
+
+    this.map.addControl(scale, 'bottom-right');
 
     this.map.on('move', () => {
       this.viewChangeCallback?.(this.getViewState());
@@ -48,8 +57,11 @@ export class MapLibreEngine implements MapEngine {
     };
   }
 
-  onViewChange(callback: (viewState: MapViewState) => void): void {
+  onViewChange(callback: (viewState: MapViewState) => void): () => void {
     this.viewChangeCallback = callback;
+    return () => {
+      if (this.viewChangeCallback === callback) this.viewChangeCallback = undefined;
+    };
   }
 
   onMapClick(callback: (lat: number, lng: number) => void): void {
