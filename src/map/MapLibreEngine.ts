@@ -7,7 +7,7 @@ export class MapLibreEngine implements MapEngine {
   private map?: maplibregl.Map;
   private viewChangeCallback?: (viewState: MapViewState) => void;
   private clickCallback?: (lat: number, lng: number) => void;
-  
+
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = new maplibregl.Map({
       container,
@@ -29,12 +29,17 @@ export class MapLibreEngine implements MapEngine {
       zoom: options.zoom,
     });
 
-        // 2. Add your Scale Control
+    // 1. Add your Scale Control
     const scale = new maplibregl.ScaleControl({
       maxWidth: 80,         // Maximum width of the control in pixels
       unit: 'metric'        // Options: 'metric', 'imperial', 'nautical'
     });
-    
+
+    // 2. Add the Navigation Control (zoom and rotation controls)
+    const nav = new maplibregl.NavigationControl();
+    this.map.addControl(nav, 'top-right');
+
+
     this.map.addControl(scale, 'bottom-right');
 
     this.map.on('move', () => {
@@ -45,7 +50,7 @@ export class MapLibreEngine implements MapEngine {
       this.clickCallback?.(e.lngLat.lat, e.lngLat.lng);
     });
   }
-  
+
   getViewState(): MapViewState {
     const center = this.map?.getCenter();
     return {
@@ -76,7 +81,7 @@ export class MapLibreEngine implements MapEngine {
     this.map?.remove();
     this.map = undefined;
   }
-  
+
   startDrawPoint(onComplete: (position: [number, number]) => void): void {
     throw new Error('Method not implemented.');
   }
