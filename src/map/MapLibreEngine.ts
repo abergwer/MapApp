@@ -2,11 +2,14 @@ import maplibregl from 'maplibre-gl/dist/maplibre-gl.js';
 import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import config from "../../config.json";
+import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
 export class MapLibreEngine implements MapEngine {
-  private map?: maplibregl.Map;
+  private map: maplibregl.Map | undefined;
   private viewChangeCallback?: (viewState: MapViewState) => void;
   private clickCallback?: (lat: number, lng: number) => void;
+  private draw: MapboxDraw | undefined;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = new maplibregl.Map({
@@ -29,6 +32,12 @@ export class MapLibreEngine implements MapEngine {
       zoom: options.zoom,
     });
 
+    this.draw = new MapboxDraw({
+      displayControlsDefault: false,
+    });
+
+    this.map.addControl(this.draw);
+
     // 1. Add your Scale Control
     const scale = new maplibregl.ScaleControl({
       maxWidth: 80,         // Maximum width of the control in pixels
@@ -48,6 +57,14 @@ export class MapLibreEngine implements MapEngine {
 
     this.map.on('click', (e: maplibregl.MapMouseEvent) => {
       this.clickCallback?.(e.lngLat.lat, e.lngLat.lng);
+    });
+
+    this.map.on('load', () => {
+      this.map?.setPaintProperty('gl-draw-polygon-fill', 'fill-color', '#ff0000');
+      this.map?.setPaintProperty('gl-draw-polygon-fill', 'fill-opacity', 0.3);
+
+      this.map?.setPaintProperty('gl-draw-polygon-stroke', 'line-color', '#00ff00');
+      this.map?.setPaintProperty('gl-draw-polygon-stroke', 'line-width', 3);
     });
   }
 
@@ -89,7 +106,18 @@ export class MapLibreEngine implements MapEngine {
     throw new Error('Method not implemented.');
   }
   startDrawPolygon(onComplete: (positions: [number, number][]) => void): void {
-    throw new Error('Method not implemented.');
+    this.draw?.changeMode('draw_polygon');
+
+    const handler = (e: any) => {
+      const feature = e.features[0];
+
+      onComplete(feature);
+
+
+      this.map?.off('draw.create', handler);
+    };
+
+    this.map?.on('draw.create', handler);
   }
   startDrawCircle(onComplete: (center: [number, number], radius: number) => void): void {
     throw new Error('Method not implemented.');
