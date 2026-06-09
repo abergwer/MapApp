@@ -2,6 +2,8 @@ import L from 'leaflet';
 import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
 import 'leaflet/dist/leaflet.css';
 import config from '../../config.json';
+import '@geoman-io/leaflet-geoman-free';
+import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;
@@ -82,14 +84,55 @@ export class LeafletEngine implements MapEngine {
   startDrawPoint(onComplete: (position: [number, number]) => void): void {
     throw new Error('Method not implemented.');
   }
+
   startDrawLine(onComplete: (positions: [number, number][]) => void): void {
-    throw new Error('Method not implemented.');
+    this.map?.pm.enableDraw('Line');
+
+    const handler = (e: any) => {
+      const coords = e.layer
+        .getLatLngs()
+        .map((p: any) => [p.lng, p.lat]);
+
+      onComplete(coords);
+
+      this.map?.off('pm:create', handler);
+    };
+
+    this.map?.on('pm:create', handler);
   }
+
   startDrawPolygon(onComplete: (positions: [number, number][]) => void): void {
-    throw new Error('Method not implemented.');
+    this.map?.pm.enableDraw('Polygon');
+
+    const handler = (e: any) => {
+      const coords = e.layer
+        .getLatLngs()[0]
+        .map((p: any) => [p.lng, p.lat]);
+
+      onComplete(coords);
+
+      this.map?.off('pm:create', handler);
+    };
+
+    this.map?.on('pm:create', handler);
   }
+
   startDrawCircle(onComplete: (center: [number, number], radius: number) => void): void {
-    throw new Error('Method not implemented.');
+    this.map?.pm.enableDraw('Circle');
+
+    const handler = (e: any) => {
+      const center = e.layer.getLatLng();
+      const radius = e.layer.getRadius();
+
+      onComplete(
+        [center.lng, center.lat],
+        radius
+      );
+
+      this.map?.off('pm:create', handler);
+    };
+
+    this.map?.on('pm:create', handler);
   }
   cancelDrawing(): void {
     throw new Error('Method not implemented.');
