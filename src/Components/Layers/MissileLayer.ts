@@ -1,6 +1,11 @@
 import { PathLayer } from '@deck.gl/layers';
 
-const missiles: any = [
+interface Missile {
+  id: string;
+  path: [number, number][];
+}
+
+const missiles: Missile[] = [
   {
     id: "m1",
     path: [
@@ -63,7 +68,7 @@ export const  createMissilesLayer = new PathLayer({
 
     data: missiles,
 
-    getPath: (d: typeof missiles[number]) => d.path,
+    getPath: (d: Missile) => d.path,
 
     getColor: [255, 80, 0],
 
