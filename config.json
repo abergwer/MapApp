@@ -1,5 +1,10 @@
 {
   "MapLibreTilesURL": "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
   "LeafletTilesURL": "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
-  "CesiumTilesURL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+  "CesiumTilesURL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "MapStyles": {
+    "light": "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "dark": "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
+    "satellite": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+  }
 }
