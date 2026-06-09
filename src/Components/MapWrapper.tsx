@@ -5,6 +5,7 @@ import { MapContext } from '../map/MapContext';
 import type { MapEngine } from '../map/MapEngine';
 import CoordinatesBar from './features/CoordinatesBar';
 import './MapWrapper.css';
+import ToolBar from './features/ToolBar';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],
@@ -62,6 +63,9 @@ export default function MapWrapper({ children }: MapWrapperProps) {
           <strong>{mapEngineLabel[selectedMapEngine]}</strong>
         </div>
         <div ref={containerRef} className="map-canvas" style={{ position: 'relative' }}>
+          <div className="map-tools" >
+            <ToolBar />
+          </div>
           <div className="map-coords-overlay">
             <CoordinatesBar />
           </div>
