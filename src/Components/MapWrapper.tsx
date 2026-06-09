@@ -15,7 +15,6 @@ interface MapWrapperProps {
   children?: ReactNode;
 }
 
-//export default function MapWrapper({ children }: MapWrapperProps) {
 export default function MapWrapper({ children }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<MapEngine | null>(null);
@@ -25,16 +24,32 @@ export default function MapWrapper({ children }: MapWrapperProps) {
       return;
     }
 
-    const eng = createMapEngine();
-    eng.initialize(containerRef.current, defaultOptions);
-    setEngine(eng);
+    let eng: MapEngine | undefined;
+    let cancelled = false;
+    let handleResize: (() => void) | undefined;
 
-    const handleResize = () => eng.resize?.();
-    window.addEventListener('resize', handleResize);
+    // Engines load on demand (dynamic import), so creation is async.
+    createMapEngine().then((created) => {
+      // Guard against unmount / StrictMode double-invoke during the await.
+      if (cancelled || !containerRef.current) {
+        created.destroy();
+        return;
+      }
+      eng = created;
+      eng.initialize(containerRef.current, defaultOptions);
+      setEngine(eng);
+
+      handleResize = () => eng?.resize?.();
+      window.addEventListener('resize', handleResize);
+    });
 
     return () => {
-      window.removeEventListener('resize', handleResize);
-      eng.destroy();
+      cancelled = true;
+      if (handleResize) {
+        window.removeEventListener('resize', handleResize);
+      }
+      eng?.destroy();
+      eng = undefined;
       setEngine(null);
     };
   }, []);
