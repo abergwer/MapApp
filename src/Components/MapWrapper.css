@@ -34,3 +34,10 @@
   z-index: 1000;
   pointer-events: none;
 }
+
+.map-tools {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 1000;
+}
