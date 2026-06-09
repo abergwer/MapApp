@@ -20,4 +20,25 @@ export interface MapEngine {
   getViewState(): MapViewState;
   onViewChange(callback: (viewState: MapViewState) => void): () => void;
   onMapClick?(callback: (lat: number, lng: number) => void): void;
+
+   startDrawPoint(
+    onComplete: (position: [number, number]) => void
+  ): void;
+
+  startDrawLine(
+    onComplete: (positions: [number, number][]) => void
+  ): void;
+
+  startDrawPolygon(
+    onComplete: (positions: [number, number][]) => void
+  ): void;
+
+  startDrawCircle(
+    onComplete: (center: [number, number], radius: number) => void
+  ): void;
+
+  cancelDrawing(): void;
+
+  //addEntity(entity: MapEntity): string;
+  //removeEntity(id: string): void;
 }

@@ -7,7 +7,7 @@ export class MapLibreEngine implements MapEngine {
   private map?: maplibregl.Map;
   private viewChangeCallback?: (viewState: MapViewState) => void;
   private clickCallback?: (lat: number, lng: number) => void;
-
+  
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = new maplibregl.Map({
       container,
@@ -34,7 +34,7 @@ export class MapLibreEngine implements MapEngine {
       maxWidth: 80,         // Maximum width of the control in pixels
       unit: 'metric'        // Options: 'metric', 'imperial', 'nautical'
     });
-
+    
     this.map.addControl(scale, 'bottom-right');
 
     this.map.on('move', () => {
@@ -45,7 +45,7 @@ export class MapLibreEngine implements MapEngine {
       this.clickCallback?.(e.lngLat.lat, e.lngLat.lng);
     });
   }
-
+  
   getViewState(): MapViewState {
     const center = this.map?.getCenter();
     return {
@@ -75,5 +75,21 @@ export class MapLibreEngine implements MapEngine {
   destroy(): void {
     this.map?.remove();
     this.map = undefined;
+  }
+  
+  startDrawPoint(onComplete: (position: [number, number]) => void): void {
+    throw new Error('Method not implemented.');
+  }
+  startDrawLine(onComplete: (positions: [number, number][]) => void): void {
+    throw new Error('Method not implemented.');
+  }
+  startDrawPolygon(onComplete: (positions: [number, number][]) => void): void {
+    throw new Error('Method not implemented.');
+  }
+  startDrawCircle(onComplete: (center: [number, number], radius: number) => void): void {
+    throw new Error('Method not implemented.');
+  }
+  cancelDrawing(): void {
+    throw new Error('Method not implemented.');
   }
 }
