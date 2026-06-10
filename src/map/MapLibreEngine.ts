@@ -10,6 +10,7 @@ export class MapLibreEngine implements MapEngine {
   private viewChangeCallback?: (viewState: MapViewState) => void;
   private clickCallback?: (lat: number, lng: number) => void;
   private draw: MapboxDraw | undefined;
+  private cancelCurrentDraw?: () => void;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = new maplibregl.Map({
@@ -34,9 +35,10 @@ export class MapLibreEngine implements MapEngine {
 
     this.draw = new MapboxDraw({
       displayControlsDefault: false,
+      styles: drawStyles
     });
 
-    this.map.addControl(this.draw);
+    this.map.addControl(this.draw as any);
 
     // 1. Add your Scale Control
     const scale = new maplibregl.ScaleControl({
@@ -123,6 +125,9 @@ export class MapLibreEngine implements MapEngine {
     throw new Error('Method not implemented.');
   }
   cancelDrawing(): void {
-    throw new Error('Method not implemented.');
+    this.cancelCurrentDraw?.();
+    if (this.draw?.getMode() !== 'simple_select') {
+      this.draw?.changeMode('simple_select');
+    }
   }
 }
