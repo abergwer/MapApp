@@ -9,12 +9,13 @@ export class LeafletEngine implements MapEngine {
   private map?: L.Map;
   private viewChangeCallback?: (viewState: MapViewState) => void;
   private clickCallback?: (lat: number, lng: number) => void;
+  private cancelCurrentDraw?: () => void;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = L.map(container, {
       center: options.center,
       zoom: options.zoom,
-      zoomControl: true,
+      zoomControl: false,
       zoomAnimation: false,
       fadeAnimation: false,
       markerZoomAnimation: false,
@@ -22,9 +23,13 @@ export class LeafletEngine implements MapEngine {
 
     L.control.scale({ position: 'bottomright' }).addTo(this.map);
 
+    L.control.zoom({
+      position: 'topright' as L.ControlPosition,
+    }).addTo(this.map);
+
     L.tileLayer(config.LeafletTilesURL, {
       attribution: '&copy; OpenStreetMap contributors',
-      maxZoom: 19,
+      maxZoom: 17,
     }).addTo(this.map);
 
     let ticking = false;
@@ -135,6 +140,6 @@ export class LeafletEngine implements MapEngine {
     this.map?.on('pm:create', handler);
   }
   cancelDrawing(): void {
-    throw new Error('Method not implemented.');
+    this.cancelCurrentDraw?.();
   }
 }
