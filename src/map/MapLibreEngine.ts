@@ -42,7 +42,7 @@ export class MapLibreEngine implements MapEngine {
 
 
     this.draw = new MapboxDraw({
-      defaultMode: 'draw_polygon',
+      defaultMode: 'simple_select',
       userProperties: true,
       modes: {
         ...MapboxDraw.modes,
