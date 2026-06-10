@@ -9,7 +9,6 @@ export class LeafletEngine implements MapEngine {
   private map?: L.Map;
   private viewChangeCallback?: (viewState: MapViewState) => void;
   private clickCallback?: (lat: number, lng: number) => void;
-  private cancelCurrentDraw?: () => void;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = L.map(container, {
@@ -87,7 +86,18 @@ export class LeafletEngine implements MapEngine {
   }
 
   startDrawPoint(onComplete: (position: [number, number]) => void): void {
-    throw new Error('Method not implemented.');
+    this.map?.pm.enableDraw('Marker');
+
+    const handler = (e: any) => {
+        const { lat, lng } = e.layer.getLatLng();
+        const coords = [lng, lat] as [number, number];
+
+        onComplete(coords);
+
+        this.map?.off('pm:create', handler);
+    };
+
+    this.map?.on('pm:create', handler);
   }
 
   startDrawLine(onComplete: (positions: [number, number][]) => void): void {
@@ -140,6 +150,6 @@ export class LeafletEngine implements MapEngine {
     this.map?.on('pm:create', handler);
   }
   cancelDrawing(): void {
-    this.cancelCurrentDraw?.();
+    this.map?.pm.disableDraw();
   }
 }
