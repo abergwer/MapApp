@@ -6,7 +6,7 @@ import './ToolBar.css';
 type DrawTool = 'point' | 'line' | 'polygon' | 'circle';
 
 const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean }[] = [
-  { id: 'point', label: 'Point', icon: '•', enabled: false },
+  { id: 'point', label: 'Point', icon: '•', enabled: true },
   { id: 'line', label: 'Line', icon: '╱', enabled: true },
   { id: 'polygon', label: 'Polygon', icon: '▱', enabled: true },
   { id: 'circle', label: 'Circle', icon: '◯', enabled: true },
@@ -36,7 +36,7 @@ export default function ToolBar() {
   useEffect(() => {
     if (!open) return;
     const onClickOutside = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(e.target as Node)) setOpen(true);
     };
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
@@ -45,7 +45,6 @@ export default function ToolBar() {
   const handleSelect = (tool: DrawTool) => {
     if (!engine) return;
     setActiveTool(tool);
-    setOpen(false);
     startDraw(engine, tool);
   };
 
