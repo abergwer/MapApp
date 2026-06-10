@@ -4,6 +4,13 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import config from "../../config.json";
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
+import { drawStyles } from './drawStyles';
+import {
+  CircleMode,
+  DragCircleMode,
+  DirectMode,
+  SimpleSelectMode
+} from 'maplibre-gl-draw-circle';
 
 export class MapLibreEngine implements MapEngine {
   private map: maplibregl.Map | undefined;
@@ -33,10 +40,21 @@ export class MapLibreEngine implements MapEngine {
       zoom: options.zoom,
     });
 
+
     this.draw = new MapboxDraw({
+      defaultMode: 'draw_polygon',
+      userProperties: true,
+      modes: {
+        ...MapboxDraw.modes,
+        draw_polygon: MapboxDraw.modes.draw_polygon,
+        draw_circle: CircleMode,
+        drag_circle: DragCircleMode,
+        direct_select: DirectMode,
+        simple_select: SimpleSelectMode
+      },
       displayControlsDefault: false,
-      styles: drawStyles
-    });
+        styles: drawStyles
+      });
 
     this.map.addControl(this.draw as any);
 
@@ -59,14 +77,6 @@ export class MapLibreEngine implements MapEngine {
 
     this.map.on('click', (e: maplibregl.MapMouseEvent) => {
       this.clickCallback?.(e.lngLat.lat, e.lngLat.lng);
-    });
-
-    this.map.on('load', () => {
-      this.map?.setPaintProperty('gl-draw-polygon-fill', 'fill-color', '#ff0000');
-      this.map?.setPaintProperty('gl-draw-polygon-fill', 'fill-opacity', 0.3);
-
-      this.map?.setPaintProperty('gl-draw-polygon-stroke', 'line-color', '#00ff00');
-      this.map?.setPaintProperty('gl-draw-polygon-stroke', 'line-width', 3);
     });
   }
 
@@ -102,10 +112,31 @@ export class MapLibreEngine implements MapEngine {
   }
 
   startDrawPoint(onComplete: (position: [number, number]) => void): void {
-    throw new Error('Method not implemented.');
+    this.draw?.changeMode('draw_point');
+    const handler = (e: any) => {
+      const feature = e.features[0];
+
+      onComplete(feature);
+
+
+      this.map?.off('draw.create', handler);
+    };
+
+    this.map?.on('draw.create', handler);
   }
   startDrawLine(onComplete: (positions: [number, number][]) => void): void {
-    throw new Error('Method not implemented.');
+    this.draw?.changeMode('draw_line_string');
+    const handler = (e: any) => {
+      const feature = e.features[0];
+
+      onComplete(feature);
+
+
+      this.map?.off('draw.create', handler);
+    };
+
+    this.map?.on('draw.create', handler);
+
   }
   startDrawPolygon(onComplete: (positions: [number, number][]) => void): void {
     this.draw?.changeMode('draw_polygon');
@@ -122,7 +153,17 @@ export class MapLibreEngine implements MapEngine {
     this.map?.on('draw.create', handler);
   }
   startDrawCircle(onComplete: (center: [number, number], radius: number) => void): void {
-    throw new Error('Method not implemented.');
+    this.draw?.changeMode('draw_circle', { initialRadiusInKm: 5 });
+    const handler = (e: any) => {
+      const feature = e.features[0];
+
+      onComplete(feature.geometry.coordinates, feature.properties.radiusInKm);
+
+
+      this.map?.off('draw.create', handler);
+    };
+
+    this.map?.on('draw.create', handler);
   }
   cancelDrawing(): void {
     this.cancelCurrentDraw?.();
