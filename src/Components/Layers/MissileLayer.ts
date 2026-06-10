@@ -75,6 +75,7 @@ export const  createMissilesLayer = new PathLayer({
     widthMinPixels: 4,
     widthMaxPixels: 14,
 
-    rounded: true,
+    capRounded: true,
+    jointRounded: true
   });
 
