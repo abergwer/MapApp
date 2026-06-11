@@ -149,6 +149,11 @@ export class LeafletEngine implements MapEngine {
 
     this.map?.on('pm:create', handler);
   }
+
+    startDrawEllipse(onComplete: (center: [number, number], radiusX: number, radiusY: number) => void): void {
+      throw new Error('Ellipse drawing not supported in LeafletEngine');
+    }
+
   cancelDrawing(): void {
     this.map?.pm.disableDraw();
   }

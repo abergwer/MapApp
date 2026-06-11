@@ -37,6 +37,10 @@ export interface MapEngine {
     onComplete: (center: [number, number], radius: number) => void
   ): void;
 
+  startDrawEllipse(
+    onComplete: (center: [number, number], radiusX: number, radiusY: number) => void
+  ): void;
+
   cancelDrawing(): void;
 
   //addEntity(entity: MapEntity): string;

@@ -11,6 +11,7 @@ import {
   DirectMode,
   SimpleSelectMode
 } from 'maplibre-gl-draw-circle';
+import {DragEllipseMode} from '../utils/DrawEllipse';
 
 export class MapLibreEngine implements MapEngine {
   private map: maplibregl.Map | undefined;
@@ -50,7 +51,8 @@ export class MapLibreEngine implements MapEngine {
         draw_circle: CircleMode,
         drag_circle: DragCircleMode,
         direct_select: DirectMode,
-        simple_select: SimpleSelectMode
+        simple_select: SimpleSelectMode,
+        drag_ellipse: DragEllipseMode,
       },
       displayControlsDefault: false,
         styles: drawStyles
@@ -165,6 +167,25 @@ export class MapLibreEngine implements MapEngine {
 
     this.map?.on('draw.create', handler);
   }
+
+ startDrawEllipse(onComplete: (center: [number, number], radiusX: number, radiusY: number) => void): void {
+    this.draw?.changeMode('drag_ellipse' as any);
+    
+    const handler = (e: any) => {
+      const feature = e.features[0];
+
+      onComplete(
+        feature.properties.center,
+        feature.properties.radiusXInKm,
+        feature.properties.radiusYInKm
+      );
+
+      this.map?.off('draw.create', handler);
+    };
+
+    this.map?.on('draw.create', handler);
+  }
+
   cancelDrawing(): void {
     this.cancelCurrentDraw?.();
     if (this.draw?.getMode() !== 'simple_select') {
