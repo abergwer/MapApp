@@ -29,11 +29,16 @@ export class MapLibreEngine implements MapEngine {
       zoom: options.zoom,
     });
 
-        // 2. Add your Scale Control
+    // 1. Add your Scale Control
     const scale = new maplibregl.ScaleControl({
       maxWidth: 80,         // Maximum width of the control in pixels
       unit: 'metric'        // Options: 'metric', 'imperial', 'nautical'
     });
+
+    // 2. Add the Navigation Control (zoom and rotation controls)
+    const nav = new maplibregl.NavigationControl();
+    this.map.addControl(nav, 'top-right');
+
 
     this.map.addControl(scale, 'bottom-right');
 
