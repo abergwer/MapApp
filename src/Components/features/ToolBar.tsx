@@ -3,13 +3,14 @@ import { useMapContext } from '../../map/MapContext';
 import type { MapEngine } from '../../map/MapEngine';
 import './ToolBar.css';
 
-type DrawTool = 'point' | 'line' | 'polygon' | 'circle';
+type DrawTool = 'point' | 'line' | 'polygon' | 'circle' | 'ellipse';
 
 const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean }[] = [
   { id: 'point', label: 'Point', icon: '•', enabled: true },
   { id: 'line', label: 'Line', icon: '╱', enabled: true },
   { id: 'polygon', label: 'Polygon', icon: '▱', enabled: true },
   { id: 'circle', label: 'Circle', icon: '◯', enabled: true },
+  { id: 'ellipse', label: 'Ellipse', icon: '⬭', enabled: true },
 ];
 
 function startDraw(engine: MapEngine, tool: DrawTool) {
@@ -24,6 +25,8 @@ function startDraw(engine: MapEngine, tool: DrawTool) {
       return engine.startDrawCircle((center, radius) =>
         console.log('circle', center, radius)
       );
+    case 'ellipse':
+      return engine.startDrawEllipse?.((feature) => console.log('ellipse', feature));
   }
 }
 
