@@ -159,6 +159,18 @@ DragEllipseMode.toDisplayFeatures = function (
 ) {
   const isActivePolygon = geojson.properties.id === state.polygon.id;
   geojson.properties.active = isActivePolygon ? 'true' : 'false';
+
+  // The in-progress ellipse starts with an empty ring (`coordinates: [[]]`).
+  // Pushing that into the source makes MapLibre treat the whole polygon
+  // FeatureCollection as invalid and stop rendering every polygon in it —
+  // which is why any previously-drawn ellipse vanishes until the new one is
+  // sized. Skip the active polygon until it has a real ring (matches the
+  // stock draw_polygon behaviour).
+  if (isActivePolygon) {
+    const ring = geojson.geometry.coordinates[0];
+    if (!ring || ring.length < 3) return;
+  }
+
   return display(geojson);
 };
 
