@@ -11,7 +11,7 @@ import {
   DirectMode,
   SimpleSelectMode
 } from 'maplibre-gl-draw-circle';
-import {DragEllipseMode} from '../utils/DrawEllipse';
+import {DragEllipseMode} from '../utils/MaplibreEllipseMath';
 
 export class MapLibreEngine implements MapEngine {
   private map: maplibregl.Map | undefined;
