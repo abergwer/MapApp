@@ -4,11 +4,16 @@ import 'leaflet/dist/leaflet.css';
 import config from '../../config.json';
 import '@geoman-io/leaflet-geoman-free';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+import {
+  createLeafletEllipseTool,
+  type LeafletEllipseTool,
+} from '../utils/leafletEllipseTool';
 
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;
   private viewChangeCallback?: (viewState: MapViewState) => void;
   private clickCallback?: (lat: number, lng: number) => void;
+  private ellipseTool?: LeafletEllipseTool;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = L.map(container, {
@@ -21,10 +26,7 @@ export class LeafletEngine implements MapEngine {
     });
 
     L.control.scale({ position: 'bottomright' }).addTo(this.map);
-
-    L.control.zoom({
-      position: 'topright' as L.ControlPosition,
-    }).addTo(this.map);
+    L.control.zoom({ position: 'topright' as L.ControlPosition }).addTo(this.map);
 
     L.tileLayer(config.LeafletTilesURL, {
       attribution: '&copy; OpenStreetMap contributors',
@@ -32,7 +34,6 @@ export class LeafletEngine implements MapEngine {
     }).addTo(this.map);
 
     let ticking = false;
-
     const syncView = () => {
       if (ticking) return;
       ticking = true;
@@ -51,6 +52,8 @@ export class LeafletEngine implements MapEngine {
     this.map.on('click', (e: L.LeafletMouseEvent) => {
       this.clickCallback?.(e.latlng.lat, e.latlng.lng);
     });
+
+    this.ellipseTool = createLeafletEllipseTool(this.map);
   }
 
   getViewState(): MapViewState {
@@ -81,6 +84,7 @@ export class LeafletEngine implements MapEngine {
   }
 
   destroy(): void {
+    this.ellipseTool = undefined;
     this.map?.remove();
     this.map = undefined;
   }
@@ -89,12 +93,9 @@ export class LeafletEngine implements MapEngine {
     this.map?.pm.enableDraw('Marker');
 
     const handler = (e: any) => {
-        const { lat, lng } = e.layer.getLatLng();
-        const coords = [lng, lat] as [number, number];
-
-        onComplete(coords);
-
-        this.map?.off('pm:create', handler);
+      const { lat, lng } = e.layer.getLatLng();
+      onComplete([lng, lat] as [number, number]);
+      this.map?.off('pm:create', handler);
     };
 
     this.map?.on('pm:create', handler);
@@ -104,12 +105,8 @@ export class LeafletEngine implements MapEngine {
     this.map?.pm.enableDraw('Line');
 
     const handler = (e: any) => {
-      const coords = e.layer
-        .getLatLngs()
-        .map((p: any) => [p.lng, p.lat]);
-
+      const coords = e.layer.getLatLngs().map((p: any) => [p.lng, p.lat]);
       onComplete(coords);
-
       this.map?.off('pm:create', handler);
     };
 
@@ -120,12 +117,8 @@ export class LeafletEngine implements MapEngine {
     this.map?.pm.enableDraw('Polygon');
 
     const handler = (e: any) => {
-      const coords = e.layer
-        .getLatLngs()[0]
-        .map((p: any) => [p.lng, p.lat]);
-
+      const coords = e.layer.getLatLngs()[0].map((p: any) => [p.lng, p.lat]);
       onComplete(coords);
-
       this.map?.off('pm:create', handler);
     };
 
@@ -137,24 +130,49 @@ export class LeafletEngine implements MapEngine {
 
     const handler = (e: any) => {
       const center = e.layer.getLatLng();
-      const radius = e.layer.getRadius();
-
-      onComplete(
-        [center.lng, center.lat],
-        radius
-      );
-
+      onComplete([center.lng, center.lat], e.layer.getRadius());
       this.map?.off('pm:create', handler);
     };
 
     this.map?.on('pm:create', handler);
   }
 
-    startDrawEllipse(onComplete: (center: [number, number], radiusX: number, radiusY: number) => void): void {
-      throw new Error('Ellipse drawing not supported in LeafletEngine');
-    }
+  startDrawEllipse(
+    onComplete: (center: [number, number], radiusX: number, radiusY: number) => void
+  ): void {
+    this.ellipseTool?.startDraw(({ center, radiusX, radiusY }) =>
+      onComplete(center, radiusX, radiusY)
+    );
+  }
 
   cancelDrawing(): void {
+    this.ellipseTool?.cancelDraw();
     this.map?.pm.disableDraw();
+  }
+
+  /**
+   * Toggle Geoman's global edit mode plus our custom ellipse editor. Cancels
+   * any in-progress drawing first and freezes map panning so dragging edit
+   * handles can't accidentally pan the basemap.
+   */
+  setEditMode(enabled: boolean): void {
+    const map = this.map;
+    if (!map) return;
+
+    if (enabled) {
+      this.ellipseTool?.cancelDraw();
+      map.pm.disableDraw();
+      map.dragging.disable();
+      map.keyboard.disable();
+      // Ellipse polygons are tagged `pmIgnore`, so Geoman's global edit
+      // skips them and only handles markers/lines/polygons/circles.
+      this.ellipseTool?.enableEdit();
+      map.pm.enableGlobalEditMode({ allowSelfIntersection: false });
+    } else {
+      map.pm.disableGlobalEditMode();
+      this.ellipseTool?.disableEdit();
+      map.dragging.enable();
+      map.keyboard.enable();
+    }
   }
 }
