@@ -26,7 +26,9 @@ function startDraw(engine: MapEngine, tool: DrawTool) {
         console.log('circle', center, radius)
       );
     case 'ellipse':
-      return engine.startDrawEllipse?.((feature) => console.log('ellipse', feature));
+      return engine.startDrawEllipse?.((center, radiusX, radiusY) =>
+        console.log('ellipse', center, radiusX, radiusY)
+      );
   }
 }
 
@@ -34,6 +36,7 @@ export default function ToolBar() {
   const { engine } = useMapContext();
   const [open, setOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<DrawTool | null>(null);
+  const [editing, setEditing] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,19 +48,50 @@ export default function ToolBar() {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [open]);
 
+  // Make sure edit mode is dropped if the engine swaps out from under us.
+  useEffect(() => {
+    return () => {
+      engine?.setEditMode?.(false);
+    };
+  }, [engine]);
+
   const handleSelect = (tool: DrawTool) => {
     if (!engine) return;
+    if (editing) {
+      engine.setEditMode?.(false);
+      setEditing(false);
+    }
     setActiveTool(tool);
     startDraw(engine, tool);
   };
 
   const handleCancel = () => {
     engine?.cancelDrawing();
+    engine?.setEditMode?.(false);
     setActiveTool(null);
+    setEditing(false);
     setOpen(false);
   };
 
+  const handleToggleEdit = () => {
+    if (!engine?.setEditMode) return;
+    const next = !editing;
+    // Drop any in-progress draw before switching modes.
+    if (next) {
+      engine.cancelDrawing();
+      setActiveTool(null);
+    }
+    engine.setEditMode(next);
+    setEditing(next);
+  };
+
+  const supportsEdit = Boolean(engine?.setEditMode);
   const activeLabel = DRAW_TOOLS.find((t) => t.id === activeTool)?.label;
+  const triggerLabel = editing
+    ? 'Edit mode'
+    : activeLabel
+    ? `Draw: ${activeLabel}`
+    : 'Draw';
 
   return (
     <div className="toolbar" ref={rootRef}>
@@ -67,9 +101,7 @@ export default function ToolBar() {
         onClick={() => setOpen((v) => !v)}
         disabled={!engine}
       >
-        <span className="toolbar-trigger-label">
-          {activeLabel ? `Draw: ${activeLabel}` : 'Draw'}
-        </span>
+        <span className="toolbar-trigger-label">{triggerLabel}</span>
         <span className="toolbar-trigger-caret" aria-hidden>▾</span>
       </button>
 
@@ -80,7 +112,7 @@ export default function ToolBar() {
               key={tool.id}
               type="button"
               role="menuitem"
-              className={`toolbar-menu-item ${activeTool === tool.id ? 'is-active' : ''}`}
+              className={`toolbar-menu-item ${activeTool === tool.id && !editing ? 'is-active' : ''}`}
               onClick={() => handleSelect(tool.id)}
               disabled={!tool.enabled}
               title={tool.enabled ? undefined : 'Not implemented yet'}
@@ -90,6 +122,21 @@ export default function ToolBar() {
             </button>
           ))}
 
+          {supportsEdit && (
+            <>
+              <div className="toolbar-menu-divider" />
+              <button
+                type="button"
+                role="menuitem"
+                className={`toolbar-menu-item ${editing ? 'is-active' : ''}`}
+                onClick={handleToggleEdit}
+              >
+                <span className="toolbar-menu-icon" aria-hidden>✎</span>
+                <span>{editing ? 'Stop editing' : 'Edit shapes'}</span>
+              </button>
+            </>
+          )}
+
           <div className="toolbar-menu-divider" />
 
           <button
@@ -97,7 +144,7 @@ export default function ToolBar() {
             role="menuitem"
             className="toolbar-menu-item is-cancel"
             onClick={handleCancel}
-            disabled={!activeTool}
+            disabled={!activeTool && !editing}
           >
             <span className="toolbar-menu-icon" aria-hidden>✕</span>
             <span>Cancel</span>
