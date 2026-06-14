@@ -6,6 +6,8 @@ import { AirCraftLayer } from './AirCraftLayer';
 
 // Register layers here. Each entry is imported from its own file.
 // To add a new layer: create a file in this folder and add it to this array.
+// Note: the drawing layer is provided dynamically by `useDrawingController`
+// in MapWrapper, so it is intentionally not listed here.
 const registeredLayers: Layer[] = [
   polygonLayer,
   createMissilesLayer,
