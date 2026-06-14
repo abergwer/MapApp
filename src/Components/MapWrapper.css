@@ -34,3 +34,11 @@
   z-index: 1000;
   pointer-events: none;
 }
+
+.map-toolbar-overlay {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+}

@@ -4,51 +4,53 @@ import type { Layer } from '@deck.gl/core';
 import { useMapContext } from '../map/MapContext';
 import registeredLayers from './Layers/index';
 
+const OVERLAY_CLASS = 'deckgl-overlay';
+
 interface LayerManagerProps {
-  /** Override the default registered layers with custom Deck.gl layers. */
+  /** Override the default registered layers. */
   layers?: Layer[];
+  /** When true, the overlay captures pointer events (e.g. for drawing). */
+  interactive?: boolean;
 }
 
-export default function LayerManager({ layers }: LayerManagerProps) {
+export default function LayerManager({
+  layers,
+  interactive = false,
+}: LayerManagerProps) {
   const { engine, containerRef } = useMapContext();
   const deckRef = useRef<Deck | null>(null);
 
+  const activeLayers = layers ?? registeredLayers;
+
+  // Create / tear down the Deck instance whenever the engine changes.
   useEffect(() => {
-    if (!engine || !containerRef.current) return;
-
     const container = containerRef.current;
+    if (!engine || !container) return;
 
-    // Sit above Leaflet tile/overlay panes (z-index 2-6) but below controls
+    const { width, height } = container.getBoundingClientRect();
+    if (width === 0 || height === 0) return;
+
+    // Sits above Leaflet tile/overlay panes (z 2-6) but below controls.
     const canvas = document.createElement('canvas');
+    canvas.className = OVERLAY_CLASS;
     canvas.style.cssText =
       'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:400;';
     container.appendChild(canvas);
 
-    const { width, height } = container.getBoundingClientRect();
-    if (width === 0 || height === 0) {
-      canvas.remove();
-      return;
-    }
-    const viewState = engine.getViewState();
-
+    // controller stays false: deck's controller swallows double-clicks (used
+    // to finish drawings) and pan/zoom is handled by the underlying basemap.
     const deck = new Deck({
       canvas,
       width,
       height,
       controller: false,
-      viewState,
-      layers: layers ?? registeredLayers,
+      viewState: engine.getViewState(),
+      layers: activeLayers,
     });
-
     deckRef.current = deck;
 
-    // Keep Deck's drawing buffer in sync with the container. Without this,
-    // Deck holds onto the initial width/height and its viewport projection
-    // drifts from the basemap whenever the window/container is resized,
-    // making layers appear offset.
+    // Keep Deck's drawing buffer in sync with the container size.
     const resizeObserver = new ResizeObserver(() => {
-      const deck = deckRef.current;
-      if (!deck) return;
       const { width, height } = container.getBoundingClientRect();
       if (width === 0 || height === 0) return;
       deck.setProps({ width, height, viewState: engine.getViewState() });
@@ -56,13 +58,9 @@ export default function LayerManager({ layers }: LayerManagerProps) {
     });
     resizeObserver.observe(container);
 
-    // Keep Deck.gl viewport in sync with whichever map engine is active.
-    // Forcing a synchronous redraw makes the overlay paint in the same frame as
-    // the basemap, preventing the one-frame lag that looks like "shaking".
-    const unsubscribe = engine.onViewChange((vs) => {
-      const deck = deckRef.current;
-      if (!deck) return;
-      deck.setProps({ viewState: vs });
+    // Mirror the basemap view; synchronous redraw avoids a one-frame lag.
+    const unsubscribe = engine.onViewChange((viewState) => {
+      deck.setProps({ viewState });
       deck.redraw('view-sync');
     });
 
@@ -73,15 +71,18 @@ export default function LayerManager({ layers }: LayerManagerProps) {
       canvas.remove();
       deckRef.current = null;
     };
+    // activeLayers is read once at create time; the effect below pushes updates.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine]);
 
-  // Reactively update layers when the prop changes
+  // Push runtime prop changes (layers + interactivity) to the live instance.
   useEffect(() => {
-    if (deckRef.current && layers) {
-      deckRef.current.setProps({ layers });
-    }
-  }, [layers]);
+    deckRef.current?.setProps({ layers: activeLayers });
+    const overlay = containerRef.current?.querySelector<HTMLCanvasElement>(
+      `canvas.${OVERLAY_CLASS}`
+    );
+    if (overlay) overlay.style.pointerEvents = interactive ? 'auto' : 'none';
+  }, [activeLayers, interactive, containerRef]);
 
   return null;
 }

@@ -1,10 +1,14 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { createMapEngine } from '../map/engineFactory';
 import { mapEngineLabel, selectedMapEngine } from '../map/mapConfig';
 import { MapContext } from '../map/MapContext';
 import type { MapEngine } from '../map/MapEngine';
 import CoordinatesBar from './features/CoordinatesBar';
 import './MapWrapper.css';
+import { useDrawingController } from '../map/DrawingMode';
+import registeredLayers from './Layers';
+import LayerManager from './LayerManager';
+import { DrawingToolbar } from './features/DrawingToolbar';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],
@@ -16,13 +20,20 @@ interface MapWrapperProps {
 }
 
 export default function MapWrapper({ children }: MapWrapperProps) {
+  const [mode, setMode] = useState('none');
+  const drawingLayer = useDrawingController(mode);
+
+  // The dynamic drawing layer is appended to the static registered layers.
+  const layers = useMemo(
+    () => [...registeredLayers, drawingLayer],
+    [drawingLayer]
+  );
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<MapEngine | null>(null);
 
   useEffect(() => {
-    if (!containerRef.current) {
-      return;
-    }
+    if (!containerRef.current) return;
 
     let eng: MapEngine | undefined;
     let cancelled = false;
@@ -45,11 +56,8 @@ export default function MapWrapper({ children }: MapWrapperProps) {
 
     return () => {
       cancelled = true;
-      if (handleResize) {
-        window.removeEventListener('resize', handleResize);
-      }
+      if (handleResize) window.removeEventListener('resize', handleResize);
       eng?.destroy();
-      eng = undefined;
       setEngine(null);
     };
   }, []);
@@ -66,6 +74,8 @@ export default function MapWrapper({ children }: MapWrapperProps) {
             <CoordinatesBar />
           </div>
         </div>
+        <LayerManager layers={layers} interactive={mode !== 'none'} />
+        <DrawingToolbar mode={mode} setMode={setMode} />
         {children}
       </div>
     </MapContext.Provider>
