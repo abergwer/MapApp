@@ -1,5 +1,4 @@
 import './App.css'
-import LayerManager from './Components/LayerManager'
 import MapWrapper from './Components/MapWrapper'
 import { mapEngineLabel, selectedMapEngine } from './map/mapConfig'
 
@@ -11,7 +10,6 @@ function App() {
         This app uses <strong>{mapEngineLabel[selectedMapEngine]}</strong> as the selected map engine.
       </p>
       <MapWrapper>
-        <LayerManager />
       </MapWrapper>
     </main>
   )
