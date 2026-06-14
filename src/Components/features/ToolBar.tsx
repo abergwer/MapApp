@@ -3,7 +3,7 @@ import { useMapContext } from '../../map/MapContext';
 import type { MapEngine } from '../../map/MapEngine';
 import './ToolBar.css';
 
-type DrawTool = 'point' | 'line' | 'polygon' | 'circle' | 'ellipse';
+type DrawTool = 'point' | 'line' | 'polygon' | 'circle' | 'ellipse' | 'sector';
 
 const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean }[] = [
   { id: 'point', label: 'Point', icon: '•', enabled: true },
@@ -11,6 +11,7 @@ const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean 
   { id: 'polygon', label: 'Polygon', icon: '▱', enabled: true },
   { id: 'circle', label: 'Circle', icon: '◯', enabled: true },
   { id: 'ellipse', label: 'Ellipse', icon: '⬭', enabled: true },
+  { id: 'sector', label: 'Sector', icon: '◔', enabled: true },
 ];
 
 function startDraw(engine: MapEngine, tool: DrawTool) {
@@ -28,6 +29,10 @@ function startDraw(engine: MapEngine, tool: DrawTool) {
     case 'ellipse':
       return engine.startDrawEllipse?.((center, radiusX, radiusY) =>
         console.log('ellipse', center, radiusX, radiusY)
+      );
+    case 'sector':
+      return engine.startDrawSector?.((center, radius, startBearing, endBearing) =>
+        console.log('sector', center, radius, startBearing, endBearing)
       );
   }
 }

@@ -41,6 +41,19 @@ export interface MapEngine {
     onComplete: (center: [number, number], radiusX: number, radiusY: number) => void
   ): void;
 
+  /**
+   * Three-click pie-slice sector: center → start arm → end arm. Optional —
+   * engines that don't support it can omit the method and the UI hides it.
+   */
+  startDrawSector(
+    onComplete: (
+      center: [number, number],
+      radius: number,
+      startBearing: number,
+      endBearing: number
+    ) => void
+  ): void;
+
   cancelDrawing(): void;
 
   /**

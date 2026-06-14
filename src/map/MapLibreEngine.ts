@@ -12,6 +12,7 @@ import {
   SimpleSelectMode
 } from 'maplibre-gl-draw-circle';
 import {DragEllipseMode} from '../utils/MaplibreEllipseMath';
+import {DragSectorMode} from '../utils/MaplibreSectorMath';
 
 export class MapLibreEngine implements MapEngine {
   private map: maplibregl.Map | undefined;
@@ -53,6 +54,7 @@ export class MapLibreEngine implements MapEngine {
         direct_select: DirectMode,
         simple_select: SimpleSelectMode,
         drag_ellipse: DragEllipseMode,
+        drag_sector: DragSectorMode,
       },
       displayControlsDefault: false,
         styles: drawStyles
@@ -178,6 +180,32 @@ export class MapLibreEngine implements MapEngine {
         feature.properties.center,
         feature.properties.radiusXInKm,
         feature.properties.radiusYInKm
+      );
+
+      this.map?.off('draw.create', handler);
+    };
+
+    this.map?.on('draw.create', handler);
+  }
+
+  startDrawSector(
+    onComplete: (
+      center: [number, number],
+      radius: number,
+      startBearing: number,
+      endBearing: number
+    ) => void
+  ): void {
+    this.draw?.changeMode('drag_sector' as any);
+
+    const handler = (e: any) => {
+      const feature = e.features[0];
+
+      onComplete(
+        feature.properties.center,
+        feature.properties.radiusInKm,
+        feature.properties.startBearing,
+        feature.properties.endBearing
       );
 
       this.map?.off('draw.create', handler);

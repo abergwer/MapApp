@@ -8,12 +8,17 @@ import {
   createLeafletEllipseTool,
   type LeafletEllipseTool,
 } from '../utils/leafletEllipseTool';
+import {
+  createLeafletSectorTool,
+  type LeafletSectorTool,
+} from '../utils/leafletSectorTool';
 
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;
   private viewChangeCallback?: (viewState: MapViewState) => void;
   private clickCallback?: (lat: number, lng: number) => void;
   private ellipseTool?: LeafletEllipseTool;
+  private sectorTool?: LeafletSectorTool;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = L.map(container, {
@@ -54,6 +59,7 @@ export class LeafletEngine implements MapEngine {
     });
 
     this.ellipseTool = createLeafletEllipseTool(this.map);
+    this.sectorTool = createLeafletSectorTool(this.map);
   }
 
   getViewState(): MapViewState {
@@ -85,6 +91,7 @@ export class LeafletEngine implements MapEngine {
 
   destroy(): void {
     this.ellipseTool = undefined;
+    this.sectorTool = undefined;
     this.map?.remove();
     this.map = undefined;
   }
@@ -145,8 +152,22 @@ export class LeafletEngine implements MapEngine {
     );
   }
 
+  startDrawSector(
+    onComplete: (
+      center: [number, number],
+      radius: number,
+      startBearing: number,
+      endBearing: number
+    ) => void
+  ): void {
+    this.sectorTool?.startDraw(({ center, radius, startBearing, endBearing }) =>
+      onComplete(center, radius, startBearing, endBearing)
+    );
+  }
+
   cancelDrawing(): void {
     this.ellipseTool?.cancelDraw();
+    this.sectorTool?.cancelDraw();
     this.map?.pm.disableDraw();
   }
 
@@ -161,16 +182,19 @@ export class LeafletEngine implements MapEngine {
 
     if (enabled) {
       this.ellipseTool?.cancelDraw();
+      this.sectorTool?.cancelDraw();
       map.pm.disableDraw();
       map.dragging.disable();
       map.keyboard.disable();
-      // Ellipse polygons are tagged `pmIgnore`, so Geoman's global edit
-      // skips them and only handles markers/lines/polygons/circles.
+      // Ellipse + sector polygons are tagged `pmIgnore`, so Geoman's global
+      // edit skips them and only handles markers/lines/polygons/circles.
       this.ellipseTool?.enableEdit();
+      this.sectorTool?.enableEdit();
       map.pm.enableGlobalEditMode({ allowSelfIntersection: false });
     } else {
       map.pm.disableGlobalEditMode();
       this.ellipseTool?.disableEdit();
+      this.sectorTool?.disableEdit();
       map.dragging.enable();
       map.keyboard.enable();
     }
