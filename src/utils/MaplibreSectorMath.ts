@@ -1,8 +1,21 @@
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
+import maplibregl from 'maplibre-gl/dist/maplibre-gl.js';
 import { DirectMode, SimpleSelectMode } from 'maplibre-gl-draw-circle';
 
 const EARTH_RADIUS_KM = 6_371;
 const MIN_RADIUS_KM = 0.001;
+
+/** Small blue dot that signals "center captured" on click 1 of a sector
+ *  draw. mapbox-gl-draw won't render the in-progress polygon until it has
+ *  3+ vertices, so without this the user gets no feedback between the first
+ *  click and their next mouse move. Style matches `gl-draw-point`. */
+function makeCenterMarkerElement(): HTMLElement {
+  const el = document.createElement('div');
+  el.style.cssText =
+    'width:12px;height:12px;background:#0000ff;border:2px solid #ffffff;' +
+    'border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);pointer-events:none;';
+  return el;
+}
 
 /* ------------------------------------------------------------------ *
  * Geometry helpers (spherical earth, bearings in degrees from N CW)
@@ -173,6 +186,14 @@ DragSectorMode.onClick = DragSectorMode.onTap = function (
   // Click 1: set center.
   if (props.center.length === 0) {
     props.center = [e.lngLat.lng, e.lngLat.lat];
+    // Visible blue dot at the center so the user sees the click was captured
+    // before mapbox-gl-draw is ready to render the in-progress polygon.
+    state.centerMarker = new maplibregl.Marker({
+      element: makeCenterMarkerElement(),
+      anchor: 'center',
+    })
+      .setLngLat(props.center)
+      .addTo(this.map);
     return;
   }
   // Click 2: set radius + start bearing.
@@ -196,6 +217,11 @@ DragSectorMode.onClick = DragSectorMode.onTap = function (
 DragSectorMode.onStop = function (this: any, state: any) {
   this.updateUIClasses({ mouse: 'none' });
   this.activateUIButton();
+
+  // Drop the center-of-sector indicator regardless of how the mode exits
+  // (commit, cancel, mode switch).
+  state.centerMarker?.remove();
+  state.centerMarker = undefined;
 
   // Always restore map interactions, even when the draw is cancelled.
   setTimeout(() => {
