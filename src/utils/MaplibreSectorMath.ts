@@ -1,8 +1,8 @@
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import maplibregl from 'maplibre-gl/dist/maplibre-gl.js';
 import { DirectMode, SimpleSelectMode } from 'maplibre-gl-draw-circle';
+import { bearingTo, distanceKm, sectorRing } from './geo';
 
-const EARTH_RADIUS_KM = 6_371;
 const MIN_RADIUS_KM = 0.001;
 
 /** Small blue dot that signals "center captured" on click 1 of a sector
@@ -15,90 +15,6 @@ function makeCenterMarkerElement(): HTMLElement {
     'width:12px;height:12px;background:#0000ff;border:2px solid #ffffff;' +
     'border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.4);pointer-events:none;';
   return el;
-}
-
-/* ------------------------------------------------------------------ *
- * Geometry helpers (spherical earth, bearings in degrees from N CW)
- * ------------------------------------------------------------------ */
-
-/** Point at `distanceKm` from `[lng,lat]` along bearing `bearingDeg`. */
-export function destination(
-  center: [number, number],
-  distanceKm: number,
-  bearingDeg: number
-): [number, number] {
-  const δ = distanceKm / EARTH_RADIUS_KM;
-  const θ = (bearingDeg * Math.PI) / 180;
-  const φ1 = (center[1] * Math.PI) / 180;
-  const λ1 = (center[0] * Math.PI) / 180;
-
-  const sinφ2 =
-    Math.sin(φ1) * Math.cos(δ) + Math.cos(φ1) * Math.sin(δ) * Math.cos(θ);
-  const φ2 = Math.asin(sinφ2);
-  const λ2 =
-    λ1 +
-    Math.atan2(
-      Math.sin(θ) * Math.sin(δ) * Math.cos(φ1),
-      Math.cos(δ) - Math.sin(φ1) * sinφ2
-    );
-
-  return [(λ2 * 180) / Math.PI, (φ2 * 180) / Math.PI];
-}
-
-/** Initial bearing in degrees [0, 360) from `from` to `to`. */
-export function bearingTo(
-  from: [number, number],
-  to: [number, number]
-): number {
-  const φ1 = (from[1] * Math.PI) / 180;
-  const φ2 = (to[1] * Math.PI) / 180;
-  const Δλ = ((to[0] - from[0]) * Math.PI) / 180;
-  const y = Math.sin(Δλ) * Math.cos(φ2);
-  const x =
-    Math.cos(φ1) * Math.sin(φ2) -
-    Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
-  const θ = (Math.atan2(y, x) * 180) / Math.PI;
-  return (θ + 360) % 360;
-}
-
-/** Great-circle distance in km between two `[lng,lat]` points. */
-export function distanceKm(a: [number, number], b: [number, number]): number {
-  const φ1 = (a[1] * Math.PI) / 180;
-  const φ2 = (b[1] * Math.PI) / 180;
-  const Δφ = ((b[1] - a[1]) * Math.PI) / 180;
-  const Δλ = ((b[0] - a[0]) * Math.PI) / 180;
-  const h =
-    Math.sin(Δφ / 2) ** 2 +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
-  return 2 * EARTH_RADIUS_KM * Math.asin(Math.sqrt(h));
-}
-
-/** Clockwise sweep angle from `start` to `end`, in (0, 360]. */
-export function sweepClockwise(startDeg: number, endDeg: number): number {
-  const s = ((endDeg - startDeg) % 360 + 360) % 360;
-  return s === 0 ? 360 : s;
-}
-
-/**
- * Polygon ring approximating a pie slice centred at `center` with the given
- * `radiusKm` and clockwise arc from `startBearing` to `endBearing`. The ring
- * goes center → arc samples → back to center.
- */
-export function sectorRing(
-  center: [number, number],
-  radiusKm: number,
-  startBearing: number,
-  endBearing: number,
-  steps = 64
-): [number, number][] {
-  const sweep = sweepClockwise(startBearing, endBearing);
-  const ring: [number, number][] = [center];
-  for (let i = 0; i <= steps; i++) {
-    const t = i / steps;
-    ring.push(destination(center, radiusKm, startBearing + sweep * t));
-  }
-  ring.push(center);
-  return ring;
 }
 
 /* ------------------------------------------------------------------ *

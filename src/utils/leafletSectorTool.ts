@@ -4,7 +4,7 @@ import {
   destination,
   sampleSectorPolygon,
   sweepClockwise,
-} from './leafletSectorMath';
+} from './geoLeaflet';
 
 export type SectorMeta = {
   center: [number, number]; // [lng, lat]

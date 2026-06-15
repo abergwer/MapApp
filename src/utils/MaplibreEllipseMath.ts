@@ -1,33 +1,8 @@
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import { DirectMode, SimpleSelectMode } from 'maplibre-gl-draw-circle';
+import { distanceKm, ellipseRing } from './geo';
 
-const EARTH_KM_PER_DEG_LAT = 110.574;
-const EARTH_KM_PER_DEG_LNG_AT_EQUATOR = 111.32;
 const MIN_RADIUS_KM = 0.001;
-
-function kmPerDegLngAt(lat: number): number {
-  return EARTH_KM_PER_DEG_LNG_AT_EQUATOR * Math.cos((lat * Math.PI) / 180);
-}
-
-/** Build the polygon ring approximating an ellipse. */
-export function ellipseRing(
-  center: [number, number],
-  radiusXInKm: number,
-  radiusYInKm: number,
-  steps = 64
-): [number, number][] {
-  const kmPerDegLng = kmPerDegLngAt(center[1]);
-  const ring: [number, number][] = [];
-  for (let i = 0; i < steps; i++) {
-    const theta = (i / steps) * 2 * Math.PI;
-    ring.push([
-      center[0] + (radiusXInKm * Math.cos(theta)) / kmPerDegLng,
-      center[1] + (radiusYInKm * Math.sin(theta)) / EARTH_KM_PER_DEG_LAT,
-    ]);
-  }
-  ring.push(ring[0]);
-  return ring;
-}
 
 /**
  * Ellipse draw mode for mapbox-gl-draw / maplibre.
@@ -43,11 +18,11 @@ function updateEllipse(state: any, e: any) {
   if (center.length === 0) return;
 
   const radiusXInKm = Math.max(
-    Math.abs(e.lngLat.lng - center[0]) * kmPerDegLngAt(center[1]),
+    distanceKm(center, [e.lngLat.lng, center[1]]),
     MIN_RADIUS_KM
   );
   const radiusYInKm = Math.max(
-    Math.abs(e.lngLat.lat - center[1]) * EARTH_KM_PER_DEG_LAT,
+    distanceKm(center, [center[0], e.lngLat.lat]),
     MIN_RADIUS_KM
   );
 
@@ -225,11 +200,11 @@ DirectMode.dragVertex = function (this: any, state: any, e: any, delta: any) {
 
   const center = state.feature.properties.center;
   const radiusXInKm = Math.max(
-    Math.abs(e.lngLat.lng - center[0]) * kmPerDegLngAt(center[1]),
+    distanceKm(center, [e.lngLat.lng, center[1]]),
     MIN_RADIUS_KM
   );
   const radiusYInKm = Math.max(
-    Math.abs(e.lngLat.lat - center[1]) * EARTH_KM_PER_DEG_LAT,
+    distanceKm(center, [center[0], e.lngLat.lat]),
     MIN_RADIUS_KM
   );
 

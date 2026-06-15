@@ -3,7 +3,7 @@ import {
   bboxToCenterAndRadii,
   latLngScaleAt,
   sampleEllipsePolygon,
-} from './leafletEllipseMath';
+} from './geoLeaflet';
 
 export type EllipseMeta = {
   center: [number, number]; // [lng, lat]
@@ -192,7 +192,7 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
 
     const onMove = (e: L.LeafletMouseEvent) => {
       if (!firstCorner) return;
-      const { center, radiusX, radiusY } = bboxToCenterAndRadii(map, firstCorner, e.latlng);
+      const { center, radiusX, radiusY } = bboxToCenterAndRadii(firstCorner, e.latlng);
       const latlngs = sampleEllipsePolygon(center, radiusX, radiusY);
       if (preview) {
         preview.setLatLngs(latlngs);
@@ -215,7 +215,7 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
         firstCorner = e.latlng;
         return;
       }
-      const { center, radiusX, radiusY } = bboxToCenterAndRadii(map, firstCorner, e.latlng);
+      const { center, radiusX, radiusY } = bboxToCenterAndRadii(firstCorner, e.latlng);
 
       // Commit the preview: keep it on the map as the final shape and tag it
       // with ellipse metadata so the edit-mode controller can find it later.
