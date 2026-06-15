@@ -28,6 +28,7 @@ export class LeafletEngine implements MapEngine {
       zoomAnimation: false,
       fadeAnimation: false,
       markerZoomAnimation: false,
+      attributionControl: false,
     });
 
     L.control.scale({ position: 'bottomright' }).addTo(this.map);
