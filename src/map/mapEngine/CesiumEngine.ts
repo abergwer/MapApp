@@ -1,7 +1,7 @@
 import * as Cesium from 'cesium';
 import 'cesium/Build/Cesium/Widgets/widgets.css';
 import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
-import config from '../../config.json';
+import config from '../../../config.json';
 
 // Altitude (metres) at the equator for Leaflet zoom 0 (256-px tile size).
 // Deck.gl uses 512-px tile math → deckZoom = leafletZoom − 1.
@@ -140,6 +140,20 @@ export class CesiumEngine implements MapEngine {
   startDrawCircle(onComplete: (center: [number, number], radius: number) => void): void {
     throw new Error('Method not implemented.');
   }
+
+  startDrawEllipse(onComplete: (center: [number, number], radiusX: number, radiusY: number) => void): void {
+    throw new Error('Method not implemented.');
+  }
+
+  startDrawSector(onComplete: (
+    center: [number, number],
+    radius: number,
+    startBearing: number,
+    endBearing: number
+  ) => void): void {
+    throw new Error('Method not implemented.');
+  }
+
   cancelDrawing(): void {
     throw new Error('Method not implemented.');
   }

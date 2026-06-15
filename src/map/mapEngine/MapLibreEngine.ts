@@ -1,18 +1,18 @@
 import maplibregl from 'maplibre-gl/dist/maplibre-gl.js';
-import type { MapEngine, MapEngineOptions, MapViewState } from './mapEngine/MapEngine';
+import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import config from "../../config.json";
+import config from "../../../config.json";
 import MapboxDraw from '@mapbox/mapbox-gl-draw';
 import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-import { drawStyles } from '../shared/styles/drawStyles';
+import { drawStyles } from '../../shared/styles/drawStyles';
 import {
   CircleMode,
   DragCircleMode,
   DirectMode,
   SimpleSelectMode
 } from 'maplibre-gl-draw-circle';
-import {DragEllipseMode} from '../utils/MaplibreEllipseMath';
-import {DragSectorMode} from '../utils/MaplibreSectorMath';
+import {DragEllipseMode} from '../../utils/MaplibreEllipseMath';
+import {DragSectorMode} from '../../utils/MaplibreSectorMath';
 
 export class MapLibreEngine implements MapEngine {
   private map: maplibregl.Map | undefined;

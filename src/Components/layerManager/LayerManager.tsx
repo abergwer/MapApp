@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react';
 import { Deck } from '@deck.gl/core';
 import type { Layer } from '@deck.gl/core';
-import { useMapContext } from '../map/MapContext';
-import registeredLayers from './Layers/index';
+import { useMapContext } from '../../map/MapContext';
+import registeredLayers from './index';
 
 interface LayerManagerProps {
   /** Override the default registered layers with custom Deck.gl layers. */

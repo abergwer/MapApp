@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { createMapEngine } from '../map/engineFactory';
-import { mapEngineLabel, selectedMapEngine } from '../map/mapConfig';
-import { MapContext } from '../map/MapContext';
-import type { MapEngine } from '../map/MapEngine';
-import CoordinatesBar from './features/CoordinatesBar';
+import { createMapEngine } from '../EngineFactory';
+import { mapEngineLabel, selectedMapEngine } from '../mapConfig';
+import { MapContext } from '../MapContext';
+import type { MapEngine } from '../mapEngine/MapEngine';
+import CoordinatesBar from '../../Components/features/CoordinatesBar';
 import './MapWrapper.css';
-import ToolBar from './features/ToolBar';
+import ToolBar from '../../Components/features/ToolBar';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],

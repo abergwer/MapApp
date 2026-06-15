@@ -1,17 +1,17 @@
 import L from 'leaflet';
 import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
 import 'leaflet/dist/leaflet.css';
-import config from '../../config.json';
+import config from '../../../config.json';
 import '@geoman-io/leaflet-geoman-free';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import {
   createLeafletEllipseTool,
   type LeafletEllipseTool,
-} from '../utils/leafletEllipseTool';
+} from '../../utils/leafletEllipseTool';
 import {
   createLeafletSectorTool,
   type LeafletSectorTool,
-} from '../utils/leafletSectorTool';
+} from '../../utils/leafletSectorTool';
 
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;

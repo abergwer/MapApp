@@ -1,6 +1,6 @@
 import './App.css'
-import LayerManager from './Components/LayerManager'
-import MapWrapper from './Components/MapWrapper'
+import LayerManager from './Components/layerManager/LayerManager'
+import MapWrapper from './map/mapWrapper/MapWrapper'
 import { mapEngineLabel, selectedMapEngine } from './map/mapConfig'
 
 function App() {

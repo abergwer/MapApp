@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useMapContext } from '../../map/MapContext';
-import type { MapEngine } from '../../map/MapEngine';
+import type { MapEngine } from '../../map/mapEngine/MapEngine';
 import './ToolBar.css';
 
 type DrawTool = 'point' | 'line' | 'polygon' | 'circle' | 'ellipse' | 'sector';

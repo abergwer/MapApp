@@ -1,4 +1,4 @@
-import type { MapEngineType } from './MapEngine';
+import type { MapEngineType } from './mapEngine/MapEngine';
 
 export const selectedMapEngine: MapEngineType = 'maplibre';
 

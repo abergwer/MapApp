@@ -1,5 +1,5 @@
 import { createContext, useContext, type RefObject } from 'react';
-import type { MapEngine } from './MapEngine';
+import type { MapEngine } from './mapEngine/MapEngine';
 
 export interface MapContextValue {
   engine: MapEngine | null;
