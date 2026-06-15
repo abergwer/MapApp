@@ -185,6 +185,7 @@ export class LeafletEngine implements MapEngine {
       this.sectorTool?.cancelDraw();
       map.pm.disableDraw();
       map.dragging.disable();
+      map.doubleClickZoom.disable();
       map.keyboard.disable();
       // Ellipse + sector polygons are tagged `pmIgnore`, so Geoman's global
       // edit skips them and only handles markers/lines/polygons/circles.
@@ -196,6 +197,7 @@ export class LeafletEngine implements MapEngine {
       this.ellipseTool?.disableEdit();
       this.sectorTool?.disableEdit();
       map.dragging.enable();
+      map.doubleClickZoom.enable();
       map.keyboard.enable();
     }
   }
