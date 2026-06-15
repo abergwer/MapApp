@@ -42,6 +42,20 @@ export default function LayerManager({ layers }: LayerManagerProps) {
 
     deckRef.current = deck;
 
+    // Keep Deck's drawing buffer in sync with the container. Without this,
+    // Deck holds onto the initial width/height and its viewport projection
+    // drifts from the basemap whenever the window/container is resized,
+    // making layers appear offset.
+    const resizeObserver = new ResizeObserver(() => {
+      const deck = deckRef.current;
+      if (!deck) return;
+      const { width, height } = container.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
+      deck.setProps({ width, height, viewState: engine.getViewState() });
+      deck.redraw('resize');
+    });
+    resizeObserver.observe(container);
+
     // Keep Deck.gl viewport in sync with whichever map engine is active.
     // Forcing a synchronous redraw makes the overlay paint in the same frame as
     // the basemap, preventing the one-frame lag that looks like "shaking".
@@ -54,6 +68,7 @@ export default function LayerManager({ layers }: LayerManagerProps) {
 
     return () => {
       unsubscribe();
+      resizeObserver.disconnect();
       deck.finalize();
       canvas.remove();
       deckRef.current = null;
