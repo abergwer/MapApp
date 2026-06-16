@@ -6,6 +6,7 @@ import type { MapEngine } from '../mapEngine/MapEngine';
 import CoordinatesBar from '../../Components/features/CoordinatesBar';
 import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
+import MeasuringTools from '../../Components/features/MeasuringTools';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],
@@ -66,7 +67,8 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
         </div>
         <div ref={containerRef} className="map-canvas" style={{ position: 'relative' }}>
           <div className="map-tools" >
-            <ToolBar showMeasureTools={showMeasureTools} />
+            <ToolBar />
+            {showMeasureTools && <MeasuringTools />}
           </div>
           <div className="map-coords-overlay">
             <CoordinatesBar />

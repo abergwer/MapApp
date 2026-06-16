@@ -3,15 +3,7 @@ import { useMapContext } from '../../map/MapContext';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
 import './ToolBar.css';
 
-type DrawTool =
-  | 'point'
-  | 'line'
-  | 'polygon'
-  | 'circle'
-  | 'ellipse'
-  | 'sector'
-  | 'measure-distance'
-  | 'measure-area';
+type DrawTool = 'point' | 'line' | 'polygon' | 'circle' | 'ellipse' | 'sector';
 
 const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean }[] = [
   { id: 'point', label: 'Point', icon: '•', enabled: true },
@@ -21,16 +13,6 @@ const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean 
   { id: 'ellipse', label: 'Ellipse', icon: '⬭', enabled: true },
   { id: 'sector', label: 'Sector', icon: '◔', enabled: true },
 ];
-
-const MEASURE_TOOLS: { id: DrawTool; label: string; icon: string }[] = [
-  { id: 'measure-distance', label: 'Measure Distance', icon: '↳' },
-  { id: 'measure-area', label: 'Measure Area', icon: '▢' },
-];
-
-interface ToolBarProps {
-  /** Show the measure-distance / measure-area / clear group. Default: true. */
-  showMeasureTools?: boolean;
-}
 
 function startDraw(engine: MapEngine, tool: DrawTool) {
   switch (tool) {
@@ -52,14 +34,10 @@ function startDraw(engine: MapEngine, tool: DrawTool) {
       return engine.startDrawSector?.((center, radius, startBearing, endBearing) =>
         console.log('sector', center, radius, startBearing, endBearing)
       );
-    case 'measure-distance':
-      return engine.startMeasureDistance?.((km) => console.log('distance (km)', km));
-    case 'measure-area':
-      return engine.startMeasureArea?.((km2) => console.log('area (km²)', km2));
   }
 }
 
-export default function ToolBar({ showMeasureTools = true }: ToolBarProps = {}) {
+export default function ToolBar() {
   const { engine } = useMapContext();
   const [open, setOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<DrawTool | null>(null);
@@ -113,16 +91,7 @@ export default function ToolBar({ showMeasureTools = true }: ToolBarProps = {}) 
   };
 
   const supportsEdit = Boolean(engine?.setEditMode);
-  const supportsMeasure =
-    showMeasureTools &&
-    Boolean(
-      engine?.startMeasureDistance &&
-        engine?.startMeasureArea &&
-        engine?.removeMeasurements
-    );
-  const activeLabel =
-    DRAW_TOOLS.find((t) => t.id === activeTool)?.label ??
-    MEASURE_TOOLS.find((t) => t.id === activeTool)?.label;
+  const activeLabel = DRAW_TOOLS.find((t) => t.id === activeTool)?.label;
   const triggerLabel = editing
     ? 'Edit mode'
     : activeLabel
@@ -157,33 +126,6 @@ export default function ToolBar({ showMeasureTools = true }: ToolBarProps = {}) 
               <span>{tool.label}</span>
             </button>
           ))}
-
-          {supportsMeasure && (
-            <>
-              <div className="toolbar-menu-divider" />
-              {MEASURE_TOOLS.map((tool) => (
-                <button
-                  key={tool.id}
-                  type="button"
-                  role="menuitem"
-                  className={`toolbar-menu-item ${activeTool === tool.id && !editing ? 'is-active' : ''}`}
-                  onClick={() => handleSelect(tool.id)}
-                >
-                  <span className="toolbar-menu-icon" aria-hidden>{tool.icon}</span>
-                  <span>{tool.label}</span>
-                </button>
-              ))}
-              <button
-                type="button"
-                role="menuitem"
-                className="toolbar-menu-item"
-                onClick={() => engine?.removeMeasurements?.()}
-              >
-                <span className="toolbar-menu-icon" aria-hidden>✖</span>
-                <span>Remove Measurements</span>
-              </button>
-            </>
-          )}
 
           {supportsEdit && (
             <>
