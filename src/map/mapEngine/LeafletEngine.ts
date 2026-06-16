@@ -12,6 +12,13 @@ import {
   createLeafletSectorTool,
   type LeafletSectorTool,
 } from '../utils/leafletSectorTool';
+import {
+  distanceKm,
+  formatArea,
+  formatDistance,
+  polygonAreaKm2,
+  type LngLat,
+} from '../utils/geo';
 
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;
@@ -164,6 +171,66 @@ export class LeafletEngine implements MapEngine {
     this.sectorTool?.startDraw(({ center, radius, startBearing, endBearing }) =>
       onComplete(center, radius, startBearing, endBearing)
     );
+  }
+
+  startMeasureDistance(onComplete: (distanceKm: number) => void): void {
+    this.map?.pm.enableDraw('Line');
+
+    const handler = (e: any) => {
+      const latlngs = e.layer.getLatLngs() as L.LatLng[];
+      const coords: LngLat[] = latlngs.map((p) => [p.lng, p.lat]);
+
+      let total = 0;
+      for (let i = 1; i < coords.length; i++) {
+        const segKm = distanceKm(coords[i - 1], coords[i]);
+        total += segKm;
+        const mid = L.latLng(
+          (latlngs[i - 1].lat + latlngs[i].lat) / 2,
+          (latlngs[i - 1].lng + latlngs[i].lng) / 2,
+        );
+        L.marker(mid, {
+          icon: L.divIcon({
+            className: 'measure-label measure-label--segment',
+            html: formatDistance(segKm),
+          }),
+          interactive: false,
+          pmIgnore: true,
+        }).addTo(this.map!);
+      }
+
+      e.layer
+        .bindTooltip(`Total: ${formatDistance(total)}`, {
+          permanent: true,
+          direction: 'top',
+        })
+        .openTooltip();
+      e.layer.options.pmIgnore = true;
+      L.PM.reInitLayer(e.layer);
+      onComplete(total);
+      this.map?.off('pm:create', handler);
+    };
+
+    this.map?.on('pm:create', handler);
+  }
+
+  startMeasureArea(onComplete: (areaKm2: number) => void): void {
+    this.map?.pm.enableDraw('Polygon');
+
+    const handler = (e: any) => {
+      const ring: LngLat[] = e.layer
+        .getLatLngs()[0]
+        .map((p: L.LatLng) => [p.lng, p.lat]);
+      const km2 = polygonAreaKm2(ring);
+      e.layer
+        .bindTooltip(formatArea(km2), { permanent: true, direction: 'center' })
+        .openTooltip();
+      e.layer.options.pmIgnore = true;
+      L.PM.reInitLayer(e.layer);
+      onComplete(km2);
+      this.map?.off('pm:create', handler);
+    };
+
+    this.map?.on('pm:create', handler);
   }
 
   cancelDrawing(): void {

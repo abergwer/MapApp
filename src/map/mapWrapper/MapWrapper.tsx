@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { createMapEngine } from '../EngineFactory';
+import { createMapEngine } from '../engineFactory';
 import { mapEngineLabel, selectedMapEngine } from '../mapConfig';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';

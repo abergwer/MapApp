@@ -13,6 +13,14 @@ import {
 } from 'maplibre-gl-draw-circle';
 import {DragEllipseMode} from '../utils/MaplibreEllipseMath';
 import {DragSectorMode} from '../utils/MaplibreSectorMath';
+import {
+  centroidOf,
+  distanceKm,
+  formatArea,
+  formatDistance,
+  polygonAreaKm2,
+  type LngLat,
+} from '../utils/geo';
 
 export class MapLibreEngine implements MapEngine {
   private map: maplibregl.Map | undefined;
@@ -20,6 +28,9 @@ export class MapLibreEngine implements MapEngine {
   private clickCallback?: (lat: number, lng: number) => void;
   private draw: MapboxDraw | undefined;
   private cancelCurrentDraw?: () => void;
+  private measureLabels: maplibregl.Marker[] = [];
+  private measureLayerIds: string[] = [];
+  private measureCounter = 0;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = new maplibregl.Map({
@@ -111,8 +122,61 @@ export class MapLibreEngine implements MapEngine {
   }
 
   destroy(): void {
+    this.measureLabels.forEach((m) => m.remove());
+    this.measureLabels = [];
+    this.measureLayerIds.forEach((id) => {
+      if (this.map?.getLayer(id)) this.map.removeLayer(id);
+      if (this.map?.getSource(id)) this.map.removeSource(id);
+    });
+    this.measureLayerIds = [];
     this.map?.remove();
     this.map = undefined;
+  }
+
+  /**
+   * Move a feature from the editable MapboxDraw layer onto a plain,
+   * non-interactive source so the user can't drag/reshape it afterward.
+   */
+  private freezeAsMeasure(
+    feature: GeoJSON.Feature,
+    paint: 'line' | 'fill',
+  ): void {
+    if (!this.map || !feature.id) return;
+    this.draw?.delete(String(feature.id));
+    const id = `measure-${paint}-${this.measureCounter++}`;
+    this.map.addSource(id, { type: 'geojson', data: feature });
+    if (paint === 'line') {
+      this.map.addLayer({
+        id,
+        type: 'line',
+        source: id,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#2563eb', 'line-width': 3 },
+      });
+    } else {
+      this.map.addLayer({
+        id,
+        type: 'fill',
+        source: id,
+        paint: {
+          'fill-color': '#2563eb',
+          'fill-opacity': 0.2,
+          'fill-outline-color': '#2563eb',
+        },
+      });
+    }
+    this.measureLayerIds.push(id);
+  }
+
+  private addMeasureLabel(text: string, position: LngLat): void {
+    if (!this.map) return;
+    const el = document.createElement('div');
+    el.className = 'measure-label';
+    el.textContent = text;
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat(position)
+      .addTo(this.map);
+    this.measureLabels.push(marker);
   }
 
   startDrawPoint(onComplete: (position: [number, number]) => void): void {
@@ -211,6 +275,39 @@ export class MapLibreEngine implements MapEngine {
       this.map?.off('draw.create', handler);
     };
 
+    this.map?.on('draw.create', handler);
+  }
+
+  startMeasureDistance(onComplete: (distanceKm: number) => void): void {
+    this.draw?.changeMode('draw_line_string');
+    const handler = (e: any) => {
+      const feature = e.features[0];
+      const coords = feature.geometry.coordinates as LngLat[];
+      let total = 0;
+      for (let i = 1; i < coords.length; i++) {
+        const segKm = distanceKm(coords[i - 1], coords[i]);
+        total += segKm;
+        this.addMeasureLabel(formatDistance(segKm), centroidOf([coords[i - 1], coords[i]]));
+      }
+      this.addMeasureLabel(`Total: ${formatDistance(total)}`, coords[coords.length - 1]);
+      this.freezeAsMeasure(feature, 'line');
+      onComplete(total);
+      this.map?.off('draw.create', handler);
+    };
+    this.map?.on('draw.create', handler);
+  }
+
+  startMeasureArea(onComplete: (areaKm2: number) => void): void {
+    this.draw?.changeMode('draw_polygon');
+    const handler = (e: any) => {
+      const feature = e.features[0];
+      const ring = feature.geometry.coordinates[0] as LngLat[];
+      const km2 = polygonAreaKm2(ring);
+      this.addMeasureLabel(formatArea(km2), centroidOf(ring));
+      this.freezeAsMeasure(feature, 'fill');
+      onComplete(km2);
+      this.map?.off('draw.create', handler);
+    };
     this.map?.on('draw.create', handler);
   }
 

@@ -57,6 +57,19 @@ export interface MapEngine {
   cancelDrawing(): void;
 
   /**
+   * Draw a polyline and report its total great-circle length in kilometres.
+   * The engine is also responsible for displaying the result on the map
+   * (e.g. as a label at the line endpoint). Optional.
+   */
+  startMeasureDistance?(onComplete: (distanceKm: number) => void): void;
+
+  /**
+   * Draw a polygon and report its spherical area in km². The engine displays
+   * the value on the map (e.g. as a label at the polygon centroid). Optional.
+   */
+  startMeasureArea?(onComplete: (areaKm2: number) => void): void;
+
+  /**
    * Toggle a "modify" mode where the user can drag/reshape every previously
    * drawn feature on the map. Optional — engines that don't support it can
    * omit the method and the UI will hide the affordance.

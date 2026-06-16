@@ -41,3 +41,18 @@
   left: 12px;
   z-index: 1000;
 }
+
+.measure-label {
+  background: rgba(20, 24, 32, 0.92);
+  color: #f3f4f6;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font: 12px/1 sans-serif;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  border: none;
+  width: auto !important;
+  height: auto !important;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
