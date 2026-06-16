@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { createMapEngine } from '../engineFactory';
+import { createMapEngine } from '../EngineFactory';
 import { mapEngineLabel, selectedMapEngine } from '../mapConfig';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
@@ -14,9 +14,11 @@ const defaultOptions = {
 
 interface MapWrapperProps {
   children?: ReactNode;
+  /** Show the measure tools group in the toolbar. Default: true. */
+  showMeasureTools?: boolean;
 }
 
-export default function MapWrapper({ children }: MapWrapperProps) {
+export default function MapWrapper({ children, showMeasureTools = true }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<MapEngine | null>(null);
 
@@ -64,7 +66,7 @@ export default function MapWrapper({ children }: MapWrapperProps) {
         </div>
         <div ref={containerRef} className="map-canvas" style={{ position: 'relative' }}>
           <div className="map-tools" >
-            <ToolBar />
+            <ToolBar showMeasureTools={showMeasureTools} />
           </div>
           <div className="map-coords-overlay">
             <CoordinatesBar />

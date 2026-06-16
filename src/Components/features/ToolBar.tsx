@@ -11,7 +11,9 @@ type DrawTool =
   | 'ellipse'
   | 'sector'
   | 'measure-distance'
-  | 'measure-area';
+  | 'measure-area'
+  | 'remove-measurements'
+  ;
 
 const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean }[] = [
   { id: 'point', label: 'Point', icon: '•', enabled: true },
@@ -25,7 +27,13 @@ const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean 
 const MEASURE_TOOLS: { id: DrawTool; label: string; icon: string }[] = [
   { id: 'measure-distance', label: 'Measure Distance', icon: '↳' },
   { id: 'measure-area', label: 'Measure Area', icon: '▢' },
+  { id: 'remove-measurements', label: 'Remove Measurements', icon: '✖' },
 ];
+
+interface ToolBarProps {
+  /** Show the measure-distance / measure-area / clear group. Default: true. */
+  showMeasureTools?: boolean;
+}
 
 function startDraw(engine: MapEngine, tool: DrawTool) {
   switch (tool) {
@@ -51,10 +59,12 @@ function startDraw(engine: MapEngine, tool: DrawTool) {
       return engine.startMeasureDistance?.((km) => console.log('distance (km)', km));
     case 'measure-area':
       return engine.startMeasureArea?.((km2) => console.log('area (km²)', km2));
+    case 'remove-measurements':
+      return engine.removeMeasurements?.();
   }
 }
 
-export default function ToolBar() {
+export default function ToolBar({ showMeasureTools = true }: ToolBarProps = {}) {
   const { engine } = useMapContext();
   const [open, setOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<DrawTool | null>(null);
@@ -108,9 +118,13 @@ export default function ToolBar() {
   };
 
   const supportsEdit = Boolean(engine?.setEditMode);
-  const supportsMeasure = Boolean(
-    engine?.startMeasureDistance && engine?.startMeasureArea
-  );
+  const supportsMeasure =
+    showMeasureTools &&
+    Boolean(
+      engine?.startMeasureDistance &&
+        engine?.startMeasureArea &&
+        engine?.removeMeasurements
+    );
   const activeLabel =
     DRAW_TOOLS.find((t) => t.id === activeTool)?.label ??
     MEASURE_TOOLS.find((t) => t.id === activeTool)?.label;

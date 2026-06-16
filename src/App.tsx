@@ -10,7 +10,7 @@ function App() {
       <p>
         This app uses <strong>{mapEngineLabel[selectedMapEngine]}</strong> as the selected map engine.
       </p>
-      <MapWrapper>
+      <MapWrapper showMeasureTools={true}>
         <LayerManager />
       </MapWrapper>
     </main>
