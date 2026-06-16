@@ -311,6 +311,16 @@ export class MapLibreEngine implements MapEngine {
     this.map?.on('draw.create', handler);
   }
 
+  removeMeasurements(): void {
+    this.measureLabels.forEach((m) => m.remove());
+    this.measureLabels = [];
+    this.measureLayerIds.forEach((id) => {
+      if (this.map?.getLayer(id)) this.map.removeLayer(id);
+      if (this.map?.getSource(id)) this.map.removeSource(id);
+    });
+    this.measureLayerIds = [];
+  }
+
   cancelDrawing(): void {
     this.cancelCurrentDraw?.();
     if (this.draw?.getMode() !== 'simple_select') {

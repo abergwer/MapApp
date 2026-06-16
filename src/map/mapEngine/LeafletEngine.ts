@@ -26,6 +26,7 @@ export class LeafletEngine implements MapEngine {
   private clickCallback?: (lat: number, lng: number) => void;
   private ellipseTool?: LeafletEllipseTool;
   private sectorTool?: LeafletSectorTool;
+  private measureLayers: L.Layer[] = [];
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = L.map(container, {
@@ -98,6 +99,7 @@ export class LeafletEngine implements MapEngine {
   }
 
   destroy(): void {
+    this.removeMeasurements();
     this.ellipseTool = undefined;
     this.sectorTool = undefined;
     this.map?.remove();
@@ -188,7 +190,7 @@ export class LeafletEngine implements MapEngine {
           (latlngs[i - 1].lat + latlngs[i].lat) / 2,
           (latlngs[i - 1].lng + latlngs[i].lng) / 2,
         );
-        L.marker(mid, {
+        const segLabel = L.marker(mid, {
           icon: L.divIcon({
             className: 'measure-label measure-label--segment',
             html: formatDistance(segKm),
@@ -196,6 +198,7 @@ export class LeafletEngine implements MapEngine {
           interactive: false,
           pmIgnore: true,
         }).addTo(this.map!);
+        this.measureLayers.push(segLabel);
       }
 
       e.layer
@@ -206,6 +209,7 @@ export class LeafletEngine implements MapEngine {
         .openTooltip();
       e.layer.options.pmIgnore = true;
       L.PM.reInitLayer(e.layer);
+      this.measureLayers.push(e.layer);
       onComplete(total);
       this.map?.off('pm:create', handler);
     };
@@ -226,11 +230,17 @@ export class LeafletEngine implements MapEngine {
         .openTooltip();
       e.layer.options.pmIgnore = true;
       L.PM.reInitLayer(e.layer);
+      this.measureLayers.push(e.layer);
       onComplete(km2);
       this.map?.off('pm:create', handler);
     };
 
     this.map?.on('pm:create', handler);
+  }
+
+  removeMeasurements(): void {
+    this.measureLayers.forEach((layer) => this.map?.removeLayer(layer));
+    this.measureLayers = [];
   }
 
   cancelDrawing(): void {

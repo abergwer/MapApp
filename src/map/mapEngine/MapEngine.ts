@@ -69,6 +69,8 @@ export interface MapEngine {
    */
   startMeasureArea?(onComplete: (areaKm2: number) => void): void;
 
+  removeMeasurements?(): void;
+
   /**
    * Toggle a "modify" mode where the user can drag/reshape every previously
    * drawn feature on the map. Optional — engines that don't support it can
