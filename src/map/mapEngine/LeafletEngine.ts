@@ -7,11 +7,11 @@ import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import {
   createLeafletEllipseTool,
   type LeafletEllipseTool,
-} from '../../utils/leafletEllipseTool';
+} from '../utils/leafletEllipseTool';
 import {
   createLeafletSectorTool,
   type LeafletSectorTool,
-} from '../../utils/leafletSectorTool';
+} from '../utils/leafletSectorTool';
 
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;
