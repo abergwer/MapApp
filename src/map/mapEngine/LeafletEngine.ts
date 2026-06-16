@@ -180,25 +180,19 @@ export class LeafletEngine implements MapEngine {
 
     const handler = (e: any) => {
       const latlngs = e.layer.getLatLngs() as L.LatLng[];
-      const coords: LngLat[] = latlngs.map((p) => [p.lng, p.lat]);
-
       let total = 0;
-      for (let i = 1; i < coords.length; i++) {
-        const segKm = distanceKm(coords[i - 1], coords[i]);
+
+      for (let i = 1; i < latlngs.length; i++) {
+        const segKm = distanceKm(
+          [latlngs[i - 1].lng, latlngs[i - 1].lat],
+          [latlngs[i].lng, latlngs[i].lat],
+        );
         total += segKm;
         const mid = L.latLng(
           (latlngs[i - 1].lat + latlngs[i].lat) / 2,
           (latlngs[i - 1].lng + latlngs[i].lng) / 2,
         );
-        const segLabel = L.marker(mid, {
-          icon: L.divIcon({
-            className: 'measure-label measure-label--segment',
-            html: formatDistance(segKm),
-          }),
-          interactive: false,
-          pmIgnore: true,
-        }).addTo(this.map!);
-        this.measureLayers.push(segLabel);
+        this.addMeasureLabel(mid, formatDistance(segKm));
       }
 
       e.layer
@@ -207,9 +201,7 @@ export class LeafletEngine implements MapEngine {
           direction: 'top',
         })
         .openTooltip();
-      e.layer.options.pmIgnore = true;
-      L.PM.reInitLayer(e.layer);
-      this.measureLayers.push(e.layer);
+      this.freezeAsMeasure(e.layer);
       onComplete(total);
       this.map?.off('pm:create', handler);
     };
@@ -228,9 +220,7 @@ export class LeafletEngine implements MapEngine {
       e.layer
         .bindTooltip(formatArea(km2), { permanent: true, direction: 'center' })
         .openTooltip();
-      e.layer.options.pmIgnore = true;
-      L.PM.reInitLayer(e.layer);
-      this.measureLayers.push(e.layer);
+      this.freezeAsMeasure(e.layer);
       onComplete(km2);
       this.map?.off('pm:create', handler);
     };
@@ -241,6 +231,24 @@ export class LeafletEngine implements MapEngine {
   removeMeasurements(): void {
     this.measureLayers.forEach((layer) => this.map?.removeLayer(layer));
     this.measureLayers = [];
+  }
+
+  /** Add a non-interactive text label and track it for removal. */
+  private addMeasureLabel(at: L.LatLng, text: string): void {
+    if (!this.map) return;
+    const marker = L.marker(at, {
+      icon: L.divIcon({ className: 'measure-label', html: text }),
+      interactive: false,
+      pmIgnore: true,
+    }).addTo(this.map);
+    this.measureLayers.push(marker);
+  }
+
+  /** Mark a drawn layer as non-editable and track it for removal. */
+  private freezeAsMeasure(layer: L.Layer & { options: { pmIgnore?: boolean } }): void {
+    layer.options.pmIgnore = true;
+    L.PM.reInitLayer(layer);
+    this.measureLayers.push(layer);
   }
 
   cancelDrawing(): void {

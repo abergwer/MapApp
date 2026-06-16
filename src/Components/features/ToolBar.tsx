@@ -11,9 +11,7 @@ type DrawTool =
   | 'ellipse'
   | 'sector'
   | 'measure-distance'
-  | 'measure-area'
-  | 'remove-measurements'
-  ;
+  | 'measure-area';
 
 const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean }[] = [
   { id: 'point', label: 'Point', icon: '•', enabled: true },
@@ -27,7 +25,6 @@ const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean 
 const MEASURE_TOOLS: { id: DrawTool; label: string; icon: string }[] = [
   { id: 'measure-distance', label: 'Measure Distance', icon: '↳' },
   { id: 'measure-area', label: 'Measure Area', icon: '▢' },
-  { id: 'remove-measurements', label: 'Remove Measurements', icon: '✖' },
 ];
 
 interface ToolBarProps {
@@ -59,8 +56,6 @@ function startDraw(engine: MapEngine, tool: DrawTool) {
       return engine.startMeasureDistance?.((km) => console.log('distance (km)', km));
     case 'measure-area':
       return engine.startMeasureArea?.((km2) => console.log('area (km²)', km2));
-    case 'remove-measurements':
-      return engine.removeMeasurements?.();
   }
 }
 
@@ -178,6 +173,15 @@ export default function ToolBar({ showMeasureTools = true }: ToolBarProps = {}) 
                   <span>{tool.label}</span>
                 </button>
               ))}
+              <button
+                type="button"
+                role="menuitem"
+                className="toolbar-menu-item"
+                onClick={() => engine?.removeMeasurements?.()}
+              >
+                <span className="toolbar-menu-icon" aria-hidden>✖</span>
+                <span>Remove Measurements</span>
+              </button>
             </>
           )}
 

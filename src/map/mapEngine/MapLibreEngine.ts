@@ -122,61 +122,9 @@ export class MapLibreEngine implements MapEngine {
   }
 
   destroy(): void {
-    this.measureLabels.forEach((m) => m.remove());
-    this.measureLabels = [];
-    this.measureLayerIds.forEach((id) => {
-      if (this.map?.getLayer(id)) this.map.removeLayer(id);
-      if (this.map?.getSource(id)) this.map.removeSource(id);
-    });
-    this.measureLayerIds = [];
+    this.removeMeasurements();
     this.map?.remove();
     this.map = undefined;
-  }
-
-  /**
-   * Move a feature from the editable MapboxDraw layer onto a plain,
-   * non-interactive source so the user can't drag/reshape it afterward.
-   */
-  private freezeAsMeasure(
-    feature: GeoJSON.Feature,
-    paint: 'line' | 'fill',
-  ): void {
-    if (!this.map || !feature.id) return;
-    this.draw?.delete(String(feature.id));
-    const id = `measure-${paint}-${this.measureCounter++}`;
-    this.map.addSource(id, { type: 'geojson', data: feature });
-    if (paint === 'line') {
-      this.map.addLayer({
-        id,
-        type: 'line',
-        source: id,
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#2563eb', 'line-width': 3 },
-      });
-    } else {
-      this.map.addLayer({
-        id,
-        type: 'fill',
-        source: id,
-        paint: {
-          'fill-color': '#2563eb',
-          'fill-opacity': 0.2,
-          'fill-outline-color': '#2563eb',
-        },
-      });
-    }
-    this.measureLayerIds.push(id);
-  }
-
-  private addMeasureLabel(text: string, position: LngLat): void {
-    if (!this.map) return;
-    const el = document.createElement('div');
-    el.className = 'measure-label';
-    el.textContent = text;
-    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-      .setLngLat(position)
-      .addTo(this.map);
-    this.measureLabels.push(marker);
   }
 
   startDrawPoint(onComplete: (position: [number, number]) => void): void {
@@ -326,5 +274,51 @@ export class MapLibreEngine implements MapEngine {
     if (this.draw?.getMode() !== 'simple_select') {
       this.draw?.changeMode('simple_select');
     }
+  }
+
+  /**
+   * Move a feature from the editable MapboxDraw layer onto a plain,
+   * non-interactive source so the user can't drag/reshape it afterward.
+   */
+  private freezeAsMeasure(
+    feature: GeoJSON.Feature,
+    paint: 'line' | 'fill',
+  ): void {
+    if (!this.map || !feature.id) return;
+    this.draw?.delete(String(feature.id));
+    const id = `measure-${paint}-${this.measureCounter++}`;
+    this.map.addSource(id, { type: 'geojson', data: feature });
+    if (paint === 'line') {
+      this.map.addLayer({
+        id,
+        type: 'line',
+        source: id,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': '#2563eb', 'line-width': 3 },
+      });
+    } else {
+      this.map.addLayer({
+        id,
+        type: 'fill',
+        source: id,
+        paint: {
+          'fill-color': '#2563eb',
+          'fill-opacity': 0.2,
+          'fill-outline-color': '#2563eb',
+        },
+      });
+    }
+    this.measureLayerIds.push(id);
+  }
+
+  private addMeasureLabel(text: string, position: LngLat): void {
+    if (!this.map) return;
+    const el = document.createElement('div');
+    el.className = 'measure-label';
+    el.textContent = text;
+    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+      .setLngLat(position)
+      .addTo(this.map);
+    this.measureLabels.push(marker);
   }
 }
