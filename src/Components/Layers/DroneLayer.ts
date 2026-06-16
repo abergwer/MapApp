@@ -54,7 +54,7 @@ export const DroneLayer = new IconLayer({
         height: 24,
         // bottom vertically
     }),
-    getSize: 24,
+    getSize: 28,
     widthMinPixels: 4,
     widthMaxPixels: 14,
     getColor: [255, 0, 0],
