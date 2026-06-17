@@ -7,6 +7,7 @@ import CoordinatesBar from '../../Components/features/CoordinatesBar';
 import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
+import MapStyleBar from '../../Components/features/MapStyleBar';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],
@@ -69,6 +70,7 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
           <div className="map-tools" >
             <ToolBar />
             {showMeasureTools && <MeasuringTools />}
+            <MapStyleBar />
           </div>
           <div className="map-coords-overlay">
             <CoordinatesBar />

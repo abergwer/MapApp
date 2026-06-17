@@ -80,6 +80,13 @@ export interface MapEngine {
    */
   setEditMode?(enabled: boolean): void;
 
+  /**
+   * Swap the basemap tile source at runtime. `url` is an XYZ tile template
+   * (e.g. `https://.../{z}/{x}/{y}.png`). Optional — engines that don't
+   * support it can omit the method and the UI hides the affordance.
+   */
+  setBaseMap?(url: string): void;
+
   //addEntity(entity: MapEntity): string;
   //removeEntity(id: string): void;
 }

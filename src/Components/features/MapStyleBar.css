@@ -1,0 +1,68 @@
+.style-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(20, 24, 32, 0.92);
+  color: #f3f4f6;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  font-family: inherit;
+}
+
+.style-bar-slider {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 6px;
+}
+
+.style-bar-slider input[type='range'] {
+  width: 110px;
+  accent-color: #2563eb;
+  cursor: pointer;
+}
+
+.style-bar-value {
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}
+
+.style-bar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.style-bar-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.style-bar-btn.is-active {
+  background: rgba(37, 99, 235, 0.95);
+  border-color: rgba(37, 99, 235, 1);
+}
+
+.style-bar-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.style-bar-icon {
+  font-size: 14px;
+  opacity: 0.85;
+}

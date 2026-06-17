@@ -27,6 +27,7 @@ export class LeafletEngine implements MapEngine {
   private ellipseTool?: LeafletEllipseTool;
   private sectorTool?: LeafletSectorTool;
   private measureLayers: L.Layer[] = [];
+  private baseLayer?: L.TileLayer;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
     this.map = L.map(container, {
@@ -42,7 +43,7 @@ export class LeafletEngine implements MapEngine {
     L.control.scale({ position: 'bottomright' }).addTo(this.map);
     L.control.zoom({ position: 'topright' as L.ControlPosition }).addTo(this.map);
 
-    L.tileLayer(config.LeafletTilesURL, {
+    this.baseLayer = L.tileLayer(config.LeafletTilesURL, {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 17,
     }).addTo(this.map);
@@ -319,5 +320,15 @@ export class LeafletEngine implements MapEngine {
       map.doubleClickZoom.enable();
       map.keyboard.enable();
     }
+  }
+
+  /** Swap the basemap tile source. */
+  setBaseMap(url: string): void {
+    if (!this.map) return;
+    if (this.baseLayer) this.map.removeLayer(this.baseLayer);
+    this.baseLayer = L.tileLayer(url, {
+      attribution: '&copy; OpenStreetMap contributors',
+      maxZoom: 19,
+    }).addTo(this.map);
   }
 }

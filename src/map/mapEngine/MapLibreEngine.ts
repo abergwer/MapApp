@@ -288,6 +288,26 @@ export class MapLibreEngine implements MapEngine {
     }
   }
 
+  /** Swap the basemap tile source by replacing the raster source/layer. */
+  setBaseMap(url: string): void {
+    const map = this.map;
+    if (!map) return;
+    if (map.getLayer('raster-layer')) map.removeLayer('raster-layer');
+    if (map.getSource('raster-tiles')) map.removeSource('raster-tiles');
+    map.addSource('raster-tiles', {
+      type: 'raster',
+      tiles: [url],
+      tileSize: 256,
+      attribution: '© OpenStreetMap contributors',
+    });
+    // Insert the basemap underneath all other layers so drawings stay on top.
+    const firstLayerId = map.getStyle().layers?.[0]?.id;
+    map.addLayer(
+      { id: 'raster-layer', type: 'raster', source: 'raster-tiles' },
+      firstLayerId,
+    );
+  }
+
   /**
    * Move a feature from the editable MapboxDraw layer onto a plain,
    * non-interactive source so the user can't drag/reshape it afterward.
