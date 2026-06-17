@@ -107,7 +107,9 @@ export class LeafletEngine implements MapEngine {
   }
 
   startDrawPoint(onComplete: (position: [number, number]) => void): void {
-    this.map?.pm.enableDraw('Marker');
+    // `continueDrawing: false` ensures the draw tool disables itself after the
+    // first marker is placed, so the user gets exactly one point.
+    this.map?.pm.enableDraw('Marker', { continueDrawing: false });
 
     const handler = (e: any) => {
       const { lat, lng } = e.layer.getLatLng();
