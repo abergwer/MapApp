@@ -121,7 +121,7 @@ export class LeafletEngine implements MapEngine {
   }
 
   startDrawLine(onComplete: (positions: [number, number][]) => void): void {
-    this.map?.pm.enableDraw('Line');
+    this.map?.pm.enableDraw('Line', { hideMiddleMarkers: true });
 
     const handler = (e: any) => {
       const coords = e.layer.getLatLngs().map((p: any) => [p.lng, p.lat]);
