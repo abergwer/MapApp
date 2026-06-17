@@ -13,11 +13,17 @@ export default function MapStyleBar() {
   // Apply brightness as a CSS filter directly on the map container.
   // Engine-agnostic and self-contained — no API changes needed.
   useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    el.style.filter = `brightness(${brightness / 100})`;
+    const mapContainer = containerRef.current;
+    if (!mapContainer) return;
+
+    // Convert the 0–120 slider value into a CSS brightness multiplier (e.g. 80 -> 0.8).
+    const brightnessMultiplier = brightness / 100;
+    mapContainer.style.filter = `brightness(${brightnessMultiplier})`;
+
+    // Cleanup: remove the filter when brightness changes or the component unmounts,
+    // so we don't leave a stale style on the map container.
     return () => {
-      el.style.filter = '';
+      mapContainer.style.filter = '';
     };
   }, [containerRef, brightness]);
 
