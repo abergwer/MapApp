@@ -32,11 +32,34 @@ export const drawStyles = [
     }
   },
 
-  // Points
+  // Midpoint handles — render invisible so users can't click them to
+  // insert a new vertex between existing nodes.
+  {
+    id: 'gl-draw-line-midpoint',
+    type: 'circle',
+    filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'midpoint']],
+    paint: {
+      'circle-radius': 0,
+      'circle-opacity': 0
+    }
+  },
+
+  // Vertex (the draggable node dot) — matches the original point style
+  {
+    id: 'gl-draw-vertex',
+    type: 'circle',
+    filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'vertex']],
+    paint: {
+      'circle-radius': 6,
+      'circle-color': '#0000ff'
+    }
+  },
+
+  // Points (only standalone user-drawn points, not vertex/midpoint handles)
   {
     id: 'gl-draw-point',
     type: 'circle',
-    filter: ['all', ['==', '$type', 'Point']],
+    filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'feature']],
     paint: {
       'circle-radius': 6,
       'circle-color': '#0000ff'
