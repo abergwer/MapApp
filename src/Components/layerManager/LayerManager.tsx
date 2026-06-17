@@ -18,8 +18,11 @@ export default function LayerManager({ layers }: LayerManagerProps) {
 
     const container = containerRef.current;
 
-    // Sit above Leaflet tile/overlay panes (z-index 2-6) but below controls
+    // Sit above Leaflet tile/overlay panes (z-index 2-6) but below controls.
+    // The `deck-overlay` class lets MapStyleBar apply a counter-brightness
+    // filter so layers stay readable when the basemap is dimmed.
     const canvas = document.createElement('canvas');
+    canvas.className = 'deck-overlay';
     canvas.style.cssText =
       'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:400;';
     container.appendChild(canvas);

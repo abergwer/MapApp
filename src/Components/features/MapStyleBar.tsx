@@ -10,20 +10,25 @@ export default function MapStyleBar() {
   const [brightness, setBrightness] = useState(100);
   const [baseMap, setBaseMap] = useState<BaseMap>('light');
 
-  // Apply brightness as a CSS filter directly on the map container.
-  // Engine-agnostic and self-contained — no API changes needed.
+  // Dim the basemap when the slider goes down. Overlays (deck.gl, Leaflet
+  // draws) are left alone so they stay readable on a darker map.
+  // On MapLibre/Cesium, draw shapes share the basemap canvas and dim with it.
   useEffect(() => {
-    const mapContainer = containerRef.current;
-    if (!mapContainer) return;
+    const container = containerRef.current;
+    if (!container) return;
 
-    // Convert the 0–120 slider value into a CSS brightness multiplier (e.g. 80 -> 0.8).
-    const brightnessMultiplier = brightness / 100;
-    mapContainer.style.filter = `brightness(${brightnessMultiplier})`;
+    const basemap = container.querySelector<HTMLElement>(
+      '.leaflet-tile-pane, .maplibregl-canvas, .cesium-widget canvas',
+    );
+    const deck = container.querySelector<HTMLElement>('.deck-overlay');
 
-    // Cleanup: remove the filter when brightness changes or the component unmounts,
-    // so we don't leave a stale style on the map container.
+    if (basemap) basemap.style.filter = `brightness(${brightness / 100})`;
+    // Below 40%, flip deck icons to white silhouettes so they don't get lost.
+    if (deck) deck.style.filter = brightness < 40 ? 'brightness(0) invert(1)' : '';
+
     return () => {
-      mapContainer.style.filter = '';
+      if (basemap) basemap.style.filter = '';
+      if (deck) deck.style.filter = '';
     };
   }, [containerRef, brightness]);
 
