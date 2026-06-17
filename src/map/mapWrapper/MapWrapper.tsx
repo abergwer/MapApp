@@ -66,8 +66,9 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
           <span className="map-label">Selected engine:</span>
           <strong>{mapEngineLabel[selectedMapEngine]}</strong>
         </div>
-        <div ref={containerRef} className="map-canvas" style={{ position: 'relative' }}>
-          <div className="map-tools" >
+        <div className="map-canvas-shell">
+          <div ref={containerRef} className="map-canvas" />
+          <div className="map-tools">
             <ToolBar />
             {showMeasureTools && <MeasuringTools />}
             <MapStyleBar />

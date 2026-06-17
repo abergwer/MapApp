@@ -18,20 +18,27 @@
   color: #666;
 }
 
-.map-canvas {
+.map-canvas-shell {
+  position: relative;
   flex: 1;
   min-height: 600px;
   border-radius: 10px;
   overflow: hidden;
   background: #f0f0f0;
-  position: relative;
+  display: flex;
+}
+
+.map-canvas {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
 }
 
 .map-coords-overlay {
   position: absolute;
   bottom: 12px;
   left: 12px;
-  z-index: 1000;
+  z-index: 1100;
   pointer-events: none;
 }
 
@@ -39,7 +46,7 @@
   position: absolute;
   top: 12px;
   left: 12px;
-  z-index: 1000;
+  z-index: 1100;
   display: flex;
   gap: 8px;
 }
