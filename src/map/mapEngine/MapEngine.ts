@@ -69,6 +69,8 @@ export interface MapEngine {
    */
   startMeasureArea?(onComplete: (areaKm2: number) => void): void;
 
+  startDrawRoute?(onUpdate: (positions: [number, number][]) => void): void;
+
   removeMeasurements?(): void;
 
   /**

@@ -177,6 +177,37 @@ export class LeafletEngine implements MapEngine {
     );
   }
 
+    startDrawRoute(
+  onUpdate: (positions: [number, number][]) => void
+): void {
+  this.map?.pm.enableDraw('Line', { hideMiddleMarkers: true });
+
+  const handler = (e: any) => {
+    const layer = e.layer;
+
+    // Initial route
+    const coords = layer.getLatLngs().map((p: any) => [p.lng, p.lat]);
+    onUpdate(coords);
+
+    // Listen for vertex deletion
+    layer.on('pm:vertexremoved', () => {
+      const updated = layer.getLatLngs().map((p: any) => [p.lng, p.lat]);
+      onUpdate(updated);
+    });
+
+    // Listen for dragging/editing vertices
+    layer.on('pm:edit', () => {
+      const updated = layer.getLatLngs().map((p: any) => [p.lng, p.lat]);
+      onUpdate(updated);
+    });
+
+    // Stop listening for creation
+    this.map?.off('pm:create', handler);
+  };
+
+  this.map?.on('pm:create', handler);
+}
+
   startMeasureDistance(onComplete: (distanceKm: number) => void): void {
     this.map?.pm.enableDraw('Line');
 

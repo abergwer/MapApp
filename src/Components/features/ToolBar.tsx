@@ -3,7 +3,7 @@ import { useMapContext } from '../../map/MapContext';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
 import './ToolBar.css';
 
-type DrawTool = 'point' | 'line' | 'polygon' | 'circle' | 'ellipse' | 'sector';
+type DrawTool = 'point' | 'line' | 'polygon' | 'circle' | 'ellipse' | 'sector' | 'route';
 
 const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean }[] = [
   { id: 'point', label: 'Point', icon: '•', enabled: true },
@@ -12,6 +12,7 @@ const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean 
   { id: 'circle', label: 'Circle', icon: '◯', enabled: true },
   { id: 'ellipse', label: 'Ellipse', icon: '⬭', enabled: true },
   { id: 'sector', label: 'Sector', icon: '◔', enabled: true },
+  { id: 'route', label: 'Route', icon: '➤', enabled: true },
 ];
 
 function startDraw(engine: MapEngine, tool: DrawTool) {
@@ -34,6 +35,8 @@ function startDraw(engine: MapEngine, tool: DrawTool) {
       return engine.startDrawSector?.((center, radius, startBearing, endBearing) =>
         console.log('sector', center, radius, startBearing, endBearing)
       );
+    case 'route':
+      return engine.startDrawRoute?.((positions) => console.log('route', positions));
   }
 }
 

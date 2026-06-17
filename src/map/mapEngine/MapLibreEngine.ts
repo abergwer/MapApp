@@ -13,6 +13,7 @@ import {
 } from 'maplibre-gl-draw-circle';
 import {DragEllipseMode} from '../utils/MaplibreEllipseMath';
 import {DragSectorMode} from '../utils/MaplibreSectorMath';
+import {startMaplibreRouteDraw} from '../utils/MaplibreRouteTool';
 import {
   centroidOf,
   distanceKm,
@@ -154,6 +155,16 @@ export class MapLibreEngine implements MapEngine {
     this.map?.on('draw.create', handler);
 
   }
+
+ startDrawRoute(
+  onUpdate: (positions: [number, number][]) => void
+): void {
+  if (!this.map || !this.draw) return;
+  this.cancelCurrentDraw = startMaplibreRouteDraw(
+    this.map, this.draw, onUpdate
+  );
+}
+  
   startDrawPolygon(onComplete: (positions: [number, number][]) => void): void {
     this.draw?.changeMode('draw_polygon');
 
@@ -271,6 +282,7 @@ export class MapLibreEngine implements MapEngine {
 
   cancelDrawing(): void {
     this.cancelCurrentDraw?.();
+    this.cancelCurrentDraw = undefined;
     if (this.draw?.getMode() !== 'simple_select') {
       this.draw?.changeMode('simple_select');
     }
