@@ -12,7 +12,7 @@ interface LayerManagerProps {
 export default function LayerManager({ layers }: LayerManagerProps) {
   const { engine, containerRef } = useMapContext();
   const deckRef = useRef<Deck | null>(null);
-
+  
   useEffect(() => {
     if (!engine || !containerRef.current) return;
 

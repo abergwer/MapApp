@@ -211,7 +211,7 @@ export class LeafletEngine implements MapEngine {
 
   startMeasureDistance(onComplete: (distanceKm: number) => void): void {
     this.map?.pm.enableDraw('Line');
-
+    
     const handler = (e: any) => {
       const latlngs = e.layer.getLatLngs() as L.LatLng[];
       let total = 0;

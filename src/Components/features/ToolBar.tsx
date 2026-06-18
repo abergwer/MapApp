@@ -1,18 +1,33 @@
 import { useEffect, useRef, useState } from 'react';
+import Button from '@mui/material/Button';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import PentagonOutlinedIcon from '@mui/icons-material/PentagonOutlined';
+import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import PanoramaFishEyeIcon from '@mui/icons-material/PanoramaFishEye';
+import PieChartOutlinedIcon from '@mui/icons-material/PieChartOutlined';
+import RouteIcon from '@mui/icons-material/Route';
+import EditIcon from '@mui/icons-material/Edit';
+import CloseIcon from '@mui/icons-material/Close';
 import { useMapContext } from '../../map/MapContext';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
-import './ToolBar.css';
 
 type DrawTool = 'point' | 'line' | 'polygon' | 'circle' | 'ellipse' | 'sector' | 'route';
 
-const DRAW_TOOLS: { id: DrawTool; label: string; icon: string; enabled: boolean }[] = [
-  { id: 'point', label: 'Point', icon: '•', enabled: true },
-  { id: 'line', label: 'Line', icon: '╱', enabled: true },
-  { id: 'polygon', label: 'Polygon', icon: '▱', enabled: true },
-  { id: 'circle', label: 'Circle', icon: '◯', enabled: true },
-  { id: 'ellipse', label: 'Ellipse', icon: '⬭', enabled: true },
-  { id: 'sector', label: 'Sector', icon: '◔', enabled: true },
-  { id: 'route', label: 'Route', icon: '➤', enabled: true },
+const DRAW_TOOLS: { id: DrawTool; label: string; Icon: typeof FiberManualRecordIcon; enabled: boolean }[] = [
+  { id: 'point', label: 'Point', Icon: FiberManualRecordIcon, enabled: true },
+  { id: 'line', label: 'Line', Icon: TimelineIcon, enabled: true },
+  { id: 'polygon', label: 'Polygon', Icon: PentagonOutlinedIcon, enabled: true },
+  { id: 'circle', label: 'Circle', Icon: RadioButtonUncheckedIcon, enabled: true },
+  { id: 'ellipse', label: 'Ellipse', Icon: PanoramaFishEyeIcon, enabled: true },
+  { id: 'sector', label: 'Sector', Icon: PieChartOutlinedIcon, enabled: true },
+  { id: 'route', label: 'Route', Icon: RouteIcon, enabled: true },
 ];
 
 function startDraw(engine: MapEngine, tool: DrawTool) {
@@ -42,19 +57,14 @@ function startDraw(engine: MapEngine, tool: DrawTool) {
 
 export default function ToolBar() {
   const { engine } = useMapContext();
-  const [open, setOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<DrawTool | null>(null);
   const [editing, setEditing] = useState(false);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const open = Boolean(anchorEl);
 
-  useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(true);
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [open]);
+  const closeMenu = () => setAnchorEl(null);
+  const openMenu = () => setAnchorEl(buttonRef.current);
 
   // Make sure edit mode is dropped if the engine swaps out from under us.
   useEffect(() => {
@@ -71,6 +81,7 @@ export default function ToolBar() {
     }
     setActiveTool(tool);
     startDraw(engine, tool);
+    closeMenu();
   };
 
   const handleCancel = () => {
@@ -78,7 +89,7 @@ export default function ToolBar() {
     engine?.setEditMode?.(false);
     setActiveTool(null);
     setEditing(false);
-    setOpen(false);
+    closeMenu();
   };
 
   const handleToggleEdit = () => {
@@ -91,6 +102,7 @@ export default function ToolBar() {
     }
     engine.setEditMode(next);
     setEditing(next);
+    closeMenu();
   };
 
   const supportsEdit = Boolean(engine?.setEditMode);
@@ -102,63 +114,63 @@ export default function ToolBar() {
     : 'Draw';
 
   return (
-    <div className="toolbar" ref={rootRef}>
-      <button
-        type="button"
-        className={`toolbar-trigger ${open ? 'is-open' : ''}`}
-        onClick={() => setOpen((v) => !v)}
+    <>
+      <Button
+        ref={buttonRef}
+        variant="contained"
+        color={open ? 'primary' : 'inherit'}
+        endIcon={<ArrowDropDownIcon />}
+        onClick={() => (open ? closeMenu() : openMenu())}
         disabled={!engine}
+        sx={{ minWidth: 140, justifyContent: 'space-between' }}
       >
-        <span className="toolbar-trigger-label">{triggerLabel}</span>
-        <span className="toolbar-trigger-caret" aria-hidden>▾</span>
-      </button>
+        {triggerLabel}
+      </Button>
 
-      {open && (
-        <div className="toolbar-menu" role="menu">
-          {DRAW_TOOLS.map((tool) => (
-            <button
-              key={tool.id}
-              type="button"
-              role="menuitem"
-              className={`toolbar-menu-item ${activeTool === tool.id && !editing ? 'is-active' : ''}`}
-              onClick={() => handleSelect(tool.id)}
-              disabled={!tool.enabled}
-              title={tool.enabled ? undefined : 'Not implemented yet'}
-            >
-              <span className="toolbar-menu-icon" aria-hidden>{tool.icon}</span>
-              <span>{tool.label}</span>
-            </button>
-          ))}
-
-          {supportsEdit && (
-            <>
-              <div className="toolbar-menu-divider" />
-              <button
-                type="button"
-                role="menuitem"
-                className={`toolbar-menu-item ${editing ? 'is-active' : ''}`}
-                onClick={handleToggleEdit}
-              >
-                <span className="toolbar-menu-icon" aria-hidden>✎</span>
-                <span>{editing ? 'Stop editing' : 'Edit shapes'}</span>
-              </button>
-            </>
-          )}
-
-          <div className="toolbar-menu-divider" />
-
-          <button
-            type="button"
-            role="menuitem"
-            className="toolbar-menu-item is-cancel"
-            onClick={handleCancel}
-            disabled={!activeTool && !editing}
+      <Menu
+        anchorEl={anchorEl}
+        open={open}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        {DRAW_TOOLS.map(({ id, label, Icon, enabled }) => (
+          <MenuItem
+            key={id}
+            selected={activeTool === id && !editing}
+            disabled={!enabled}
+            onClick={() => handleSelect(id)}
           >
-            <span className="toolbar-menu-icon" aria-hidden>✕</span>
-            <span>Cancel</span>
-          </button>
-        </div>
-      )}
-    </div>
+            <ListItemIcon>
+              <Icon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{label}</ListItemText>
+          </MenuItem>
+        ))}
+
+        {supportsEdit && [
+          <Divider key="edit-divider" />,
+          <MenuItem key="edit" selected={editing} onClick={handleToggleEdit}>
+            <ListItemIcon>
+              <EditIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{editing ? 'Stop editing' : 'Edit shapes'}</ListItemText>
+          </MenuItem>,
+        ]}
+
+        <Divider />
+
+        <MenuItem
+          onClick={handleCancel}
+          disabled={!activeTool && !editing}
+          sx={{ color: 'error.light' }}
+        >
+          <ListItemIcon>
+            <CloseIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Cancel</ListItemText>
+        </MenuItem>
+      </Menu>
+    </>
   );
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
+import Paper from '@mui/material/Paper';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { useMapContext } from '../../map/MapContext';
-import './CoordinatesBar.css';
 
 export default function CoordinatesBar() {
   const { engine } = useMapContext();
@@ -12,15 +14,28 @@ export default function CoordinatesBar() {
   }, [engine]);
 
   return (
-    <div className="coords-bar">
+    <Paper
+      sx={{
+        px: 1.75,
+        py: 0.75,
+        fontFamily: 'ui-monospace, Consolas, monospace',
+        fontSize: '0.82rem',
+        backdropFilter: 'blur(4px)',
+        pointerEvents: 'none',
+        userSelect: 'none',
+        width: 'fit-content',
+      }}
+    >
       {coords ? (
-        <>
-          <span>Lat: <strong>{coords.lat.toFixed(5)}</strong></span>
-          <span>Lng: <strong>{coords.lng.toFixed(5)}</strong></span>
-        </>
+        <Stack direction="row" spacing={2.5} sx={{ alignItems: 'center' }}>
+          <span>Lat: <strong style={{ color: '#a3e6a3' }}>{coords.lat.toFixed(5)}</strong></span>
+          <span>Lng: <strong style={{ color: '#a3e6a3' }}>{coords.lng.toFixed(5)}</strong></span>
+        </Stack>
       ) : (
-        <span className="coords-bar__hint">Click on the map to see coordinates</span>
+        <Typography component="span" sx={{ color: 'text.disabled', fontStyle: 'italic' }}>
+          Click on the map to see coordinates
+        </Typography>
       )}
-    </div>
+    </Paper>
   );
 }

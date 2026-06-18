@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { createMapEngine } from '../EngineFactory';
 import { mapEngineLabel, selectedMapEngine } from '../mapConfig';
 import { MapContext } from '../MapContext';
@@ -61,24 +64,44 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
 
   return (
     <MapContext.Provider value={{ engine, containerRef }}>
-      <div className="map-canvas-wrapper">
-        <div className="map-header">
-          <span className="map-label">Selected engine:</span>
-          <strong>{mapEngineLabel[selectedMapEngine]}</strong>
-        </div>
-        <div className="map-canvas-shell">
-          <div ref={containerRef} className="map-canvas" />
-          <div className="map-tools">
+      <Stack spacing={1.5} sx={{ width: '100%', flex: 1, minHeight: 500 }}>
+        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+          <Typography variant="body2" color="text.secondary">
+            Selected engine:
+          </Typography>
+          <Typography variant="body2" sx={{ fontWeight: 700 }}>
+            {mapEngineLabel[selectedMapEngine]}
+          </Typography>
+        </Stack>
+
+        <Box
+          sx={{
+            position: 'relative',
+            flex: 1,
+            minHeight: 600,
+            borderRadius: 2,
+            overflow: 'hidden',
+            display: 'flex',
+          }}
+        >
+          <Box ref={containerRef} sx={{ flex: 1, minWidth: 0, minHeight: 0 }} />
+
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1100 }}
+          >
             <ToolBar />
             {showMeasureTools && <MeasuringTools />}
             <MapStyleBar />
-          </div>
-          <div className="map-coords-overlay">
+          </Stack>
+
+          <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
             <CoordinatesBar />
-          </div>
-        </div>
+          </Box>
+        </Box>
         {children}
-      </div>
+      </Stack>
     </MapContext.Provider>
   );
 }

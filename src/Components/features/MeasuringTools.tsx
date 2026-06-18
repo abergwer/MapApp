@@ -1,13 +1,23 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
+import Button from '@mui/material/Button';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import Divider from '@mui/material/Divider';
+import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
+import StraightenIcon from '@mui/icons-material/Straighten';
+import SquareFootIcon from '@mui/icons-material/SquareFoot';
+import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import CloseIcon from '@mui/icons-material/Close';
 import { useMapContext } from '../../map/MapContext';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
-import './ToolBar.css';
 
 type MeasureTool = 'distance' | 'area';
 
-const MEASURE_TOOLS: { id: MeasureTool; label: string; icon: string }[] = [
-  { id: 'distance', label: 'Measure Distance', icon: '↳' },
-  { id: 'area', label: 'Measure Area', icon: '▢' },
+const MEASURE_TOOLS: { id: MeasureTool; label: string; Icon: typeof StraightenIcon }[] = [
+  { id: 'distance', label: 'Measure Distance', Icon: StraightenIcon },
+  { id: 'area', label: 'Measure Area', Icon: SquareFootIcon },
 ];
 
 function startMeasure(engine: MapEngine, tool: MeasureTool) {
@@ -25,18 +35,18 @@ function startMeasure(engine: MapEngine, tool: MeasureTool) {
  */
 export default function MeasuringTools() {
   const { engine } = useMapContext();
-  const [open, setOpen] = useState(false);
   const [activeTool, setActiveTool] = useState<MeasureTool | null>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
+  // Ref to the trigger button so the menu knows which element to anchor to.
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    const onClickOutside = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [open]);
+  // The menu is "open" whenever it has an anchor element; closed when null.
+  // MUI's <Menu> uses `anchorEl` both as a visibility flag and as the
+  // positioning target.
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const isMenuOpen = Boolean(anchorEl);
+
+  const closeMenu = () => setAnchorEl(null);
+  const openMenu = () => setAnchorEl(buttonRef.current);
 
   const supported = Boolean(
     engine?.startMeasureDistance &&
@@ -49,72 +59,77 @@ export default function MeasuringTools() {
     if (!engine) return;
     setActiveTool(tool);
     startMeasure(engine, tool);
+    closeMenu();
   };
 
   const handleClear = () => {
     engine?.removeMeasurements?.();
+    closeMenu();
   };
 
   const handleCancel = () => {
     engine?.cancelDrawing();
     setActiveTool(null);
-    setOpen(false);
+    closeMenu();
   };
 
   const activeLabel = MEASURE_TOOLS.find((t) => t.id === activeTool)?.label;
   const triggerLabel = activeLabel ? `Measure: ${activeLabel}` : 'Measure';
 
   return (
-    <div className="toolbar" ref={rootRef}>
-      <button
-        type="button"
-        className={`toolbar-trigger ${open ? 'is-open' : ''}`}
-        onClick={() => setOpen((v) => !v)}
+    <>
+      <Button
+        ref={buttonRef}
+        variant="contained"
+        color={isMenuOpen ? 'primary' : 'inherit'}
+        endIcon={<ArrowDropDownIcon />}
+        onClick={() => (isMenuOpen ? closeMenu() : openMenu())}
         disabled={!engine}
+        sx={{ minWidth: 140, justifyContent: 'space-between' }}
       >
-        <span className="toolbar-trigger-label">{triggerLabel}</span>
-        <span className="toolbar-trigger-caret" aria-hidden>▾</span>
-      </button>
+        {triggerLabel}
+      </Button>
 
-      {open && (
-        <div className="toolbar-menu" role="menu">
-          {MEASURE_TOOLS.map((tool) => (
-            <button
-              key={tool.id}
-              type="button"
-              role="menuitem"
-              className={`toolbar-menu-item ${activeTool === tool.id ? 'is-active' : ''}`}
-              onClick={() => handleSelect(tool.id)}
-            >
-              <span className="toolbar-menu-icon" aria-hidden>{tool.icon}</span>
-              <span>{tool.label}</span>
-            </button>
-          ))}
-
-          <div className="toolbar-menu-divider" />
-
-          <button
-            type="button"
-            role="menuitem"
-            className="toolbar-menu-item"
-            onClick={handleClear}
+      <Menu
+        anchorEl={anchorEl}
+        open={isMenuOpen}
+        onClose={closeMenu}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+      >
+        {MEASURE_TOOLS.map(({ id, label, Icon }) => (
+          <MenuItem
+            key={id}
+            selected={activeTool === id}
+            onClick={() => handleSelect(id)}
           >
-            <span className="toolbar-menu-icon" aria-hidden>✖</span>
-            <span>Remove Measurements</span>
-          </button>
+            <ListItemIcon>
+              <Icon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText>{label}</ListItemText>
+          </MenuItem>
+        ))}
 
-          <button
-            type="button"
-            role="menuitem"
-            className="toolbar-menu-item is-cancel"
-            onClick={handleCancel}
-            disabled={!activeTool}
-          >
-            <span className="toolbar-menu-icon" aria-hidden>✕</span>
-            <span>Cancel</span>
-          </button>
-        </div>
-      )}
-    </div>
+        <Divider />
+
+        <MenuItem onClick={handleClear}>
+          <ListItemIcon>
+            <DeleteOutlinedIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Remove Measurements</ListItemText>
+        </MenuItem>
+
+        <MenuItem
+          onClick={handleCancel}
+          disabled={!activeTool}
+          sx={{ color: 'error.light' }}
+        >
+          <ListItemIcon>
+            <CloseIcon fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Cancel</ListItemText>
+        </MenuItem>
+      </Menu>
+    </>
   );
 }
