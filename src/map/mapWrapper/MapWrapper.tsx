@@ -11,6 +11,7 @@ import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
+import MiniMap from '../../Components/features/MiniMap';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],
@@ -26,6 +27,7 @@ interface MapWrapperProps {
 export default function MapWrapper({ children, showMeasureTools = true }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<MapEngine | null>(null);
+  const [minimapVisible, setMinimapVisible] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -93,12 +95,22 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
           >
             <ToolBar />
             {showMeasureTools && <MeasuringTools />}
-            <MapStyleBar />
+            <MapStyleBar
+              minimapVisible={minimapVisible}
+              onToggleMinimap={() => setMinimapVisible((v) => !v)}
+            />
           </Stack>
 
           <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
             <CoordinatesBar />
           </Box>
+
+          {/* Bottom-right, lifted above the engine scale bar (~20px tall). */}
+          {minimapVisible && (
+            <Box sx={{ position: 'absolute', bottom: 36, right: 12, zIndex: 1100 }}>
+              <MiniMap />
+            </Box>
+          )}
         </Box>
         {children}
       </Stack>

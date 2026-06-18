@@ -2,6 +2,7 @@
   "MapLibreTilesURL": "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
   "LeafletTilesURL": "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
   "CesiumTilesURL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "MinimalTilesURL": "https://tiles.stadiamaps.com/tiles/stamen_terrain_background/{z}/{x}/{y}.png",
   "MapStyles": {
     "light": "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
     "dark": "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",

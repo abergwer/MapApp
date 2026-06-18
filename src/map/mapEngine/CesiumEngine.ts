@@ -13,7 +13,7 @@ function zoomToHeight(deckZoom: number): number {
 
 export class CesiumEngine implements MapEngine {
   private viewer?: Cesium.Viewer;
-  private viewChangeCallback?: (viewState: MapViewState) => void;
+  private viewChangeCallbacks = new Set<(viewState: MapViewState) => void>();
   private clickHandler?: Cesium.ScreenSpaceEventHandler;
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
@@ -60,7 +60,8 @@ export class CesiumEngine implements MapEngine {
     // Fire only when the camera actually moves, not every rendered frame
     this.viewer.camera.percentageChanged = 0.005; // sensitivity: 0.1% change triggers event
     this.viewer.camera.changed.addEventListener(() => {
-      this.viewChangeCallback?.(this.getViewState());
+      const vs = this.getViewState();
+      this.viewChangeCallbacks.forEach((cb) => cb(vs));
     });
   }
 
@@ -93,9 +94,9 @@ export class CesiumEngine implements MapEngine {
   }
 
   onViewChange(callback: (viewState: MapViewState) => void): () => void {
-    this.viewChangeCallback = callback;
+    this.viewChangeCallbacks.add(callback);
     return () => {
-      if (this.viewChangeCallback === callback) this.viewChangeCallback = undefined;
+      this.viewChangeCallbacks.delete(callback);
     };
   }
 

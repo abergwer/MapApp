@@ -25,7 +25,7 @@ import {
 
 export class MapLibreEngine implements MapEngine {
   private map: maplibregl.Map | undefined;
-  private viewChangeCallback?: (viewState: MapViewState) => void;
+  private viewChangeCallbacks = new Set<(viewState: MapViewState) => void>();
   private clickCallback?: (lat: number, lng: number) => void;
   private draw: MapboxDraw | undefined;
   private cancelCurrentDraw?: () => void;
@@ -49,7 +49,9 @@ export class MapLibreEngine implements MapEngine {
         layers: [{ id: 'raster-layer', type: 'raster', source: 'raster-tiles' }],
       },
       attributionControl: false,
+      renderWorldCopies: false, // disable seamless horizontal panning/duplication at zooms where it would be enabled by default
       // MapLibre uses [lng, lat]; defaultOptions.center is [lat, lng] → swap
+      
       center: [options.center[1], options.center[0]],
       zoom: options.zoom,
     });
@@ -88,7 +90,8 @@ export class MapLibreEngine implements MapEngine {
     this.map.addControl(scale, 'bottom-right');
 
     this.map.on('move', () => {
-      this.viewChangeCallback?.(this.getViewState());
+      const vs = this.getViewState();
+      this.viewChangeCallbacks.forEach((cb) => cb(vs));
     });
 
     this.map.on('click', (e: maplibregl.MapMouseEvent) => {
@@ -108,9 +111,9 @@ export class MapLibreEngine implements MapEngine {
   }
 
   onViewChange(callback: (viewState: MapViewState) => void): () => void {
-    this.viewChangeCallback = callback;
+    this.viewChangeCallbacks.add(callback);
     return () => {
-      if (this.viewChangeCallback === callback) this.viewChangeCallback = undefined;
+      this.viewChangeCallbacks.delete(callback);
     };
   }
 

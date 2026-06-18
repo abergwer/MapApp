@@ -3,15 +3,24 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Slider from '@mui/material/Slider';
 import ToggleButton from '@mui/material/ToggleButton';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
+import MapIcon from '@mui/icons-material/Map';
 import { useMapContext } from '../../map/MapContext';
 import config from '../../../config.json';
 
 type BaseMap = 'light' | 'satellite';
 
-export default function MapStyleBar() {
+interface MapStyleBarProps {
+  /** Current minimap visibility. */
+  minimapVisible?: boolean;
+  /** Toggle handler. When omitted, the minimap toggle button is hidden. */
+  onToggleMinimap?: () => void;
+}
+
+export default function MapStyleBar({ minimapVisible, onToggleMinimap }: MapStyleBarProps = {}) {
   const { engine, containerRef } = useMapContext();
   const [brightness, setBrightness] = useState(100);
   const [baseMap, setBaseMap] = useState<BaseMap>('light');
@@ -71,20 +80,44 @@ export default function MapStyleBar() {
           </Typography>
         </Stack>
 
-        <ToggleButton
-          value="satellite"
-          size="small"
-          color="primary"
-          selected={isSatellite}
-          onChange={toggleSatellite}
-          disabled={!supportsBaseMap}
+        <Tooltip
           title={supportsBaseMap ? 'Toggle satellite view' : 'Not supported by this engine'}
+          arrow
         >
-          <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-            <SatelliteAltIcon fontSize="small" />
-            <span>{isSatellite ? 'Satellite' : 'Light'}</span>
-          </Stack>
-        </ToggleButton>
+          {/* span wrapper so Tooltip still fires when the button is disabled */}
+          <span>
+            <ToggleButton
+              value="satellite"
+              size="small"
+              color="primary"
+              selected={isSatellite}
+              onChange={toggleSatellite}
+              disabled={!supportsBaseMap}
+            >
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                <SatelliteAltIcon fontSize="small" />
+                <span>{isSatellite ? 'Satellite' : 'Light'}</span>
+              </Stack>
+            </ToggleButton>
+          </span>
+        </Tooltip>
+
+        {onToggleMinimap && (
+          <Tooltip title={minimapVisible ? 'Hide minimap' : 'Show minimap'} arrow>
+            <ToggleButton
+              value="minimap"
+              size="small"
+              color="primary"
+              selected={Boolean(minimapVisible)}
+              onChange={onToggleMinimap}
+            >
+              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+                <MapIcon fontSize="small" />
+                <span>Minimap</span>
+              </Stack>
+            </ToggleButton>
+          </Tooltip>
+        )}
       </Stack>
     </Paper>
   );

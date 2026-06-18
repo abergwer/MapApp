@@ -22,7 +22,7 @@ import {
 
 export class LeafletEngine implements MapEngine {
   private map?: L.Map;
-  private viewChangeCallback?: (viewState: MapViewState) => void;
+  private viewChangeCallbacks = new Set<(viewState: MapViewState) => void>();
   private clickCallback?: (lat: number, lng: number) => void;
   private ellipseTool?: LeafletEllipseTool;
   private sectorTool?: LeafletSectorTool;
@@ -35,9 +35,15 @@ export class LeafletEngine implements MapEngine {
       zoom: options.zoom,
       zoomControl: false,
       zoomAnimation: false,
+      worldCopyJump: false, // disable seamless horizontal panning/duplication at zooms where it would be enabled by default
       fadeAnimation: false,
       markerZoomAnimation: false,
       attributionControl: false,
+       maxBounds: [
+    [-85, -180],   // southwest corner of the world
+    [85, 180]      // northeast corner of the world
+  ],
+      maxBoundsViscosity: 1.0,
     });
 
     L.control.scale({ position: 'bottomright' }).addTo(this.map);
@@ -46,14 +52,19 @@ export class LeafletEngine implements MapEngine {
     this.baseLayer = L.tileLayer(config.LeafletTilesURL, {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 17,
+      minZoom: 3,
     }).addTo(this.map);
 
     let ticking = false;
+    const emitViewChange = () => {
+      const vs = this.getViewState();
+      this.viewChangeCallbacks.forEach((cb) => cb(vs));
+    };
     const syncView = () => {
       if (ticking) return;
       ticking = true;
       requestAnimationFrame(() => {
-        this.viewChangeCallback?.(this.getViewState());
+        emitViewChange();
         ticking = false;
       });
     };
@@ -61,8 +72,8 @@ export class LeafletEngine implements MapEngine {
     this.map.on('move', syncView);
     this.map.on('zoom', syncView);
     // Guarantee final state is synced after animations settle
-    this.map.on('zoomend', () => this.viewChangeCallback?.(this.getViewState()));
-    this.map.on('moveend', () => this.viewChangeCallback?.(this.getViewState()));
+    this.map.on('zoomend', emitViewChange);
+    this.map.on('moveend', emitViewChange);
 
     this.map.on('click', (e: L.LeafletMouseEvent) => {
       this.clickCallback?.(e.latlng.lat, e.latlng.lng);
@@ -85,9 +96,9 @@ export class LeafletEngine implements MapEngine {
   }
 
   onViewChange(callback: (viewState: MapViewState) => void): () => void {
-    this.viewChangeCallback = callback;
+    this.viewChangeCallbacks.add(callback);
     return () => {
-      if (this.viewChangeCallback === callback) this.viewChangeCallback = undefined;
+      this.viewChangeCallbacks.delete(callback);
     };
   }
 
@@ -329,6 +340,8 @@ export class LeafletEngine implements MapEngine {
     this.baseLayer = L.tileLayer(url, {
       attribution: '&copy; OpenStreetMap contributors',
       maxZoom: 19,
+      noWrap: true,
+      bounds: L.latLngBounds([-90, -180], [90, 180]),
     }).addTo(this.map);
   }
 }
