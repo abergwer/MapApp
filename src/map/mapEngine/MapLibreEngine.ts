@@ -43,13 +43,25 @@ export class MapLibreEngine implements MapEngine {
             type: 'raster',
             tiles: [config.MapLibreTilesURL],
             tileSize: 256,
+            // Bound the pyramid so MapLibre won't request tiles outside the
+            // provider's range — prevents 404 gaps when zoomed in far.
+            minzoom: 0,
+            maxzoom: 15,
             attribution: '© OpenStreetMap contributors',
           },
         },
-        layers: [{ id: 'raster-layer', type: 'raster', source: 'raster-tiles' }],
+        layers: [
+          // Solid background fills any area not yet covered by a tile, so
+          // zoom-out gaps read as "loading" instead of "broken" black squares.
+          { id: 'background', type: 'background', paint: { 'background-color': '#1f2937' } },
+          { id: 'raster-layer', type: 'raster', source: 'raster-tiles' },
+        ],
       },
       attributionControl: false,
       renderWorldCopies: false, // disable seamless horizontal panning/duplication at zooms where it would be enabled by default
+      // Make tile cross-fade snappy so freshly-arrived tiles replace stale
+      // children/parents immediately instead of blending for 300ms.
+      fadeDuration: 0,
       // MapLibre uses [lng, lat]; defaultOptions.center is [lat, lng] → swap
       
       center: [options.center[1], options.center[0]],
@@ -301,13 +313,16 @@ export class MapLibreEngine implements MapEngine {
       type: 'raster',
       tiles: [url],
       tileSize: 256,
+      minzoom: 0,
+      maxzoom: 15,
       attribution: '© OpenStreetMap contributors',
     });
-    // Insert the basemap underneath all other layers so drawings stay on top.
+    // Insert the basemap underneath all other layers (but above the
+    // background fill, which stays at the very bottom).
     const firstLayerId = map.getStyle().layers?.[0]?.id;
     map.addLayer(
       { id: 'raster-layer', type: 'raster', source: 'raster-tiles' },
-      firstLayerId,
+      firstLayerId === 'background' ? map.getStyle().layers?.[1]?.id : firstLayerId,
     );
   }
 
