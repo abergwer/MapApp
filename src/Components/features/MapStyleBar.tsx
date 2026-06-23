@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import MapIcon from '@mui/icons-material/Map';
+import VideocamIcon from '@mui/icons-material/Videocam';
 import { useMapContext } from '../../map/MapContext';
 import config from '../../../config.json';
 
@@ -18,9 +19,18 @@ interface MapStyleBarProps {
   minimapVisible?: boolean;
   /** Toggle handler. When omitted, the minimap toggle button is hidden. */
   onToggleMinimap?: () => void;
+  /** Current mini-video visibility. */
+  videoVisible?: boolean;
+  /** Toggle handler. When omitted, the video toggle button is hidden. */
+  onToggleVideo?: () => void;
 }
 
-export default function MapStyleBar({ minimapVisible, onToggleMinimap }: MapStyleBarProps = {}) {
+export default function MapStyleBar({
+  minimapVisible,
+  onToggleMinimap,
+  videoVisible,
+  onToggleVideo,
+}: MapStyleBarProps = {}) {
   const { engine, containerRef } = useMapContext();
   const [brightness, setBrightness] = useState(100);
   const [baseMap, setBaseMap] = useState<BaseMap>('light');
@@ -118,6 +128,24 @@ export default function MapStyleBar({ minimapVisible, onToggleMinimap }: MapStyl
             </ToggleButton>
           </Tooltip>
         )}
+
+        {onToggleVideo && (
+          <Tooltip title={videoVisible ? 'Hide video' : 'Show video'} arrow>
+            
+            <ToggleButton
+              value="video"
+              size="small"
+              color="primary"
+              selected={Boolean(videoVisible)}
+              onChange={onToggleVideo}
+              aria-label={videoVisible ? 'Hide video' : 'Show video'}
+            >
+              <span>Video</span>
+              <VideocamIcon fontSize="small" />
+            </ToggleButton>
+          </Tooltip>
+        )}
+        
       </Stack>
     </Paper>
   );

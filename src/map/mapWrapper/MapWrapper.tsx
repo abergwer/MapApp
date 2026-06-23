@@ -12,6 +12,7 @@ import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
 import MiniMap from '../../Components/features/MiniMap';
+import MiniVideo from '../../Components/features/MiniVideo';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],
@@ -28,6 +29,7 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
   const containerRef = useRef<HTMLDivElement>(null);
   const [engine, setEngine] = useState<MapEngine | null>(null);
   const [minimapVisible, setMinimapVisible] = useState(false);
+  const [videoVisible, setVideoVisible] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -98,6 +100,8 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
             <MapStyleBar
               minimapVisible={minimapVisible}
               onToggleMinimap={() => setMinimapVisible((v) => !v)}
+              videoVisible={videoVisible}
+              onToggleVideo={() => setVideoVisible((v) => !v)}
             />
           </Stack>
 
@@ -109,6 +113,21 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
           {minimapVisible && (
             <Box sx={{ position: 'absolute', bottom: 36, right: 12, zIndex: 1100 }}>
               <MiniMap />
+            </Box>
+          )}
+
+          {/* Mini video sits directly above the minimap slot on the right. */}
+          {videoVisible && (
+            <Box
+              sx={{
+                position: 'absolute',
+                // 36 (minimap bottom) + 150 (minimap height) + 8 (gap) = 194
+                bottom: minimapVisible ? 194 : 36,
+                right: 12,
+                zIndex: 1100,
+              }}
+            >
+              <MiniVideo onClose={() => setVideoVisible(false)} />
             </Box>
           )}
         </Box>
