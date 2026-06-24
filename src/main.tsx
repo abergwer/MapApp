@@ -5,13 +5,16 @@ import CssBaseline from '@mui/material/CssBaseline'
 import './index.css'
 import App from './App.tsx'
 import theme from './theme'
+import { StoreProvider } from './stores/StoreProvider'
 window.global = window
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <App />
+      <StoreProvider>
+        <App />
+      </StoreProvider>
     </ThemeProvider>
   </StrictMode>,
 )

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -10,22 +11,25 @@ import StraightenIcon from '@mui/icons-material/Straighten';
 import SquareFootIcon from '@mui/icons-material/SquareFoot';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import CloseIcon from '@mui/icons-material/Close';
-import { useMapContext } from '../../map/MapContext';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
-
-type MeasureTool = 'distance' | 'area';
+import { useStores } from '../../stores/StoreContext';
+import type { DrawingToolStore, MeasureTool } from '../../stores/DrawingToolStore';
 
 const MEASURE_TOOLS: { id: MeasureTool; label: string; Icon: typeof StraightenIcon }[] = [
   { id: 'distance', label: 'Measure Distance', Icon: StraightenIcon },
   { id: 'area', label: 'Measure Area', Icon: SquareFootIcon },
 ];
 
-function startMeasure(engine: MapEngine, tool: MeasureTool) {
+function startMeasure(engine: MapEngine, tool: MeasureTool, store: DrawingToolStore) {
   switch (tool) {
     case 'distance':
-      return engine.startMeasureDistance?.((km) => console.log('distance (km)', km));
+      return engine.startMeasureDistance?.((km) =>
+        store.recordMeasurement({ kind: 'distance', value: km }),
+      );
     case 'area':
-      return engine.startMeasureArea?.((km2) => console.log('area (km²)', km2));
+      return engine.startMeasureArea?.((km2) =>
+        store.recordMeasurement({ kind: 'area', value: km2 }),
+      );
   }
 }
 
@@ -33,9 +37,10 @@ function startMeasure(engine: MapEngine, tool: MeasureTool) {
  * Self-contained dropdown for the measurement tools. Only renders when the
  * active map engine implements the full measurement API on `MapEngine`.
  */
-export default function MeasuringTools() {
-  const { engine } = useMapContext();
-  const [activeTool, setActiveTool] = useState<MeasureTool | null>(null);
+function MeasuringToolsImpl() {
+  const { mapEngineStore, drawingToolStore } = useStores();
+  const engine = mapEngineStore.engine;
+  const activeTool = drawingToolStore.activeMeasureTool;
   // Ref to the trigger button so the menu knows which element to anchor to.
   const buttonRef = useRef<HTMLButtonElement>(null);
 
@@ -57,19 +62,20 @@ export default function MeasuringTools() {
 
   const handleSelect = (tool: MeasureTool) => {
     if (!engine) return;
-    setActiveTool(tool);
-    startMeasure(engine, tool);
+    drawingToolStore.setActiveMeasureTool(tool);
+    startMeasure(engine, tool, drawingToolStore);
     closeMenu();
   };
 
   const handleClear = () => {
     engine?.removeMeasurements?.();
+    drawingToolStore.clearMeasurements();
     closeMenu();
   };
 
   const handleCancel = () => {
     engine?.cancelDrawing();
-    setActiveTool(null);
+    drawingToolStore.setActiveMeasureTool(null);
     closeMenu();
   };
 
@@ -133,3 +139,5 @@ export default function MeasuringTools() {
     </>
   );
 }
+
+export default observer(MeasuringToolsImpl);

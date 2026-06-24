@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { useMapContext } from '../../map/MapContext';
+import { useStores } from '../../stores/StoreContext';
 
-export default function CoordinatesBar() {
-  const { engine } = useMapContext();
+function CoordinatesBarImpl() {
+  const { mapEngineStore } = useStores();
+  const engine = mapEngineStore.engine;
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
@@ -39,3 +41,5 @@ export default function CoordinatesBar() {
     </Paper>
   );
 }
+
+export default observer(CoordinatesBarImpl);

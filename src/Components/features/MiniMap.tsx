@@ -4,8 +4,10 @@ import Paper from '@mui/material/Paper';
 import { Deck, MapView } from '@deck.gl/core';
 import { TileLayer } from '@deck.gl/geo-layers';
 import { BitmapLayer } from '@deck.gl/layers';
+import { reaction } from 'mobx';
+import { observer } from 'mobx-react-lite';
 import config from '../../../config.json';
-import { useMapContext } from '../../map/MapContext';
+import { useStores } from '../../stores/StoreContext';
 
 // --- Tunables -------------------------------------------------------------
 
@@ -59,12 +61,17 @@ function createBasemapLayer() {
  *  - Controlled mode (`viewState`) + an immediate `deck.redraw('initial')`
  *    so tiles appear on mount instead of after the first view change.
  *  - A ResizeObserver keeps Deck's drawing buffer aligned with the Paper.
- *  - View-change syncs are deduplicated: when the main map zooms past the
+ *  - View state is consumed from `mapEngineStore` via a MobX `reaction()`
+ *    instead of subscribing to `engine.onViewChange()` directly. The single
+ *    upstream subscription lives in MapWrapper and fans out to every
+ *    observer of the store.
+ *  - Sync frames are deduplicated: when the main map zooms past the
  *    clamped MAX_ZOOM, the minimap's viewState stops changing and we skip
  *    the redundant `setProps` + GPU redraw.
  */
-export default function MiniMap() {
-  const { engine } = useMapContext();
+function MiniMapImpl() {
+  const { mapEngineStore } = useStores();
+  const engine = mapEngineStore.engine;
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -73,14 +80,11 @@ export default function MiniMap() {
     const container = containerRef.current;
     if (!engine || !canvas || !container) return;
 
-    const readViewState = (): ViewState => {
-      const vs = engine.getViewState();
-      return {
-        longitude: vs.longitude,
-        latitude: vs.latitude,
-        zoom: toMinimapZoom(vs.zoom),
-      };
-    };
+    const clampVS = (vs: { longitude: number; latitude: number; zoom: number }): ViewState => ({
+      longitude: vs.longitude,
+      latitude: vs.latitude,
+      zoom: toMinimapZoom(vs.zoom),
+    });
 
     // 1. Build Deck with explicit size + viewState so the first frame renders
     //    even before any view-change event arrives.
@@ -91,16 +95,19 @@ export default function MiniMap() {
       height,
       views: new MapView(),
       controller: false,
-      viewState: readViewState(),
+      viewState: clampVS(engine.getViewState()),
       layers: [createBasemapLayer()],
     });
     deck.redraw('initial');
 
-    // 2. Sync on view changes, skipping frames where the clamped viewState
-    //    hasn't changed (e.g. main map zooming past MAX_ZOOM + ZOOM_OFFSET).
+    // 2. Sync on viewState changes from the store. The reaction only fires
+    //    when the observed value actually changes, so we additionally
+    //    deduplicate by clamped value to skip redraws when the main map
+    //    zooms past MAX_ZOOM + ZOOM_OFFSET.
     let last: ViewState | null = null;
     const sync = (reason: string) => {
-      const next = readViewState();
+      const upstream = mapEngineStore.viewState ?? engine.getViewState();
+      const next = clampVS(upstream);
       if (
         last &&
         last.longitude === next.longitude &&
@@ -113,7 +120,10 @@ export default function MiniMap() {
       deck.setProps({ viewState: next });
       deck.redraw(reason);
     };
-    const unsubscribe = engine.onViewChange(() => sync('view-sync'));
+    const stopReaction = reaction(
+      () => mapEngineStore.viewState,
+      () => sync('view-sync'),
+    );
 
     // 3. Keep Deck's framebuffer in step with the container size.
     const resizeObserver = new ResizeObserver(() => {
@@ -126,11 +136,11 @@ export default function MiniMap() {
     resizeObserver.observe(container);
 
     return () => {
-      unsubscribe();
+      stopReaction();
       resizeObserver.disconnect();
       deck.finalize();
     };
-  }, [engine]);
+  }, [engine, mapEngineStore]);
 
   if (!engine) return null;
 
@@ -155,3 +165,5 @@ export default function MiniMap() {
     </Paper>
   );
 }
+
+export default observer(MiniMapImpl);

@@ -1,22 +1,26 @@
 import { ScatterplotLayer } from '@deck.gl/layers';
-import { targets } from './DroneLayer';
+import type { DroneTarget } from '../../stores/DroneStore';
 
-export const RangeRingsLayer = new ScatterplotLayer({
-  id: 'range-rings',
-  data: targets.flatMap(target => [
-    { ...target, radius: 100 },
-    { ...target, radius: 200 },
-    { ...target, radius: 500 },
-    { ...target, radius: 750 },
-  ]),
+interface RangeRing extends DroneTarget {
+  radius: number;
+}
 
-  getPosition: d => d.position,
-  getRadius: d => d.radius,
+const RING_RADII = [100, 200, 500, 750];
 
-  stroked: true,
-  filled: false,
+export function createRangeRingsLayer(targets: DroneTarget[]) {
+  const data: RangeRing[] = targets.flatMap((target) =>
+    RING_RADII.map((radius) => ({ ...target, radius })),
+  );
 
-  getLineColor: [255, 0, 0, 180],
-   getLineWidth: 10,
-  lineWidthMinPixels: 5,
-});
+  return new ScatterplotLayer<RangeRing>({
+    id: 'range-rings',
+    data,
+    getPosition: (d) => d.position,
+    getRadius: (d) => d.radius,
+    stroked: true,
+    filled: false,
+    getLineColor: [255, 0, 0, 180],
+    getLineWidth: 10,
+    lineWidthMinPixels: 5,
+  });
+}

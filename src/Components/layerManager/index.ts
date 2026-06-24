@@ -1,18 +1,26 @@
 import type { Layer } from '@deck.gl/core';
-import { polygonLayer } from '../Layers/PolygonLayer';
+import { createPolygonLayer } from '../Layers/PolygonLayer';
 import { createMissilesLayer } from '../Layers/MissileLayer';
-import { DroneLayer } from '../Layers/DroneLayer';
-import { AirCraftLayer } from '../Layers/AirCraftLayer';
-import { RangeRingsLayer } from '../Layers/RangeRingsLayer';
+import { createDroneLayer } from '../Layers/DroneLayer';
+import { createAirCraftLayer } from '../Layers/AirCraftLayer';
+import { createRangeRingsLayer } from '../Layers/RangeRingsLayer';
+import type { RootStore } from '../../stores/RootStore';
 
-// Register layers here. Each entry is imported from its own file.
-// To add a new layer: create a file in this folder and add it to this array.
-const registeredLayers: Layer[] = [
-  polygonLayer,
-  createMissilesLayer,
-  DroneLayer,
-  AirCraftLayer,
-  RangeRingsLayer
-];
+/**
+ * Build the array of Deck.gl layers from the current store state.
+ *
+ * To add a new layer: create a factory in `../Layers` and call it here.
+ * MobX tracks the observable reads done inside this function — when wrapped
+ * in a `reaction()` (see LayerManager) it will rerun automatically as the
+ * underlying store collections change.
+ */
+export function buildLayers(stores: RootStore): Layer[] {
+  return [
+    createPolygonLayer(stores.polygonStore.polygons),
+    createMissilesLayer(stores.missileStore.missiles),
+    createDroneLayer(stores.droneStore.targets),
+    createAirCraftLayer(stores.airCraftStore.targets),
+    createRangeRingsLayer(stores.droneStore.targets),
+  ];
+}
 
-export default registeredLayers;

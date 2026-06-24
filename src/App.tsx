@@ -1,10 +1,13 @@
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
+import { observer } from 'mobx-react-lite'
 import LayerManager from './Components/layerManager/LayerManager'
 import MapWrapper from './map/mapWrapper/MapWrapper'
-import { mapEngineLabel, selectedMapEngine } from './map/mapConfig'
+import { mapEngineLabel } from './map/mapConfig'
+import { useStores } from './stores/StoreContext'
 
 function App() {
+  const { mapEngineStore } = useStores()
   return (
     <Box
       component="main"
@@ -22,7 +25,7 @@ function App() {
       <Typography color="text.secondary">
         This app uses{' '}
         <Box component="strong" sx={{ color: 'primary.light' }}>
-          {mapEngineLabel[selectedMapEngine]}
+          {mapEngineLabel[mapEngineStore.selectedEngine]}
         </Box>{' '}
         as the selected map engine.
       </Typography>
@@ -33,4 +36,4 @@ function App() {
   )
 }
 
-export default App
+export default observer(App)

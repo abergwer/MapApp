@@ -1,11 +1,13 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import { observer } from 'mobx-react-lite';
 import { createMapEngine } from '../EngineFactory';
-import { mapEngineLabel, selectedMapEngine } from '../mapConfig';
+import { mapEngineLabel } from '../mapConfig';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
+import { useStores } from '../../stores/StoreContext';
 import CoordinatesBar from '../../Components/features/CoordinatesBar';
 import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
@@ -25,11 +27,10 @@ interface MapWrapperProps {
   showMeasureTools?: boolean;
 }
 
-export default function MapWrapper({ children, showMeasureTools = true }: MapWrapperProps) {
+function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [engine, setEngine] = useState<MapEngine | null>(null);
-  const [minimapVisible, setMinimapVisible] = useState(false);
-  const [videoVisible, setVideoVisible] = useState(false);
+  const { mapEngineStore, uiVisibilityStore } = useStores();
+  const { minimapVisible, videoVisible } = uiVisibilityStore;
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -39,6 +40,7 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
     let eng: MapEngine | undefined;
     let cancelled = false;
     let handleResize: (() => void) | undefined;
+    let unsubscribeViewChange: (() => void) | undefined;
 
     // Engines load on demand (dynamic import), so creation is async.
     createMapEngine().then((created) => {
@@ -49,7 +51,13 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
       }
       eng = created;
       eng.initialize(containerRef.current, defaultOptions);
-      setEngine(eng);
+      mapEngineStore.setEngine(eng);
+      mapEngineStore.setViewState(eng.getViewState());
+
+      // Subscribe once and push view state into the store so any observer
+      // (MiniMap, LayerManager, future overlays) can react without opening
+      // their own onViewChange subscription.
+      unsubscribeViewChange = eng.onViewChange((vs) => mapEngineStore.setViewState(vs));
 
       handleResize = () => eng?.resize?.();
       window.addEventListener('resize', handleResize);
@@ -60,21 +68,22 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
       if (handleResize) {
         window.removeEventListener('resize', handleResize);
       }
+      unsubscribeViewChange?.();
+      mapEngineStore.setEngine(null);
       eng?.destroy();
       eng = undefined;
-      setEngine(null);
     };
-  }, []);
+  }, [mapEngineStore]);
 
   return (
-    <MapContext.Provider value={{ engine, containerRef }}>
+    <MapContext.Provider value={{ containerRef }}>
       <Stack spacing={1.5} sx={{ width: '100%', flex: 1, minHeight: 500 }}>
         <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
           <Typography variant="body2" color="text.secondary">
             Selected engine:
           </Typography>
           <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            {mapEngineLabel[selectedMapEngine]}
+            {mapEngineLabel[mapEngineStore.selectedEngine]}
           </Typography>
         </Stack>
 
@@ -97,12 +106,7 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
           >
             <ToolBar />
             {showMeasureTools && <MeasuringTools />}
-            <MapStyleBar
-              minimapVisible={minimapVisible}
-              onToggleMinimap={() => setMinimapVisible((v) => !v)}
-              videoVisible={videoVisible}
-              onToggleVideo={() => setVideoVisible((v) => !v)}
-            />
+            <MapStyleBar />
           </Stack>
 
           <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
@@ -127,7 +131,7 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
                 zIndex: 1100,
               }}
             >
-              <MiniVideo onClose={() => setVideoVisible(false)} />
+              <MiniVideo onClose={() => uiVisibilityStore.setVideoVisible(false)} />
             </Box>
           )}
         </Box>
@@ -136,3 +140,6 @@ export default function MapWrapper({ children, showMeasureTools = true }: MapWra
     </MapContext.Provider>
   );
 }
+
+const MapWrapper = observer(MapWrapperImpl);
+export default MapWrapper;

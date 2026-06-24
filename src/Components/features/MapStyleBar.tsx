@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { observer } from 'mobx-react-lite';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Slider from '@mui/material/Slider';
@@ -10,30 +11,20 @@ import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import MapIcon from '@mui/icons-material/Map';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import { useMapContext } from '../../map/MapContext';
+import { useStores } from '../../stores/StoreContext';
 import config from '../../../config.json';
 
-type BaseMap = 'light' | 'satellite';
-
-interface MapStyleBarProps {
-  /** Current minimap visibility. */
-  minimapVisible?: boolean;
-  /** Toggle handler. When omitted, the minimap toggle button is hidden. */
-  onToggleMinimap?: () => void;
-  /** Current mini-video visibility. */
-  videoVisible?: boolean;
-  /** Toggle handler. When omitted, the video toggle button is hidden. */
-  onToggleVideo?: () => void;
-}
-
-export default function MapStyleBar({
-  minimapVisible,
-  onToggleMinimap,
-  videoVisible,
-  onToggleVideo,
-}: MapStyleBarProps = {}) {
-  const { engine, containerRef } = useMapContext();
-  const [brightness, setBrightness] = useState(100);
-  const [baseMap, setBaseMap] = useState<BaseMap>('light');
+/**
+ * Map style controls bar. Reads brightness/baseMap from MapStyleStore and
+ * minimap/video visibility from UIVisibilityStore — all four pieces of state
+ * can now be driven by other components (or devtools) without prop drilling.
+ */
+function MapStyleBarImpl() {
+  const { containerRef } = useMapContext();
+  const { mapEngineStore, mapStyleStore, uiVisibilityStore } = useStores();
+  const engine = mapEngineStore.engine;
+  const { brightness, baseMap } = mapStyleStore;
+  const { minimapVisible, videoVisible } = uiVisibilityStore;
 
   // Dim the basemap when the slider goes down. Overlays (deck.gl, Leaflet
   // draws) are left alone so they stay readable on a darker map.
@@ -59,9 +50,9 @@ export default function MapStyleBar({
 
   const toggleSatellite = () => {
     if (!engine?.setBaseMap) return;
-    const next: BaseMap = baseMap === 'satellite' ? 'light' : 'satellite';
+    const next = baseMap === 'satellite' ? 'light' : 'satellite';
     engine.setBaseMap(config.MapStyles[next]);
-    setBaseMap(next);
+    mapStyleStore.setBaseMap(next);
   };
 
   const supportsBaseMap = Boolean(engine?.setBaseMap);
@@ -78,7 +69,7 @@ export default function MapStyleBar({
             min={0}
             max={120}
             step={1}
-            onChange={(_, v) => setBrightness(v as number)}
+            onChange={(_, v) => mapStyleStore.setBrightness(v as number)}
             aria-label="Map brightness"
             sx={{ width: 110 }}
           />
@@ -112,41 +103,38 @@ export default function MapStyleBar({
           </span>
         </Tooltip>
 
-        {onToggleMinimap && (
-          <Tooltip title={minimapVisible ? 'Hide minimap' : 'Show minimap'} arrow>
-            <ToggleButton
-              value="minimap"
-              size="small"
-              color="primary"
-              selected={Boolean(minimapVisible)}
-              onChange={onToggleMinimap}
-            >
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                <MapIcon fontSize="small" />
-                <span>Minimap</span>
-              </Stack>
-            </ToggleButton>
-          </Tooltip>
-        )}
+        <Tooltip title={minimapVisible ? 'Hide minimap' : 'Show minimap'} arrow>
+          <ToggleButton
+            value="minimap"
+            size="small"
+            color="primary"
+            selected={minimapVisible}
+            onChange={() => uiVisibilityStore.toggleMinimap()}
+          >
+            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+              <MapIcon fontSize="small" />
+              <span>Minimap</span>
+            </Stack>
+          </ToggleButton>
+        </Tooltip>
 
-        {onToggleVideo && (
-          <Tooltip title={videoVisible ? 'Hide video' : 'Show video'} arrow>
-            
-            <ToggleButton
-              value="video"
-              size="small"
-              color="primary"
-              selected={Boolean(videoVisible)}
-              onChange={onToggleVideo}
-              aria-label={videoVisible ? 'Hide video' : 'Show video'}
-            >
-              <span>Video</span>
-              <VideocamIcon fontSize="small" />
-            </ToggleButton>
-          </Tooltip>
-        )}
-        
+        <Tooltip title={videoVisible ? 'Hide video' : 'Show video'} arrow>
+          <ToggleButton
+            value="video"
+            size="small"
+            color="primary"
+            selected={videoVisible}
+            onChange={() => uiVisibilityStore.toggleVideo()}
+            aria-label={videoVisible ? 'Hide video' : 'Show video'}
+          >
+            <span>Video</span>
+            <VideocamIcon fontSize="small" />
+          </ToggleButton>
+        </Tooltip>
       </Stack>
     </Paper>
   );
 }
+
+export default observer(MapStyleBarImpl);
+

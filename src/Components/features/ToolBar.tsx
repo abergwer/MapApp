@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { observer } from 'mobx-react-lite';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
@@ -15,10 +16,9 @@ import PieChartOutlinedIcon from '@mui/icons-material/PieChartOutlined';
 import RouteIcon from '@mui/icons-material/Route';
 import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
-import { useMapContext } from '../../map/MapContext';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
-
-type DrawTool = 'point' | 'line' | 'polygon' | 'circle' | 'ellipse' | 'sector' | 'route';
+import { useStores } from '../../stores/StoreContext';
+import type { DrawingToolStore, DrawTool } from '../../stores/DrawingToolStore';
 
 const DRAW_TOOLS: { id: DrawTool; label: string; Icon: typeof FiberManualRecordIcon; enabled: boolean }[] = [
   { id: 'point', label: 'Point', Icon: FiberManualRecordIcon, enabled: true },
@@ -30,35 +30,48 @@ const DRAW_TOOLS: { id: DrawTool; label: string; Icon: typeof FiberManualRecordI
   { id: 'route', label: 'Route', Icon: RouteIcon, enabled: true },
 ];
 
-function startDraw(engine: MapEngine, tool: DrawTool) {
+/**
+ * Wire the engine's draw callback to the store so completed shapes are
+ * captured globally instead of dropped to console.log.
+ */
+function startDraw(engine: MapEngine, tool: DrawTool, store: DrawingToolStore) {
   switch (tool) {
     case 'point':
-      return engine.startDrawPoint((pos) => console.log('point', pos));
+      return engine.startDrawPoint((position) =>
+        store.recordShape({ kind: 'point', position }),
+      );
     case 'line':
-      return engine.startDrawLine((pts) => console.log('line', pts));
+      return engine.startDrawLine((positions) =>
+        store.recordShape({ kind: 'line', positions }),
+      );
     case 'polygon':
-      return engine.startDrawPolygon((pts) => console.log('polygon', pts));
+      return engine.startDrawPolygon((positions) =>
+        store.recordShape({ kind: 'polygon', positions }),
+      );
     case 'circle':
       return engine.startDrawCircle((center, radius) =>
-        console.log('circle', center, radius)
+        store.recordShape({ kind: 'circle', center, radius }),
       );
     case 'ellipse':
       return engine.startDrawEllipse?.((center, radiusX, radiusY) =>
-        console.log('ellipse', center, radiusX, radiusY)
+        store.recordShape({ kind: 'ellipse', center, radiusX, radiusY }),
       );
     case 'sector':
       return engine.startDrawSector?.((center, radius, startBearing, endBearing) =>
-        console.log('sector', center, radius, startBearing, endBearing)
+        store.recordShape({ kind: 'sector', center, radius, startBearing, endBearing }),
       );
     case 'route':
-      return engine.startDrawRoute?.((positions) => console.log('route', positions));
+      return engine.startDrawRoute?.((positions) =>
+        store.recordShape({ kind: 'route', positions }),
+      );
   }
 }
 
-export default function ToolBar() {
-  const { engine } = useMapContext();
-  const [activeTool, setActiveTool] = useState<DrawTool | null>(null);
-  const [editing, setEditing] = useState(false);
+function ToolBarImpl() {
+  const { mapEngineStore, drawingToolStore } = useStores();
+  const engine = mapEngineStore.engine;
+  const activeTool = drawingToolStore.activeDrawTool;
+  const editing = drawingToolStore.isEditing;
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
@@ -77,18 +90,18 @@ export default function ToolBar() {
     if (!engine) return;
     if (editing) {
       engine.setEditMode?.(false);
-      setEditing(false);
+      drawingToolStore.setEditing(false);
     }
-    setActiveTool(tool);
-    startDraw(engine, tool);
+    drawingToolStore.setActiveDrawTool(tool);
+    startDraw(engine, tool, drawingToolStore);
     closeMenu();
   };
 
   const handleCancel = () => {
     engine?.cancelDrawing();
     engine?.setEditMode?.(false);
-    setActiveTool(null);
-    setEditing(false);
+    drawingToolStore.setActiveDrawTool(null);
+    drawingToolStore.setEditing(false);
     closeMenu();
   };
 
@@ -98,10 +111,10 @@ export default function ToolBar() {
     // Drop any in-progress draw before switching modes.
     if (next) {
       engine.cancelDrawing();
-      setActiveTool(null);
+      drawingToolStore.setActiveDrawTool(null);
     }
     engine.setEditMode(next);
-    setEditing(next);
+    drawingToolStore.setEditing(next);
     closeMenu();
   };
 
@@ -174,3 +187,5 @@ export default function ToolBar() {
     </>
   );
 }
+
+export default observer(ToolBarImpl);

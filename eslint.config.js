@@ -18,5 +18,14 @@ export default defineConfig([
     languageOptions: {
       globals: globals.browser,
     },
+    rules: {
+      // Recognize MobX/React HOCs so wrapped default exports
+      // (e.g. `export default observer(MyComponent)`) don't trip
+      // react-refresh's component-only-export check.
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true, extraHOCs: ['observer', 'memo'] },
+      ],
+    },
   },
 ])

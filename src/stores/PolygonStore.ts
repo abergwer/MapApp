@@ -1,0 +1,68 @@
+import { makeAutoObservable } from 'mobx';
+
+export interface PolygonFeature {
+  contour: [number, number][];
+}
+
+const seedPolygons: PolygonFeature[] = [
+  {
+    contour: [
+      [35.1000, 32.8000],
+      [35.0924, 32.8383],
+      [35.0707, 32.8707],
+      [35.0383, 32.8924],
+      [35.0000, 32.9000],
+      [34.9617, 32.8924],
+      [34.9293, 32.8707],
+      [34.9076, 32.8383],
+      [34.9000, 32.8000],
+      [34.9076, 32.7617],
+      [34.9293, 32.7293],
+      [34.9617, 32.7076],
+      [35.0000, 32.7000],
+      [35.0383, 32.7076],
+      [35.0707, 32.7293],
+      [35.0924, 32.7617],
+    ],
+  },
+  {
+    contour: [
+      [35.0500, 29.5600],
+      [35.0424, 29.5983],
+      [35.0207, 29.6307],
+      [34.9883, 29.6524],
+      [34.9500, 29.6600],
+      [34.9117, 29.6524],
+      [34.8793, 29.6307],
+      [34.8576, 29.5983],
+      [34.8500, 29.5600],
+      [34.8576, 29.5217],
+      [34.8793, 29.4893],
+      [34.9117, 29.4676],
+      [34.9500, 29.4600],
+      [34.9883, 29.4676],
+      [35.0207, 29.4893],
+      [35.0424, 29.5217],
+    ],
+  },
+];
+
+export class PolygonStore {
+  polygons: PolygonFeature[] = seedPolygons;
+
+  constructor() {
+    makeAutoObservable(this);
+  }
+
+  setAll(polygons: PolygonFeature[]) {
+    this.polygons = polygons;
+  }
+
+  add(polygon: PolygonFeature) {
+    this.polygons.push(polygon);
+  }
+
+  clear() {
+    this.polygons = [];
+  }
+}

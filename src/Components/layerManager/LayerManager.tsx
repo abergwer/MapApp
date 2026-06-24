@@ -1,18 +1,24 @@
 import { useEffect, useRef } from 'react';
 import { Deck } from '@deck.gl/core';
 import type { Layer } from '@deck.gl/core';
+import { reaction } from 'mobx';
+import { observer } from 'mobx-react-lite';
 import { useMapContext } from '../../map/MapContext';
-import registeredLayers from './index';
+import { useStores } from '../../stores/StoreContext';
+import { buildLayers } from './index';
 
 interface LayerManagerProps {
-  /** Override the default registered layers with custom Deck.gl layers. */
+  /** Override the store-driven layers with a custom Deck.gl layer array. */
   layers?: Layer[];
 }
 
-export default function LayerManager({ layers }: LayerManagerProps) {
-  const { engine, containerRef } = useMapContext();
+function LayerManagerImpl({ layers }: LayerManagerProps) {
+  const { containerRef } = useMapContext();
+  const stores = useStores();
+  const { mapEngineStore } = stores;
+  const engine = mapEngineStore.engine;
   const deckRef = useRef<Deck | null>(null);
-  
+
   useEffect(() => {
     if (!engine || !containerRef.current) return;
 
@@ -40,7 +46,7 @@ export default function LayerManager({ layers }: LayerManagerProps) {
       height,
       controller: false,
       viewState,
-      layers: layers ?? registeredLayers,
+      layers: layers ?? buildLayers(stores),
     });
 
     deckRef.current = deck;
@@ -60,17 +66,41 @@ export default function LayerManager({ layers }: LayerManagerProps) {
     resizeObserver.observe(container);
 
     // Keep Deck.gl viewport in sync with whichever map engine is active.
-    // Forcing a synchronous redraw makes the overlay paint in the same frame as
-    // the basemap, preventing the one-frame lag that looks like "shaking".
-    const unsubscribe = engine.onViewChange((vs) => {
-      const deck = deckRef.current;
-      if (!deck) return;
-      deck.setProps({ viewState: vs });
-      deck.redraw('view-sync');
-    });
+    // MapWrapper owns the single `engine.onViewChange` subscription and
+    // republishes view state on the store; we observe it here. Forcing a
+    // synchronous redraw makes the overlay paint in the same frame as the
+    // basemap, preventing the one-frame lag that looks like "shaking".
+    const stopViewReaction = reaction(
+      () => mapEngineStore.viewState,
+      (vs) => {
+        if (!vs) return;
+        const deck = deckRef.current;
+        if (!deck) return;
+        deck.setProps({ viewState: vs });
+        deck.redraw('view-sync');
+      },
+    );
+
+    // Bridge MobX -> Deck.gl. When any observable consumed by buildLayers()
+    // changes (drone positions, missile paths, ...), rebuild the layer array
+    // and push it imperatively into Deck. This skips React re-rendering for
+    // high-frequency entity updates and is the main reason MobX is a good fit
+    // for this app.
+    const stopLayerReaction = layers
+      ? () => {}
+      : reaction(
+          () => buildLayers(stores),
+          (nextLayers) => {
+            const deck = deckRef.current;
+            if (!deck) return;
+            deck.setProps({ layers: nextLayers });
+          },
+          { fireImmediately: false },
+        );
 
     return () => {
-      unsubscribe();
+      stopLayerReaction();
+      stopViewReaction();
       resizeObserver.disconnect();
       deck.finalize();
       canvas.remove();
@@ -79,7 +109,7 @@ export default function LayerManager({ layers }: LayerManagerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine]);
 
-  // Reactively update layers when the prop changes
+  // Allow an explicit `layers` prop override to bypass the store-driven path.
   useEffect(() => {
     if (deckRef.current && layers) {
       deckRef.current.setProps({ layers });
@@ -88,3 +118,7 @@ export default function LayerManager({ layers }: LayerManagerProps) {
 
   return null;
 }
+
+const LayerManager = observer(LayerManagerImpl);
+export default LayerManager;
+
