@@ -1,0 +1,28 @@
+%% Drawing/measuring tool flow. UI updates DrawingToolStore, then asks
+%% the active engine to start a draw/measure session. Engine completion
+%% callback writes the result back into the store.
+sequenceDiagram
+    actor User
+    participant TB as ToolBar / MeasuringTools
+    participant DTS as DrawingToolStore
+    participant Engine as MapEngine
+
+    User->>TB: pick tool (e.g. Polygon)
+    TB->>DTS: setActiveDrawTool('polygon')
+    TB->>Engine: startDrawPolygon({ onComplete })
+
+    loop draw session
+        User->>Engine: click vertex / drag handle
+    end
+    User->>Engine: finish (double-click / Enter)
+
+    Engine-->>TB: onComplete(coords)
+    TB->>DTS: recordShape({ tool, coords })
+    Note over DTS: completedShapes grows — observers can list / clear them
+
+    alt Measuring tool
+        User->>TB: pick distance / area
+        TB->>Engine: startMeasureDistance() / startMeasureArea()
+        Engine-->>TB: onComplete(measurement)
+        TB->>DTS: recordMeasurement(...)
+    end

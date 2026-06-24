@@ -1,0 +1,57 @@
+%% Map engine abstraction. MapEngine is a stable interface so the rest of
+%% the app (stores, layers, UI) does not depend on any specific library.
+%% EngineFactory dynamically imports the chosen implementation to keep the
+%% initial bundle small.
+classDiagram
+    class MapEngine {
+        <<interface>>
+        +initialize(container, options)
+        +getViewState() ViewState
+        +onViewChange(cb) Unsubscribe
+        +onMapClick(cb)
+        +resize()
+        +destroy()
+        +startDrawPoint/Line/Polygon()
+        +startDrawCircle/Ellipse/Sector/Route()
+        +startMeasureDistance/Area()
+        +removeMeasurements()
+        +setBaseMap(url)
+        +setEditMode(on)
+    }
+
+    class LeafletEngine {
+        -L.Map
+        -Geoman (draw/edit)
+        -leafletEllipseTool
+        -leafletSectorTool
+        +reports zoom = leafletZoom - 1
+    }
+
+    class MapLibreEngine {
+        -maplibregl.Map
+        -MapboxDraw
+        -DragEllipseMode
+        -DragSectorMode
+        -MaplibreRouteTool
+    }
+
+    class CesiumEngine {
+        -Viewer (SCENE2D)
+        -orthographic camera
+        +draw/measure not implemented
+    }
+
+    class EngineFactory {
+        +createMapEngine() Promise~MapEngine~
+    }
+
+    class mapConfig {
+        +selectedMapEngine
+        +mapEngineLabel
+    }
+
+    MapEngine <|.. LeafletEngine
+    MapEngine <|.. MapLibreEngine
+    MapEngine <|.. CesiumEngine
+    EngineFactory ..> MapEngine : returns
+    EngineFactory ..> mapConfig : reads selectedMapEngine

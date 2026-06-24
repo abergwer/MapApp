@@ -1,0 +1,31 @@
+%% How entity stores become deck.gl layers. LayerManager runs buildLayers()
+%% inside a MobX reaction; any read of an observed store causes the layer
+%% array to be rebuilt and pushed to Deck.gl in a single batched GPU call.
+flowchart LR
+    subgraph Stores["Entity stores (MobX)"]
+        DS[DroneStore.targets]
+        MS[MissileStore.missiles]
+        AS[AirCraftStore.targets]
+        PS[PolygonStore.polygons]
+    end
+
+    subgraph LM["LayerManager"]
+        BL["buildLayers(stores)"]
+        R[("reaction&#40;&#41;")]
+    end
+
+    DS -- observed --> BL
+    MS -- observed --> BL
+    AS -- observed --> BL
+    PS -- observed --> BL
+
+    BL -- "Layer[]" --> R
+    R -- "deck.setProps({ layers })" --> Deck["Deck.gl"]
+
+    MES["MapEngineStore.viewState"] -- reaction --> Deck
+
+    Deck --> L1["AirCraftLayer<br/>IconLayer"]
+    Deck --> L2["DroneLayer<br/>IconLayer"]
+    Deck --> L3["MissileLayer<br/>PathLayer"]
+    Deck --> L4["PolygonLayer<br/>PolygonLayer"]
+    Deck --> L5["RangeRingsLayer<br/>ScatterplotLayer"]

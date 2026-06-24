@@ -1,0 +1,27 @@
+%% Pan/zoom data flow. MapWrapper owns the single subscription to the
+%% engine; everything else observes MapEngineStore.viewState. This avoids
+%% multiple listeners on the engine and keeps redraws synchronized.
+sequenceDiagram
+    actor User
+    participant Engine as MapEngine
+    participant MW as MapWrapper
+    participant Store as MapEngineStore
+    participant LM as LayerManager
+    participant MM as MiniMap
+    participant CB as CoordinatesBar
+
+    User->>Engine: pan / zoom / rotate
+    Engine->>MW: onViewChange(vs)
+    MW->>Store: setViewState(vs)
+    Note over Store: viewState observable mutated
+
+    par MobX reactions fan out
+        Store-->>LM: reaction(viewState)
+        LM->>LM: deck.setProps({ viewState })<br/>redraw entity layers
+    and
+        Store-->>MM: reaction(viewState)
+        MM->>MM: clamp zoom, minimap.setProps()<br/>redraw overview tiles
+    and
+        Store-->>CB: observer re-render
+        CB->>CB: update lat/lng readout
+    end

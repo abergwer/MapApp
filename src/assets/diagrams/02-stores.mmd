@@ -1,0 +1,79 @@
+%% MobX store composition. RootStore aggregates 8 independent observable
+%% stores; components read them via useStores().
+classDiagram
+    class RootStore {
+        +mapEngineStore
+        +mapStyleStore
+        +drawingToolStore
+        +airCraftStore
+        +droneStore
+        +missileStore
+        +polygonStore
+        +uiVisibilityStore
+    }
+
+    class MapEngineStore {
+        +engine: MapEngine
+        +viewState
+        +selectedEngine
+        +setEngine()
+        +setViewState()
+    }
+
+    class MapStyleStore {
+        +brightness
+        +baseMap
+        +setBrightness()
+        +setBaseMap()
+    }
+
+    class DrawingToolStore {
+        +activeDrawTool
+        +activeMeasureTool
+        +completedShapes
+        +measurements
+        +isEditing
+        +recordShape()
+        +recordMeasurement()
+        +setEditing()
+    }
+
+    class AirCraftStore {
+        +targets
+        +upsert()
+        +remove()
+    }
+
+    class DroneStore {
+        +targets
+        +upsert()
+        +remove()
+    }
+
+    class MissileStore {
+        +missiles
+        +setAll()
+        +upsert()
+    }
+
+    class PolygonStore {
+        +polygons
+        +add()
+        +clear()
+    }
+
+    class UIVisibilityStore {
+        +minimapVisible
+        +videoVisible
+        +toggleMinimap()
+        +toggleVideo()
+    }
+
+    RootStore *-- MapEngineStore
+    RootStore *-- MapStyleStore
+    RootStore *-- DrawingToolStore
+    RootStore *-- AirCraftStore
+    RootStore *-- DroneStore
+    RootStore *-- MissileStore
+    RootStore *-- PolygonStore
+    RootStore *-- UIVisibilityStore
