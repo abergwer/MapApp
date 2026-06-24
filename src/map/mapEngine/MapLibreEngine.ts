@@ -62,6 +62,12 @@ export class MapLibreEngine implements MapEngine {
       // Make tile cross-fade snappy so freshly-arrived tiles replace stale
       // children/parents immediately instead of blending for 300ms.
       fadeDuration: 0,
+      // Cap the canvas pixel ratio. On HiDPI displays MapLibre + Deck.gl both
+      // render at devicePixelRatio (often 2.0+), which quadruples fragment-
+      // shader cost vs a 1x display. 1.5 keeps text/lines crisp while ~halving
+      // GPU work on typical laptops.
+      maxTileCacheSize: 256, // default is small (~6 per source) → re-fetches on back-pan
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
       // MapLibre uses [lng, lat]; defaultOptions.center is [lat, lng] → swap
       
       center: [options.center[1], options.center[0]],

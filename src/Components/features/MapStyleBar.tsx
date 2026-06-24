@@ -39,8 +39,6 @@ function MapStyleBarImpl() {
     const deck = container.querySelector<HTMLElement>('.deck-overlay');
 
     if (basemap) basemap.style.filter = `brightness(${brightness / 100})`;
-    // Below 40%, flip deck icons to white silhouettes so they don't get lost.
-    if (deck) deck.style.filter = brightness < 40 ? 'brightness(0) invert(1)' : '';
 
     return () => {
       if (basemap) basemap.style.filter = '';

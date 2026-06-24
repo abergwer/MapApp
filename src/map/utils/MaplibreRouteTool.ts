@@ -35,7 +35,9 @@ export function startMaplibreRouteDraw(
   };
 
   const onCreate = (ev: any) => {
-    routeId = ev.features[0].id as string;
+    const id = ev.features?.[0]?.id;
+    if (id === undefined || id === null) return;
+    routeId = String(id);
     emit();
     // Defer the mode switch — MapboxDraw is still finishing its own
     // transition out of `draw_line_string`.
