@@ -153,7 +153,6 @@ export class LeafletDrawingManager {
    */
   addShape(shape: CompletedShape): void {
     const layer = this.buildShapeLayer(shape);
-    if (!layer) return;
     this.stampTags(layer, shape.id, shape.kind);
     layer.addTo(this.map);
   }
@@ -304,7 +303,7 @@ export class LeafletDrawingManager {
   }
 
   /** Build the Leaflet primitive for an external `CompletedShape`. */
-  private buildShapeLayer(shape: CompletedShape): L.Layer | null {
+  private buildShapeLayer(shape: CompletedShape): L.Layer {
     switch (shape.kind) {
       case 'point':
         return L.marker([shape.position[1], shape.position[0]]);

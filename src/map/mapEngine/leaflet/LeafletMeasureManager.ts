@@ -90,7 +90,6 @@ export class LeafletMeasureManager {
     const marker = L.marker(at, {
       icon: L.divIcon({ className: 'measure-label', html: text }),
       interactive: false,
-      pmIgnore: true,
     }).addTo(this.map);
     this.overlays.push(marker);
   }
