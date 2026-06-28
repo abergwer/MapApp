@@ -1,40 +1,32 @@
 import maplibregl from 'maplibre-gl/dist/maplibre-gl.js';
-import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import config from "../../../config.json";
-import MapboxDraw from '@mapbox/mapbox-gl-draw';
-import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
-import { drawStyles } from '../../shared/styles/drawStyles';
-import {
-  CircleMode,
-  DragCircleMode,
-  DirectMode,
-  SimpleSelectMode
-} from 'maplibre-gl-draw-circle';
-import {DragEllipseMode} from '../utils/MaplibreEllipseMath';
-import {DragSectorMode} from '../utils/MaplibreSectorMath';
-import {startMaplibreRouteDraw} from '../utils/MaplibreRouteTool';
-import {
-  centroidOf,
-  distanceKm,
-  formatArea,
-  formatDistance,
-  polygonAreaKm2,
-  type LngLat,
-} from '../utils/geo';
+import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
+import type { CompletedShape } from '../../stores/DrawingToolStore';
+import config from '../../../config.json';
+import { MapLibreDrawingManager } from './maplibre/MapLibreDrawingManager';
+import { MapLibreMeasureManager } from './maplibre/MapLibreMeasureManager';
 
+/**
+ * Thin orchestrator over `MapLibreDrawingManager` + `MapLibreMeasureManager`.
+ *
+ * Owns only engine-scoped concerns: map lifecycle, view-state
+ * subscription, click forwarding, basemap source swapping. All drawing
+ * and measurement complexity lives under `./maplibre/`.
+ *
+ * The drawing manager owns the (single) MapboxDraw instance and exposes
+ * it via `getDraw()` so the measurement manager can reuse it.
+ */
 export class MapLibreEngine implements MapEngine {
-  private map: maplibregl.Map | undefined;
-  private viewChangeCallbacks = new Set<(viewState: MapViewState) => void>();
+  private map?: maplibregl.Map;
+  private drawing?: MapLibreDrawingManager;
+  private measure?: MapLibreMeasureManager;
+  private viewChangeCallbacks = new Set<(vs: MapViewState) => void>();
   private clickCallback?: (lat: number, lng: number) => void;
-  private draw: MapboxDraw | undefined;
-  private cancelCurrentDraw?: () => void;
-  private measureLabels: maplibregl.Marker[] = [];
-  private measureLayerIds: string[] = [];
-  private measureCounter = 0;
+
+  // ── Lifecycle ────────────────────────────────────────────────────────
 
   initialize(container: HTMLElement, options: MapEngineOptions): void {
-    this.map = new maplibregl.Map({
+    const map = new maplibregl.Map({
       container,
       style: {
         version: 8,
@@ -43,79 +35,67 @@ export class MapLibreEngine implements MapEngine {
             type: 'raster',
             tiles: [config.MapLibreTilesURL],
             tileSize: 256,
-            // Bound the pyramid so MapLibre won't request tiles outside the
-            // provider's range — prevents 404 gaps when zoomed in far.
+            // Bound the pyramid so MapLibre won't request tiles outside
+            // the provider's range — prevents 404 gaps when zoomed in far.
             minzoom: 0,
             maxzoom: 15,
             attribution: '© OpenStreetMap contributors',
           },
         },
         layers: [
-          // Solid background fills any area not yet covered by a tile, so
-          // zoom-out gaps read as "loading" instead of "broken" black squares.
+          // Solid background fills areas not yet covered by a tile so
+          // zoom-out gaps read as "loading" instead of broken black squares.
           { id: 'background', type: 'background', paint: { 'background-color': '#1f2937' } },
           { id: 'raster-layer', type: 'raster', source: 'raster-tiles' },
         ],
       },
       attributionControl: false,
-      renderWorldCopies: false, // disable seamless horizontal panning/duplication at zooms where it would be enabled by default
+      renderWorldCopies: false,
       // Make tile cross-fade snappy so freshly-arrived tiles replace stale
       // children/parents immediately instead of blending for 300ms.
       fadeDuration: 0,
-      // Cap the canvas pixel ratio. On HiDPI displays MapLibre + Deck.gl both
-      // render at devicePixelRatio (often 2.0+), which quadruples fragment-
-      // shader cost vs a 1x display. 1.5 keeps text/lines crisp while ~halving
-      // GPU work on typical laptops.
-      maxTileCacheSize: 256, // default is small (~6 per source) → re-fetches on back-pan
+      // Cap canvas pixel ratio. HiDPI displays render at devicePixelRatio
+      // (often 2+), which quadruples fragment-shader cost vs 1x. 1.5
+      // keeps text/lines crisp while ~halving GPU work on typical laptops.
+      maxTileCacheSize: 256,
       pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
-      // MapLibre uses [lng, lat]; defaultOptions.center is [lat, lng] → swap
-      
+      // MapLibre wants [lng, lat]; defaultOptions.center is [lat, lng].
       center: [options.center[1], options.center[0]],
       zoom: options.zoom,
     });
+    this.map = map;
 
+    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    map.addControl(
+      new maplibregl.ScaleControl({ maxWidth: 80, unit: 'metric' }),
+      'bottom-right',
+    );
 
-    this.draw = new MapboxDraw({
-      defaultMode: 'simple_select',
-      userProperties: true,
-      modes: {
-        ...MapboxDraw.modes,
-        draw_polygon: MapboxDraw.modes.draw_polygon,
-        draw_circle: CircleMode,
-        drag_circle: DragCircleMode,
-        direct_select: DirectMode,
-        simple_select: SimpleSelectMode,
-        drag_ellipse: DragEllipseMode,
-        drag_sector: DragSectorMode,
-      },
-      displayControlsDefault: false,
-        styles: drawStyles
-      });
-
-    this.map.addControl(this.draw as any);
-
-    // 1. Add your Scale Control
-    const scale = new maplibregl.ScaleControl({
-      maxWidth: 80,         // Maximum width of the control in pixels
-      unit: 'metric'        // Options: 'metric', 'imperial', 'nautical'
-    });
-
-    // 2. Add the Navigation Control (zoom and rotation controls)
-    const nav = new maplibregl.NavigationControl();
-    this.map.addControl(nav, 'top-right');
-
-
-    this.map.addControl(scale, 'bottom-right');
-
-    this.map.on('move', () => {
+    map.on('move', () => {
       const vs = this.getViewState();
       this.viewChangeCallbacks.forEach((cb) => cb(vs));
     });
-
-    this.map.on('click', (e: maplibregl.MapMouseEvent) => {
+    map.on('click', (e: maplibregl.MapMouseEvent) => {
       this.clickCallback?.(e.lngLat.lat, e.lngLat.lng);
     });
+
+    this.drawing = new MapLibreDrawingManager(map);
+    this.measure = new MapLibreMeasureManager(map, this.drawing.getDraw());
   }
+
+  resize(): void {
+    this.map?.resize();
+  }
+
+  destroy(): void {
+    this.measure?.removeAll();
+    this.drawing = undefined;
+    this.measure = undefined;
+    this.map?.remove();
+    this.map = undefined;
+  }
+
+  // ── View state + clicks ──────────────────────────────────────────────
 
   getViewState(): MapViewState {
     const center = this.map?.getCenter();
@@ -128,7 +108,7 @@ export class MapLibreEngine implements MapEngine {
     };
   }
 
-  onViewChange(callback: (viewState: MapViewState) => void): () => void {
+  onViewChange(callback: (vs: MapViewState) => void): () => void {
     this.viewChangeCallbacks.add(callback);
     return () => {
       this.viewChangeCallbacks.delete(callback);
@@ -139,177 +119,90 @@ export class MapLibreEngine implements MapEngine {
     this.clickCallback = callback;
   }
 
-  resize(): void {
-    this.map?.resize();
+  // ── Drawing (delegated) ──────────────────────────────────────────────
+
+  startDrawPoint(onComplete: (id: string, position: [number, number]) => void): void {
+    this.drawing?.startDrawPoint(onComplete);
   }
 
-  destroy(): void {
-    this.removeMeasurements();
-    this.map?.remove();
-    this.map = undefined;
+  startDrawLine(onComplete: (id: string, positions: [number, number][]) => void): void {
+    this.drawing?.startDrawLine(onComplete);
   }
 
-  startDrawPoint(onComplete: (position: [number, number]) => void): void {
-    this.draw?.changeMode('draw_point');
-    const handler = (e: any) => {
-      const feature = e.features[0];
-
-      onComplete(feature);
-
-
-      this.map?.off('draw.create', handler);
-    };
-
-    this.map?.on('draw.create', handler);
-  }
-  startDrawLine(onComplete: (positions: [number, number][]) => void): void {
-    this.draw?.changeMode('draw_line_string');
-    const handler = (e: any) => {
-      const feature = e.features[0];
-
-      onComplete(feature);
-
-
-      this.map?.off('draw.create', handler);
-    };
-
-    this.map?.on('draw.create', handler);
-
+  startDrawPolygon(onComplete: (id: string, positions: [number, number][]) => void): void {
+    this.drawing?.startDrawPolygon(onComplete);
   }
 
- startDrawRoute(
-  onUpdate: (positions: [number, number][]) => void
-): void {
-  if (!this.map || !this.draw) return;
-  this.cancelCurrentDraw = startMaplibreRouteDraw(
-    this.map, this.draw, onUpdate
-  );
-}
-  
-  startDrawPolygon(onComplete: (positions: [number, number][]) => void): void {
-    this.draw?.changeMode('draw_polygon');
-
-    const handler = (e: any) => {
-      const feature = e.features[0];
-
-      onComplete(feature);
-
-
-      this.map?.off('draw.create', handler);
-    };
-
-    this.map?.on('draw.create', handler);
-  }
-  startDrawCircle(onComplete: (center: [number, number], radius: number) => void): void {
-    this.draw?.changeMode('draw_circle', { initialRadiusInKm: 5 });
-    const handler = (e: any) => {
-      const feature = e.features[0];
-
-      onComplete(feature.geometry.coordinates, feature.properties.radiusInKm);
-
-
-      this.map?.off('draw.create', handler);
-    };
-
-    this.map?.on('draw.create', handler);
+  startDrawCircle(
+    onComplete: (id: string, center: [number, number], radius: number) => void,
+  ): void {
+    this.drawing?.startDrawCircle(onComplete);
   }
 
- startDrawEllipse(onComplete: (center: [number, number], radiusX: number, radiusY: number) => void): void {
-    this.draw?.changeMode('drag_ellipse' as any);
-    
-    const handler = (e: any) => {
-      const feature = e.features[0];
-
-      onComplete(
-        feature.properties.center,
-        feature.properties.radiusXInKm,
-        feature.properties.radiusYInKm
-      );
-
-      this.map?.off('draw.create', handler);
-    };
-
-    this.map?.on('draw.create', handler);
+  startDrawEllipse(
+    onComplete: (
+      id: string,
+      center: [number, number],
+      radiusX: number,
+      radiusY: number,
+    ) => void,
+  ): void {
+    this.drawing?.startDrawEllipse(onComplete);
   }
 
   startDrawSector(
     onComplete: (
+      id: string,
       center: [number, number],
       radius: number,
       startBearing: number,
-      endBearing: number
-    ) => void
+      endBearing: number,
+    ) => void,
   ): void {
-    this.draw?.changeMode('drag_sector' as any);
-
-    const handler = (e: any) => {
-      const feature = e.features[0];
-
-      onComplete(
-        feature.properties.center,
-        feature.properties.radiusInKm,
-        feature.properties.startBearing,
-        feature.properties.endBearing
-      );
-
-      this.map?.off('draw.create', handler);
-    };
-
-    this.map?.on('draw.create', handler);
+    this.drawing?.startDrawSector(onComplete);
   }
 
-  startMeasureDistance(onComplete: (distanceKm: number) => void): void {
-    this.draw?.changeMode('draw_line_string');
-    const handler = (e: any) => {
-      const feature = e.features[0];
-      const coords = feature.geometry.coordinates as LngLat[];
-      let total = 0;
-      for (let i = 1; i < coords.length; i++) {
-        const segKm = distanceKm(coords[i - 1], coords[i]);
-        total += segKm;
-        this.addMeasureLabel(formatDistance(segKm), centroidOf([coords[i - 1], coords[i]]));
-      }
-      this.addMeasureLabel(`Total: ${formatDistance(total)}`, coords[coords.length - 1]);
-      this.freezeAsMeasure(feature, 'line');
-      onComplete(total);
-      this.map?.off('draw.create', handler);
-    };
-    this.map?.on('draw.create', handler);
-  }
-
-  startMeasureArea(onComplete: (areaKm2: number) => void): void {
-    this.draw?.changeMode('draw_polygon');
-    const handler = (e: any) => {
-      const feature = e.features[0];
-      const ring = feature.geometry.coordinates[0] as LngLat[];
-      const km2 = polygonAreaKm2(ring);
-      this.addMeasureLabel(formatArea(km2), centroidOf(ring));
-      this.freezeAsMeasure(feature, 'fill');
-      onComplete(km2);
-      this.map?.off('draw.create', handler);
-    };
-    this.map?.on('draw.create', handler);
-  }
-
-  removeMeasurements(): void {
-    this.measureLabels.forEach((m) => m.remove());
-    this.measureLabels = [];
-    this.measureLayerIds.forEach((id) => {
-      if (this.map?.getLayer(id)) this.map.removeLayer(id);
-      if (this.map?.getSource(id)) this.map.removeSource(id);
-    });
-    this.measureLayerIds = [];
+  startDrawRoute(onUpdate: (id: string, positions: [number, number][]) => void): void {
+    this.drawing?.startDrawRoute(onUpdate);
   }
 
   cancelDrawing(): void {
-    this.cancelCurrentDraw?.();
-    this.cancelCurrentDraw = undefined;
-    if (this.draw?.getMode() !== 'simple_select') {
-      this.draw?.changeMode('simple_select');
-    }
+    this.drawing?.cancelDrawing();
   }
 
-  /** Swap the basemap tile source by replacing the raster source/layer. */
+  addShape(shape: CompletedShape): void {
+    this.drawing?.addShape(shape);
+  }
+
+  setOnShapeEdited(callback: (shape: CompletedShape) => void): void {
+    this.drawing?.setOnShapeEdited(callback);
+  }
+
+  setOnShapeDeleted(callback: (id: string) => void): void {
+    this.drawing?.setOnShapeDeleted(callback);
+  }
+
+  // ── Measurement (delegated) ──────────────────────────────────────────
+
+  startMeasureDistance(onComplete: (distanceKm: number) => void): void {
+    this.measure?.startMeasureDistance(onComplete);
+  }
+
+  startMeasureArea(onComplete: (areaKm2: number) => void): void {
+    this.measure?.startMeasureArea(onComplete);
+  }
+
+  removeMeasurements(): void {
+    this.measure?.removeAll();
+  }
+
+  // ── Basemap ──────────────────────────────────────────────────────────
+
+  /**
+   * Swap the basemap tile source. We keep the raster layer underneath
+   * all other layers (above the background fill) so user shapes and
+   * draw controls always render on top.
+   */
   setBaseMap(url: string): void {
     const map = this.map;
     if (!map) return;
@@ -323,58 +216,10 @@ export class MapLibreEngine implements MapEngine {
       maxzoom: 15,
       attribution: '© OpenStreetMap contributors',
     });
-    // Insert the basemap underneath all other layers (but above the
-    // background fill, which stays at the very bottom).
     const firstLayerId = map.getStyle().layers?.[0]?.id;
     map.addLayer(
       { id: 'raster-layer', type: 'raster', source: 'raster-tiles' },
       firstLayerId === 'background' ? map.getStyle().layers?.[1]?.id : firstLayerId,
     );
-  }
-
-  /**
-   * Move a feature from the editable MapboxDraw layer onto a plain,
-   * non-interactive source so the user can't drag/reshape it afterward.
-   */
-  private freezeAsMeasure(
-    feature: GeoJSON.Feature,
-    paint: 'line' | 'fill',
-  ): void {
-    if (!this.map || !feature.id) return;
-    this.draw?.delete(String(feature.id));
-    const id = `measure-${paint}-${this.measureCounter++}`;
-    this.map.addSource(id, { type: 'geojson', data: feature });
-    if (paint === 'line') {
-      this.map.addLayer({
-        id,
-        type: 'line',
-        source: id,
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#2563eb', 'line-width': 3 },
-      });
-    } else {
-      this.map.addLayer({
-        id,
-        type: 'fill',
-        source: id,
-        paint: {
-          'fill-color': '#2563eb',
-          'fill-opacity': 0.2,
-          'fill-outline-color': '#2563eb',
-        },
-      });
-    }
-    this.measureLayerIds.push(id);
-  }
-
-  private addMeasureLabel(text: string, position: LngLat): void {
-    if (!this.map) return;
-    const el = document.createElement('div');
-    el.className = 'measure-label';
-    el.textContent = text;
-    const marker = new maplibregl.Marker({ element: el, anchor: 'center' })
-      .setLngLat(position)
-      .addTo(this.map);
-    this.measureLabels.push(marker);
   }
 }

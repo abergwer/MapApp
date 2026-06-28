@@ -14,7 +14,7 @@ type RouteCoords = [number, number][];
 export function startMaplibreRouteDraw(
   map: maplibregl.Map,
   draw: MapboxDraw,
-  onUpdate: (positions: RouteCoords) => void,
+  onUpdate: (id: string, positions: RouteCoords) => void,
 ): () => void {
   let routeId: string | undefined;
 
@@ -22,7 +22,7 @@ export function startMaplibreRouteDraw(
     if (!routeId) return;
     const feature = draw.get(routeId);
     if (feature?.geometry.type === 'LineString') {
-      onUpdate(feature.geometry.coordinates as RouteCoords);
+      onUpdate(routeId, feature.geometry.coordinates as RouteCoords);
     }
   };
 

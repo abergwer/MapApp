@@ -30,20 +30,30 @@ export interface LeafletSectorTool {
   enableEdit(): void;
   /** Remove all currently-attached sector edit handles. */
   disableEdit(): void;
+  /**
+   * Build a finished, editable sector layer for the given meta. NOT added
+   * to the map — caller decides where it goes. Used both by the draw
+   * flow on commit and by the engine when adding a sector programmatically.
+   */
+  buildLayer(meta: SectorMeta): SectorLayer;
+  /**
+   * Register a callback invoked when the user finishes dragging any of a
+   * sector's edit handles. The layer carries `_shapeId` set by the engine
+   * so the callback can match the update back to a stored shape.
+   */
+  setOnEdit(callback: (layer: SectorLayer) => void): void;
 }
 
-const ARM_HANDLE_HTML =
- '<div style="width:14px;height:14px;background:#f59e0b;border:2px solid #fff;' +
-  'border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.4);cursor:move;"></div>';
-const RADIUS_HANDLE_HTML =
-  '<div style="width:12px;height:12px;background:#fff;border:2px solid #16a34a;' +
+// Handle + outline styling matches the ellipse tool so all custom-drawn
+// shapes read as one visual family: blue outline, white circular handles
+// with a blue border. Center handle is slightly larger so it's easy to
+// distinguish from the three reshape handles around it.
+const HANDLE_HTML =
+  '<div style="width:12px;height:12px;background:#fff;border:2px solid #1f6feb;' +
   'border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:move;"></div>';
-const CENTER_HTML =
-  '<div style="width:14px;height:14px;background:#f59e0b;border:2px solid #fff;' +
-  'border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.4);cursor:move;"></div>';
 
 const PREVIEW_STYLE: L.PolylineOptions = {
-  color: '#f59e0b',
+  color: '#1f6feb',
   weight: 2,
   fillOpacity: 0.15,
   interactive: false,
@@ -57,6 +67,37 @@ const PREVIEW_STYLE: L.PolylineOptions = {
 export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
   let activeDrawCleanup: (() => void) | undefined;
   const activeEdits: Array<{ remove: () => void }> = [];
+  let editCallback: ((layer: SectorLayer) => void) | undefined;
+
+  /**
+   * Single source of truth for what a finished sector layer looks like:
+   * sampled pie-slice ring + `_sectorMeta` (used by `enableEdit` to find
+   * and reshape it) + `feature` GeoJSON for export. `pmIgnore` keeps
+   * Geoman away — our custom handles own the reshape.
+   */
+  const buildLayer = (meta: SectorMeta): SectorLayer => {
+    const [lng, lat] = meta.center;
+    const latlngs = sampleSectorPolygon(
+      L.latLng(lat, lng),
+      meta.radius,
+      meta.startBearing,
+      meta.endBearing,
+    );
+    const opts: L.PolylineOptions & { pmIgnore?: boolean } = {
+      ...PREVIEW_STYLE,
+      fillOpacity: 0.25,
+      interactive: true,
+      pmIgnore: true,
+    };
+    const layer = L.polygon(latlngs, opts) as SectorLayer & { feature?: GeoJSON.Feature };
+    layer._sectorMeta = { ...meta };
+    layer.feature = {
+      type: 'Feature',
+      geometry: layer.toGeoJSON().geometry,
+      properties: { shape: 'Sector', ...meta },
+    };
+    return layer;
+  };
 
   const findSectorLayers = (): SectorLayer[] => {
     const out: SectorLayer[] = [];
@@ -72,21 +113,17 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
   };
 
   const attachEditHandles = (layer: SectorLayer): { remove: () => void } => {
-    const armIcon = L.divIcon({
+    // Same icon for the three reshape handles (start arm, end arm, radius).
+    const handleIcon = L.divIcon({
       className: '',
-      html: ARM_HANDLE_HTML,
+      html: HANDLE_HTML,
       iconSize: [12, 12],
       iconAnchor: [6, 6],
     });
-    const radiusIcon = L.divIcon({
-      className: '',
-      html: RADIUS_HANDLE_HTML,
-      iconSize: [12, 12],
-      iconAnchor: [6, 6],
-    });
+    // Center handle uses the same look, bumped 2px so it's easy to grab.
     const centerIcon = L.divIcon({
       className: '',
-      html: CENTER_HTML,
+      html: HANDLE_HTML,
       iconSize: [14, 14],
       iconAnchor: [7, 7],
     });
@@ -112,9 +149,9 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
     };
 
     const initial = positions();
-    const startHandle = L.marker(initial.start, markerOpts(armIcon)).addTo(map);
-    const endHandle = L.marker(initial.end, markerOpts(armIcon)).addTo(map);
-    const radiusHandle = L.marker(initial.mid, markerOpts(radiusIcon)).addTo(map);
+    const startHandle = L.marker(initial.start, markerOpts(handleIcon)).addTo(map);
+    const endHandle = L.marker(initial.end, markerOpts(handleIcon)).addTo(map);
+    const radiusHandle = L.marker(initial.mid, markerOpts(handleIcon)).addTo(map);
     const centerHandle = L.marker(initial.c, markerOpts(centerIcon)).addTo(map);
 
     const syncHandles = () => {
@@ -173,6 +210,7 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
           endBearing: layer._sectorMeta.endBearing,
         };
       }
+      editCallback?.(layer);
     };
 
     startHandle.on('drag', onArmDrag('start', startHandle)).on('dragend', onDragEnd);
@@ -261,40 +299,21 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
         return;
       }
       const endBearing = bearingTo(center, e.latlng);
-
-      // Commit: keep the polygon, tag it with sector metadata so the edit
-      // controller can find and reshape it later.
-      if (preview instanceof L.Polygon) {
-        preview.setLatLngs(sampleSectorPolygon(center, radius, startBearing, endBearing));
-        preview.setStyle({ fillOpacity: 0.25, interactive: true });
-        const sectorLayer = preview as SectorLayer & { feature?: GeoJSON.Feature };
-        sectorLayer._sectorMeta = {
-          center: [center.lng, center.lat],
-          radius,
-          startBearing,
-          endBearing,
-        };
-        sectorLayer.feature = {
-          type: 'Feature',
-          geometry: preview.toGeoJSON().geometry,
-          properties: {
-            shape: 'Sector',
-            center: [center.lng, center.lat],
-            radius,
-            startBearing,
-            endBearing,
-          },
-        };
-        preview = null; // hand off ownership so cancel() can't remove it
-      }
-
-      detachHandlers();
-      onComplete({
+      const meta: SectorMeta = {
         center: [center.lng, center.lat],
         radius,
         startBearing,
         endBearing,
-      });
+      };
+
+      // Drop the preview and replace it with the canonical layer so draw-
+      // commit and programmatic `addShape` go through the same path.
+      preview?.remove();
+      preview = null;
+      buildLayer(meta).addTo(map);
+
+      detachHandlers();
+      onComplete(meta);
     };
 
     const onKeyDown = (e: KeyboardEvent) => {
@@ -321,6 +340,10 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
       while (activeEdits.length > 0) {
         activeEdits.pop()?.remove();
       }
+    },
+    buildLayer,
+    setOnEdit: (cb) => {
+      editCallback = cb;
     },
   };
 }

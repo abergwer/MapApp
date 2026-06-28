@@ -37,32 +37,32 @@ const DRAW_TOOLS: { id: DrawTool; label: string; Icon: typeof FiberManualRecordI
 function startDraw(engine: MapEngine, tool: DrawTool, store: DrawingToolStore) {
   switch (tool) {
     case 'point':
-      return engine.startDrawPoint((position) =>
-        store.recordShape({ kind: 'point', position }),
+      return engine.startDrawPoint((id, position) =>
+        store.recordShape({ id, kind: 'point', position }),
       );
     case 'line':
-      return engine.startDrawLine((positions) =>
-        store.recordShape({ kind: 'line', positions }),
+      return engine.startDrawLine((id, positions) =>
+        store.recordShape({ id, kind: 'line', positions }),
       );
     case 'polygon':
-      return engine.startDrawPolygon((positions) =>
-        store.recordShape({ kind: 'polygon', positions }),
+      return engine.startDrawPolygon((id, positions) =>
+        store.recordShape({ id, kind: 'polygon', positions }),
       );
     case 'circle':
-      return engine.startDrawCircle((center, radius) =>
-        store.recordShape({ kind: 'circle', center, radius }),
+      return engine.startDrawCircle((id, center, radius) =>
+        store.recordShape({ id, kind: 'circle', center, radius }),
       );
     case 'ellipse':
-      return engine.startDrawEllipse?.((center, radiusX, radiusY) =>
-        store.recordShape({ kind: 'ellipse', center, radiusX, radiusY }),
+      return engine.startDrawEllipse?.((id, center, radiusX, radiusY) =>
+        store.recordShape({ id, kind: 'ellipse', center, radiusX, radiusY }),
       );
     case 'sector':
-      return engine.startDrawSector?.((center, radius, startBearing, endBearing) =>
-        store.recordShape({ kind: 'sector', center, radius, startBearing, endBearing }),
+      return engine.startDrawSector?.((id, center, radius, startBearing, endBearing) =>
+        store.recordShape({ id, kind: 'sector', center, radius, startBearing, endBearing }),
       );
     case 'route':
-      return engine.startDrawRoute?.((positions) =>
-        store.recordShape({ kind: 'route', positions }),
+      return engine.startDrawRoute?.((id, positions) =>
+        store.recordShape({ id, kind: 'route', positions }),
       );
   }
 }

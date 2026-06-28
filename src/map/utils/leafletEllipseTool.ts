@@ -27,6 +27,18 @@ export interface LeafletEllipseTool {
   enableEdit(): void;
   /** Remove all currently-attached ellipse edit handles. */
   disableEdit(): void;
+  /**
+   * Build a finished, editable ellipse layer for the given meta. NOT added
+   * to the map — caller decides where it goes. Used both by the draw
+   * flow on commit and by the engine when adding an ellipse programmatically.
+   */
+  buildLayer(meta: EllipseMeta): EllipseLayer;
+  /**
+   * Register a callback invoked when the user finishes dragging any of an
+   * ellipse's edit handles. The layer carries `_shapeId` set by the engine
+   * so the callback can match the update back to a stored shape.
+   */
+  setOnEdit(callback: (layer: EllipseLayer) => void): void;
 }
 
 const HANDLE_HTML =
@@ -40,6 +52,34 @@ const HANDLE_HTML =
 export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
   let activeDrawCleanup: (() => void) | undefined;
   const activeEdits: Array<{ remove: () => void }> = [];
+  let editCallback: ((layer: EllipseLayer) => void) | undefined;
+
+  /**
+   * Single source of truth for what a finished ellipse layer looks like:
+   * 64-point polygon ring + `_ellipseMeta` (used by `enableEdit` to find
+   * and reshape it) + `feature` GeoJSON (used for export / serialization).
+   * `pmIgnore` keeps Geoman's vertex editor away — our custom handles
+   * own the reshape gesture.
+   */
+  const buildLayer = (meta: EllipseMeta): EllipseLayer => {
+    const [lng, lat] = meta.center;
+    const latlngs = sampleEllipsePolygon(L.latLng(lat, lng), meta.radiusX, meta.radiusY);
+    const opts: L.PolylineOptions & { pmIgnore?: boolean } = {
+      color: '#1f6feb',
+      weight: 2,
+      fillOpacity: 0.25,
+      interactive: true,
+      pmIgnore: true,
+    };
+    const layer = L.polygon(latlngs, opts) as EllipseLayer & { feature?: GeoJSON.Feature };
+    layer._ellipseMeta = { ...meta };
+    layer.feature = {
+      type: 'Feature',
+      geometry: layer.toGeoJSON().geometry,
+      properties: { shape: 'Ellipse', ...meta },
+    };
+    return layer;
+  };
 
   const findEllipseLayers = (): EllipseLayer[] => {
     const out: EllipseLayer[] = [];
@@ -146,6 +186,7 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
           radiusY: layer._ellipseMeta.radiusY,
         };
       }
+      editCallback?.(layer);
     };
 
     eHandle.on('drag', onAxisDrag('x', eHandle)).on('dragend', onDragEnd);
@@ -217,29 +258,15 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
       }
       const { center, radiusX, radiusY } = bboxToCenterAndRadii(firstCorner, e.latlng);
 
-      // Commit the preview: keep it on the map as the final shape and tag it
-      // with ellipse metadata so the edit-mode controller can find it later.
-      if (preview) {
-        preview.setLatLngs(sampleEllipsePolygon(center, radiusX, radiusY));
-        preview.setStyle({ fillOpacity: 0.25, interactive: true });
-        const ellipseLayer = preview as EllipseLayer & { feature?: GeoJSON.Feature };
-        ellipseLayer._ellipseMeta = {
-          center: [center.lng, center.lat],
-          radiusX,
-          radiusY,
-        };
-        ellipseLayer.feature = {
-          type: 'Feature',
-          geometry: preview.toGeoJSON().geometry,
-          properties: {
-            shape: 'Ellipse',
-            center: [center.lng, center.lat],
-            radiusX,
-            radiusY,
-          },
-        };
-        preview = null; // hand off ownership so cancel() can't remove it
-      }
+      // Drop the preview and replace it with the canonical layer so draw-
+      // commit and programmatic `addShape` go through the same path.
+      preview?.remove();
+      preview = null;
+      buildLayer({
+        center: [center.lng, center.lat],
+        radiusX,
+        radiusY,
+      }).addTo(map);
 
       detachHandlers();
       onComplete({ center: [center.lng, center.lat], radiusX, radiusY });
@@ -269,6 +296,10 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
       while (activeEdits.length > 0) {
         activeEdits.pop()?.remove();
       }
+    },
+    buildLayer,
+    setOnEdit: (cb) => {
+      editCallback = cb;
     },
   };
 }
