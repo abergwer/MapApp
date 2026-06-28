@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
+import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -20,9 +21,9 @@ function CoordinatesBarImpl() {
       sx={{
         px: 1.75,
         py: 0.75,
-        fontFamily: 'ui-monospace, Consolas, monospace',
-        fontSize: '0.82rem',
-        backdropFilter: 'blur(4px)',
+        fontFamily: "'JetBrains Mono', ui-monospace, Consolas, monospace",
+        fontSize: '0.78rem',
+        letterSpacing: '0.01em',
         pointerEvents: 'none',
         userSelect: 'none',
         width: 'fit-content',
@@ -30,8 +31,18 @@ function CoordinatesBarImpl() {
     >
       {coords ? (
         <Stack direction="row" spacing={2.5} sx={{ alignItems: 'center' }}>
-          <span>Lat: <strong style={{ color: '#a3e6a3' }}>{coords.lat.toFixed(5)}</strong></span>
-          <span>Lng: <strong style={{ color: '#a3e6a3' }}>{coords.lng.toFixed(5)}</strong></span>
+          <span>
+            Lat:{' '}
+            <Box component="strong" sx={{ color: 'success.light' }}>
+              {coords.lat.toFixed(5)}
+            </Box>
+          </span>
+          <span>
+            Lng:{' '}
+            <Box component="strong" sx={{ color: 'success.light' }}>
+              {coords.lng.toFixed(5)}
+            </Box>
+          </span>
         </Stack>
       ) : (
         <Typography component="span" sx={{ color: 'text.disabled', fontStyle: 'italic' }}>
