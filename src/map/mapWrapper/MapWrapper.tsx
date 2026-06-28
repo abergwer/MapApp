@@ -29,7 +29,7 @@ interface MapWrapperProps {
 
 function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, uiVisibilityStore } = useStores();
+  const { mapEngineStore, uiVisibilityStore, drawingToolStore } = useStores();
   const { minimapVisible, videoVisible } = uiVisibilityStore;
 
   useEffect(() => {
@@ -59,6 +59,20 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
       // their own onViewChange subscription.
       unsubscribeViewChange = eng.onViewChange((vs) => mapEngineStore.setViewState(vs));
 
+      // Round-trip user edits/deletes back into the store. The engine
+      // reconstructs a full CompletedShape from its painted layer/feature
+      // (tagged by shape id) and hands it off — the store stays the
+      // single source of truth.
+      eng.setOnShapeEdited?.((shape) => drawingToolStore.updateShape(shape));
+      eng.setOnShapeDeleted?.((id) => drawingToolStore.removeShape(id));
+
+      // Replay the store's current shapes onto the freshly-built engine.
+      // The store is the single writer; we only paint. New shapes added
+      // later (user-drawn via ToolBar, or pushed by a server feed into
+      // `recordShape`) reach the engine through their own draw flow —
+      // this loop only covers what's already there at engine-init time.
+      drawingToolStore.completedShapes.forEach((shape) => eng?.addShape?.(shape));
+
       handleResize = () => eng?.resize?.();
       window.addEventListener('resize', handleResize);
     });
@@ -73,7 +87,7 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
       eng?.destroy();
       eng = undefined;
     };
-  }, [mapEngineStore]);
+  }, [mapEngineStore, drawingToolStore]);
 
   return (
     <MapContext.Provider value={{ containerRef }}>
