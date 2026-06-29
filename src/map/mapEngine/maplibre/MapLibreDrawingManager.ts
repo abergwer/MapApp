@@ -12,11 +12,11 @@ import { DragSectorMode } from '../../utils/MaplibreSectorMath';
 import { startMaplibreRouteDraw } from '../../utils/MaplibreRouteTool';
 import { drawStyles } from '../../drawStyles';
 import { ellipseRing, sectorRing } from '../../utils/geo';
-import type { CompletedShape } from '../../../stores/DrawingToolStore';
+import type { MapShape } from '../../../stores/DrawingToolStore';
 
 /**
  * Property name we stamp on every feature so edit events know which
- * `CompletedShape` variant to rebuild — MapboxDraw stores arbitrary
+ * `MapShape` variant to rebuild — MapboxDraw stores arbitrary
  * properties alongside its features, so we piggyback on that.
  */
 const KIND_PROP = 'shapeKind';
@@ -34,7 +34,7 @@ export class MapLibreDrawingManager {
   private readonly map: maplibregl.Map;
   private readonly draw: MapboxDraw;
   private cancelCurrentDraw?: () => void;
-  private onShapeEdited?: (shape: CompletedShape) => void;
+  private onShapeEdited?: (shape: MapShape) => void;
   private onShapeDeleted?: (id: string) => void;
 
   constructor(map: maplibregl.Map) {
@@ -58,7 +58,7 @@ export class MapLibreDrawingManager {
     map.addControl(this.draw as any);
 
     // MapboxDraw fires `draw.update` after every vertex drag / resize and
-    // `draw.delete` on trash. We rebuild a `CompletedShape` from the
+    // `draw.delete` on trash. We rebuild a `MapShape` from the
     // feature's tagged `shapeKind` + geometry and forward to the engine.
     map.on('draw.update', (e: any) => {
       for (const feature of e.features ?? []) {
@@ -188,7 +188,7 @@ export class MapLibreDrawingManager {
    * custom draw modes set, which keeps the patched `direct_select`
    * resize/rotate handlers working.
    */
-  addShape(shape: CompletedShape): void {
+  addShape(shape: MapShape): void {
     const feature = shapeToFeature(shape);
     if (!feature) return;
     feature.id = shape.id;
@@ -198,7 +198,7 @@ export class MapLibreDrawingManager {
 
   // ── Round-trip callbacks ─────────────────────────────────────────────
 
-  setOnShapeEdited(callback: (shape: CompletedShape) => void): void {
+  setOnShapeEdited(callback: (shape: MapShape) => void): void {
     this.onShapeEdited = callback;
   }
 
@@ -218,7 +218,7 @@ export class MapLibreDrawingManager {
   }
 
   /** Stamp a freshly-drawn feature with its `shapeKind`. Returns the id. */
-  private tag(feature: any, kind: CompletedShape['kind']): string {
+  private tag(feature: any, kind: MapShape['kind']): string {
     const id = String(feature.id);
     this.draw.setFeatureProperty(id, KIND_PROP, kind);
     return id;
@@ -228,11 +228,11 @@ export class MapLibreDrawingManager {
 // ── Pure conversion helpers ────────────────────────────────────────────
 
 /**
- * Convert a `CompletedShape` into a GeoJSON feature MapboxDraw can
+ * Convert a `MapShape` into a GeoJSON feature MapboxDraw can
  * accept. Property names mirror the custom draw modes so features added
  * this way behave identically to drawn ones under `direct_select`.
  */
-function shapeToFeature(shape: CompletedShape): GeoJSON.Feature | null {
+function shapeToFeature(shape: MapShape): GeoJSON.Feature | null {
   switch (shape.kind) {
     case 'point':
       return {
@@ -316,14 +316,14 @@ function shapeToFeature(shape: CompletedShape): GeoJSON.Feature | null {
 
 /**
  * Inverse of `shapeToFeature`: read a MapboxDraw feature (post-edit)
- * back into a `CompletedShape`. Uses the `shapeKind` property we stamp
+ * back into a `MapShape`. Uses the `shapeKind` property we stamp
  * on every feature. Returns null for features without it (anything
  * painted outside the engine).
  */
-function featureToShape(feature: any): CompletedShape | null {
+function featureToShape(feature: any): MapShape | null {
   if (!feature) return null;
   const id = feature.id != null ? String(feature.id) : undefined;
-  const kind: CompletedShape['kind'] | undefined = feature.properties?.[KIND_PROP];
+  const kind: MapShape['kind'] | undefined = feature.properties?.[KIND_PROP];
   if (!id || !kind) return null;
 
   switch (kind) {

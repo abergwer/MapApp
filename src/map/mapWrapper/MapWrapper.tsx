@@ -60,7 +60,7 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
       unsubscribeViewChange = eng.onViewChange((vs) => mapEngineStore.setViewState(vs));
 
       // Round-trip user edits/deletes back into the store. The engine
-      // reconstructs a full CompletedShape from its painted layer/feature
+      // reconstructs a full MapShape from its painted layer/feature
       // (tagged by shape id) and hands it off — the store stays the
       // single source of truth.
       eng.setOnShapeEdited?.((shape) => drawingToolStore.updateShape(shape));

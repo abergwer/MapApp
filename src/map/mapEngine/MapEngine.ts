@@ -1,4 +1,4 @@
-import type { CompletedShape } from '../../stores/DrawingToolStore';
+import type { MapShape } from '../../stores/DrawingToolStore';
 
 export type MapEngineType = 'leaflet' | 'maplibre' | 'cesium';
 
@@ -84,7 +84,7 @@ export interface MapEngine {
    * caller is responsible for `store.recordShape(shape)` if persistence
    * is desired. Keeps the engine free of store knowledge.
    */
-  addShape?(shape: CompletedShape): void;
+  addShape?(shape: MapShape): void;
 
   /**
    * Fires whenever the user finishes editing an existing shape (vertex
@@ -92,7 +92,7 @@ export interface MapEngine {
    * updated shape with the same `id` it was painted with — pair it with
    * `DrawingToolStore.updateShape` to keep the store in sync. Optional.
    */
-  setOnShapeEdited?(callback: (shape: CompletedShape) => void): void;
+  setOnShapeEdited?(callback: (shape: MapShape) => void): void;
 
   /**
    * Fires when the user removes a shape via the engine's edit/delete UI.

@@ -10,7 +10,7 @@ import {
   type LeafletSectorTool,
   type SectorLayer,
 } from '../../utils/leafletSectorTool';
-import type { CompletedShape } from '../../../stores/DrawingToolStore';
+import type { MapShape } from '../../../stores/DrawingToolStore';
 import { newShapeId } from '../../../stores/DrawingToolStore';
 
 /** Leaflet primitives work in metres; the store is unit-canonical in km. */
@@ -19,7 +19,7 @@ const KM_TO_M = 1000;
 /** Tags we stamp on every drawn layer so edit events can rebuild the shape. */
 type TaggedLayer = L.Layer & {
   _shapeId?: string;
-  _shapeKind?: CompletedShape['kind'];
+  _shapeKind?: MapShape['kind'];
 };
 
 /**
@@ -35,7 +35,7 @@ export class LeafletDrawingManager {
   private readonly map: L.Map;
   private readonly ellipseTool: LeafletEllipseTool;
   private readonly sectorTool: LeafletSectorTool;
-  private onShapeEdited?: (shape: CompletedShape) => void;
+  private onShapeEdited?: (shape: MapShape) => void;
   private onShapeDeleted?: (id: string) => void;
 
   constructor(map: L.Map) {
@@ -151,7 +151,7 @@ export class LeafletDrawingManager {
    * state, demo seeds). Same primitives + tagging as drawn shapes — the
    * result is editable identically.
    */
-  addShape(shape: CompletedShape): void {
+  addShape(shape: MapShape): void {
     const layer = this.buildShapeLayer(shape);
     this.stampTags(layer, shape.id, shape.kind);
     layer.addTo(this.map);
@@ -192,7 +192,7 @@ export class LeafletDrawingManager {
 
   // ── Round-trip callbacks ─────────────────────────────────────────────
 
-  setOnShapeEdited(callback: (shape: CompletedShape) => void): void {
+  setOnShapeEdited(callback: (shape: MapShape) => void): void {
     this.onShapeEdited = callback;
   }
 
@@ -212,13 +212,13 @@ export class LeafletDrawingManager {
   }
 
   /** Stamp a freshly-drawn layer with a new shape id + kind. Returns the id. */
-  private tag(layer: L.Layer, kind: CompletedShape['kind']): string {
+  private tag(layer: L.Layer, kind: MapShape['kind']): string {
     const id = newShapeId();
     this.stampTags(layer, id, kind);
     return id;
   }
 
-  private stampTags(layer: L.Layer, id: string, kind: CompletedShape['kind']): void {
+  private stampTags(layer: L.Layer, id: string, kind: MapShape['kind']): void {
     (layer as TaggedLayer)._shapeId = id;
     (layer as TaggedLayer)._shapeKind = kind;
     // Geoman fires `pm:edit` on the layer only (no map propagation),
@@ -253,8 +253,8 @@ export class LeafletDrawingManager {
     }
   }
 
-  /** Reconstruct a `CompletedShape` from a tagged Leaflet layer. */
-  private layerToShape(layer: TaggedLayer): CompletedShape | null {
+  /** Reconstruct a `MapShape` from a tagged Leaflet layer. */
+  private layerToShape(layer: TaggedLayer): MapShape | null {
     const id = layer._shapeId;
     const kind = layer._shapeKind;
     if (!id || !kind) return null;
@@ -302,8 +302,8 @@ export class LeafletDrawingManager {
     }
   }
 
-  /** Build the Leaflet primitive for an external `CompletedShape`. */
-  private buildShapeLayer(shape: CompletedShape): L.Layer {
+  /** Build the Leaflet primitive for an external `MapShape`. */
+  private buildShapeLayer(shape: MapShape): L.Layer {
     switch (shape.kind) {
       case 'point':
         return L.marker([shape.position[1], shape.position[0]]);

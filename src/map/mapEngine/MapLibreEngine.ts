@@ -1,7 +1,7 @@
 import maplibregl from 'maplibre-gl/dist/maplibre-gl.js';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
-import type { CompletedShape } from '../../stores/DrawingToolStore';
+import type { MapShape } from '../../stores/DrawingToolStore';
 import config from '../../../config.json';
 import { MapLibreDrawingManager } from './maplibre/MapLibreDrawingManager';
 import { MapLibreMeasureManager } from './maplibre/MapLibreMeasureManager';
@@ -170,11 +170,11 @@ export class MapLibreEngine implements MapEngine {
     this.drawing?.cancelDrawing();
   }
 
-  addShape(shape: CompletedShape): void {
+  addShape(shape: MapShape): void {
     this.drawing?.addShape(shape);
   }
 
-  setOnShapeEdited(callback: (shape: CompletedShape) => void): void {
+  setOnShapeEdited(callback: (shape: MapShape) => void): void {
     this.drawing?.setOnShapeEdited(callback);
   }
 

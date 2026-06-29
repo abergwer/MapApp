@@ -1,6 +1,6 @@
 import L from 'leaflet';
 import type { MapEngine, MapEngineOptions, MapViewState } from './MapEngine';
-import type { CompletedShape } from '../../stores/DrawingToolStore';
+import type { MapShape } from '../../stores/DrawingToolStore';
 import 'leaflet/dist/leaflet.css';
 import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import config from '../../../config.json';
@@ -148,7 +148,7 @@ export class LeafletEngine implements MapEngine {
     this.drawing?.cancelDrawing();
   }
 
-  addShape(shape: CompletedShape): void {
+  addShape(shape: MapShape): void {
     this.drawing?.addShape(shape);
   }
 
@@ -156,7 +156,7 @@ export class LeafletEngine implements MapEngine {
     this.drawing?.setEditMode(enabled);
   }
 
-  setOnShapeEdited(callback: (shape: CompletedShape) => void): void {
+  setOnShapeEdited(callback: (shape: MapShape) => void): void {
     this.drawing?.setOnShapeEdited(callback);
   }
 

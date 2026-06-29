@@ -11,7 +11,7 @@ export type DrawTool =
 
 export type MeasureTool = 'distance' | 'area';
 
-export type CompletedShape =
+export type MapShape =
   | { id: string; kind: 'point'; position: [number, number] }
   | { id: string; kind: 'line'; positions: [number, number][] }
   | { id: string; kind: 'polygon'; positions: [number, number][] }
@@ -52,7 +52,7 @@ export interface Measurement {
  * In a real app, swap for a websocket / fetch hook that calls
  * `recordShape` as messages arrive.
  */
-const DEMO_SERVER_SHAPES: CompletedShape[] = [
+const DEMO_SERVER_SHAPES: MapShape[] = [
   { id: newShapeId(), kind: 'point', position: [34.7818, 32.0853] },
   {
     id: newShapeId(),
@@ -80,7 +80,7 @@ export class DrawingToolStore {
   activeDrawTool: DrawTool | null = null;
   activeMeasureTool: MeasureTool | null = null;
   isEditing = false;
-  completedShapes: CompletedShape[] = [...DEMO_SERVER_SHAPES];
+  completedShapes: MapShape[] = [...DEMO_SERVER_SHAPES];
   measurements: Measurement[] = [];
 
   constructor() {
@@ -99,13 +99,13 @@ export class DrawingToolStore {
     this.isEditing = value;
   }
 
-  recordShape(shape: CompletedShape) {
+  recordShape(shape: MapShape) {
     this.completedShapes.push(shape);
     console.log('Recorded shape:', shape);
   }
 
   /** Replace a shape (matched by id). No-op if id isn't present. */
-  updateShape(shape: CompletedShape) {
+  updateShape(shape: MapShape) {
     const idx = this.completedShapes.findIndex((s) => s.id === shape.id);
     if (idx === -1) return;
     this.completedShapes[idx] = shape;
