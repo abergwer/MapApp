@@ -37,6 +37,9 @@ export class LeafletDrawingManager {
   private readonly sectorTool: LeafletSectorTool;
   private onShapeEdited?: (shape: MapShape) => void;
   private onShapeDeleted?: (id: string) => void;
+  private selectedLayer?: TaggedLayer;
+  private editMode = false;
+  private readonly onKeyDown: (ev: KeyboardEvent) => void;
 
   constructor(map: L.Map) {
     this.map = map;
@@ -52,6 +55,24 @@ export class LeafletDrawingManager {
     map.on('pm:remove', (e: any) => this.emitDelete(e.layer as TaggedLayer));
     this.ellipseTool.setOnEdit((layer) => this.emitEdit(layer as TaggedLayer));
     this.sectorTool.setOnEdit((layer) => this.emitEdit(layer as TaggedLayer));
+
+    // Delete/Backspace removes the selected shape. Geoman's edit mode has no
+    // key-to-delete and `map.keyboard.disable()` kills Leaflet's own, so a
+    // document listener is the only reliable hook — and ellipse/sector layers
+    // are `pmIgnore` so removal mode skips them entirely. Only active in edit
+    // mode (a layer must be selected by click via `stampTags`).
+    this.onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key !== 'Delete' && ev.key !== 'Backspace') return;
+      if (!this.selectedLayer) return;
+      ev.preventDefault();
+      this.deleteSelected();
+    };
+    document.addEventListener('keydown', this.onKeyDown);
+  }
+
+  /** Remove the document-level delete listener. Called on engine destroy. */
+  dispose(): void {
+    document.removeEventListener('keydown', this.onKeyDown);
   }
 
   // ── Draw flow ────────────────────────────────────────────────────────
@@ -166,6 +187,7 @@ export class LeafletDrawingManager {
    */
   setEditMode(enabled: boolean): void {
     const map = this.map;
+    this.editMode = enabled;
     if (enabled) {
       this.cancelDrawing();
       map.dragging.disable();
@@ -184,6 +206,7 @@ export class LeafletDrawingManager {
       map.pm.disableGlobalEditMode();
       this.ellipseTool.disableEdit();
       this.sectorTool.disableEdit();
+      this.selectedLayer = undefined;
       map.dragging.enable();
       map.doubleClickZoom.enable();
       map.keyboard.enable();
@@ -225,6 +248,8 @@ export class LeafletDrawingManager {
     // so the per-layer listener is the only reliable hook for circle,
     // polygon, line, and marker edits.
     layer.on('pm:edit', () => this.emitEdit(layer as TaggedLayer));
+    // Track click selection so Delete/Backspace knows which shape to remove.
+    layer.on('click', () => { this.selectedLayer = layer as TaggedLayer; });
   }
 
   private findUntaggedEllipseOrSector(
@@ -250,6 +275,25 @@ export class LeafletDrawingManager {
   private emitDelete(layer: TaggedLayer): void {
     if (this.onShapeDeleted && layer._shapeId) {
       this.onShapeDeleted(layer._shapeId);
+    }
+  }
+
+  /** Remove the selected shape from the map, store, and any custom handles. */
+  private deleteSelected(): void {
+    const layer = this.selectedLayer;
+    if (!layer) return;
+    this.selectedLayer = undefined;
+    this.emitDelete(layer);
+    layer.remove();
+    // Ellipse/sector handles live in the tools, not on the layer, so the
+    // polygon's removal leaves them stranded. Re-running edit mode rebuilds
+    // handles only for the shapes that remain, clearing the orphans. Skip
+    // when not editing, else this would switch edit handles back on.
+    if (this.editMode && (layer._shapeKind === 'ellipse' || layer._shapeKind === 'sector')) {
+      this.ellipseTool.disableEdit();
+      this.sectorTool.disableEdit();
+      this.ellipseTool.enableEdit();
+      this.sectorTool.enableEdit();
     }
   }
 

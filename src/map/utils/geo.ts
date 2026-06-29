@@ -63,7 +63,8 @@ export function ellipseRing(
   radiusYKm: number,
   steps = 64,
 ): LngLat[] {
-  return ellipse(center, radiusXKm, radiusYKm, {
+  // turf throws if either semi-axis is 0 (e.g. a zero-size drag). Clamp.
+  return ellipse(center, Math.max(radiusXKm, 1e-6), Math.max(radiusYKm, 1e-6), {
     units: 'kilometers',
     steps,
   }).geometry.coordinates[0] as LngLat[];
