@@ -10,7 +10,7 @@ import {
 import { DragEllipseMode } from '../../utils/MaplibreEllipseMath';
 import { DragSectorMode } from '../../utils/MaplibreSectorMath';
 import { startMaplibreRouteDraw } from '../../utils/MaplibreRouteTool';
-import { drawStyles } from '../../../shared/styles/drawStyles';
+import { drawStyles } from '../../drawStyles';
 import { ellipseRing, sectorRing } from '../../utils/geo';
 import type { CompletedShape } from '../../../stores/DrawingToolStore';
 
@@ -156,16 +156,14 @@ export class MapLibreDrawingManager {
     });
   }
 
-  startDrawRoute(onUpdate: (id: string, positions: [number, number][]) => void): void {
+  startDrawRoute(onComplete: (id: string, positions: [number, number][]) => void): void {
+    // Tear down any prior route draw first — otherwise its document keydown
+    // listener lingers and every route stacks another `draw.trash()` on
+    // Delete, firing `draw.update` once per route still alive.
+    this.cancelCurrentDraw?.();
     this.cancelCurrentDraw = startMaplibreRouteDraw(this.map, this.draw, (id, positions) => {
-      // First emit tags the feature; later emits are no-ops (or fail
-      // harmlessly if the user has already trashed it).
-      try {
-        this.draw.setFeatureProperty(id, KIND_PROP, 'route');
-      } catch {
-        /* feature already gone — ignore */
-      }
-      onUpdate(id, positions);
+      this.draw.setFeatureProperty(id, KIND_PROP, 'route');
+      onComplete(id, positions);
     });
   }
 

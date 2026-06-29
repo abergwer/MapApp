@@ -6,28 +6,25 @@ type RouteCoords = [number, number][];
 /**
  * Draw a route on a MapLibre map using mapbox-gl-draw.
  *
- * Flow: draw a line, then drag/insert/delete its vertices. Delete/Backspace
- * removes the selected vertex. `onUpdate` fires on every change.
+ * Flow: draw a line, then auto-enter `direct_select` so the user can
+ * immediately drag/insert/delete vertices. Delete/Backspace removes the
+ * selected vertex.
  *
- * Returns a cancel function that removes all listeners.
+ * `onComplete` fires exactly once, when the line is first drawn — mirrors
+ * every other `startDraw*` method. Subsequent vertex edits / deletes flow
+ * through the standard `draw.update` / `draw.delete` listeners on the
+ * shared `MapLibreDrawingManager`.
+ *
+ * Returns a cancel function that removes the keydown listener and resets
+ * the draw mode.
  */
 export function startMaplibreRouteDraw(
   map: maplibregl.Map,
   draw: MapboxDraw,
-  onUpdate: (id: string, positions: RouteCoords) => void,
+  onComplete: (id: string, positions: RouteCoords) => void,
 ): () => void {
   let routeId: string | undefined;
-
-  const emit = () => {
-    if (!routeId) return;
-    const feature = draw.get(routeId);
-    if (feature?.geometry.type === 'LineString') {
-      onUpdate(routeId, feature.geometry.coordinates as RouteCoords);
-    }
-  };
-
-  const isRouteEvent = (ev: { features: { id?: string | number }[] }) =>
-    !!routeId && ev.features.some((f) => f.id === routeId);
+  let cancelled = false;
 
   const isTypingInForm = (target: EventTarget | null) => {
     const el = target as HTMLElement | null;
@@ -35,18 +32,22 @@ export function startMaplibreRouteDraw(
   };
 
   const onCreate = (ev: any) => {
-    const id = ev.features?.[0]?.id;
+    const feature = ev.features?.[0];
+    const id = feature?.id;
     if (id === undefined || id === null) return;
     routeId = String(id);
-    emit();
-    // Defer the mode switch — MapboxDraw is still finishing its own
-    // transition out of `draw_line_string`.
-    setTimeout(() => {
-      if (routeId) draw.changeMode('direct_select', { featureId: routeId });
-    }, 0);
+    if (feature.geometry?.type === 'LineString') {
+      onComplete(routeId, feature.geometry.coordinates as RouteCoords);
+    }
+    // MapboxDraw auto-transitions draw_line_string -> simple_select right
+    // after firing create. A setTimeout(0) can lose that race and leave the
+    // route in simple_select (whole-feature move, no vertex drag). rAF lands
+    // after the synchronous transition, so direct_select reliably sticks and
+    // vertices are immediately draggable.
+    requestAnimationFrame(() => {
+      if (!cancelled && routeId) draw.changeMode('direct_select', { featureId: routeId });
+    });
   };
-
-  const onEdit = (ev: any) => { if (isRouteEvent(ev)) emit(); };
 
   const onKeyDown = (ev: KeyboardEvent) => {
     if (ev.key !== 'Delete' && ev.key !== 'Backspace') return;
@@ -60,18 +61,19 @@ export function startMaplibreRouteDraw(
   };
 
   draw.changeMode('draw_line_string');
-  map.on('draw.create', onCreate);
-  map.on('draw.update', onEdit);
-  map.on('draw.delete', onEdit);
+  // create fires once; we detach immediately so a follow-up draw doesn't
+  // double-trigger this handler.
+  const onCreateOnce = (ev: any) => {
+    map.off('draw.create', onCreateOnce);
+    onCreate(ev);
+  };
+  map.on('draw.create', onCreateOnce);
   document.addEventListener('keydown', onKeyDown);
 
-  let cancelled = false;
   return () => {
     if (cancelled) return;
     cancelled = true;
-    map.off('draw.create', onCreate);
-    map.off('draw.update', onEdit);
-    map.off('draw.delete', onEdit);
+    map.off('draw.create', onCreateOnce);
     document.removeEventListener('keydown', onKeyDown);
   };
 }

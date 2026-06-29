@@ -57,7 +57,7 @@ export interface MapEngine {
   /**
    * Three-click pie-slice sector: center → start arm → end arm. Optional —
    * engines that don't support it can omit the method and the UI hides it.
-   */
+  */
   startDrawSector(
     onComplete: (
       id: string,
@@ -67,6 +67,8 @@ export interface MapEngine {
       endBearing: number
     ) => void
   ): void;
+
+  startDrawRoute?(onComplete: (id: string, positions: [number, number][]) => void): void;
 
   cancelDrawing(): void;
 
@@ -111,8 +113,6 @@ export interface MapEngine {
    * the value on the map (e.g. as a label at the polygon centroid). Optional.
    */
   startMeasureArea?(onComplete: (areaKm2: number) => void): void;
-
-  startDrawRoute?(onUpdate: (id: string, positions: [number, number][]) => void): void;
 
   removeMeasurements?(): void;
 
