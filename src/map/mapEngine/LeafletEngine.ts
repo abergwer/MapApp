@@ -65,10 +65,10 @@ export class LeafletEngine implements MapEngine {
   }
 
   destroy(): void {
-    this.measure?.removeAll();
+    this.drawing?.dispose();
+    this.map?.remove();
     this.drawing = undefined;
     this.measure = undefined;
-    this.map?.remove();
     this.map = undefined;
   }
 
