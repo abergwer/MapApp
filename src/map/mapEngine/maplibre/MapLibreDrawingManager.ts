@@ -36,6 +36,7 @@ export class MapLibreDrawingManager {
   private cancelCurrentDraw?: () => void;
   private onShapeEdited?: (shape: MapShape) => void;
   private onShapeDeleted?: (id: string) => void;
+  private readonly onKeyDown: (ev: KeyboardEvent) => void;
 
   constructor(map: maplibregl.Map) {
     this.map = map;
@@ -71,6 +72,29 @@ export class MapLibreDrawingManager {
         if (feature?.id != null) this.onShapeDeleted?.(String(feature.id));
       }
     });
+
+    // Persistent delete handler. MapboxDraw's own keybindings listen on the
+    // (unfocused) map canvas, so Delete/Backspace never reaches them and
+    // selected shapes can't be removed. Listen on `document` instead so a
+    // selected feature trashes regardless of focus. Skip while a route draw
+    // owns its own delete handler to avoid double-trash.
+    this.onKeyDown = (ev: KeyboardEvent) => {
+      if (ev.key !== 'Delete' && ev.key !== 'Backspace') return;
+      if (this.cancelCurrentDraw) return;
+      const el = ev.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      const mode = this.draw.getMode();
+      if (mode !== 'direct_select' && mode !== 'simple_select') return;
+      if (this.draw.getSelectedIds().length === 0) return;
+      ev.preventDefault();
+      this.draw.trash();
+    };
+    document.addEventListener('keydown', this.onKeyDown);
+  }
+
+  /** Remove the document-level delete listener. Called on engine destroy. */
+  dispose(): void {
+    document.removeEventListener('keydown', this.onKeyDown);
   }
 
   /** Shared with the measurement manager; MapLibre allows only one Draw. */
