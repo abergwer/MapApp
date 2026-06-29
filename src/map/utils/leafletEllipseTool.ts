@@ -41,9 +41,9 @@ export interface LeafletEllipseTool {
   setOnEdit(callback: (layer: EllipseLayer) => void): void;
 }
 
-const HANDLE_HTML =
+const handleHtml = (cursor: string) =>
   '<div style="width:12px;height:12px;background:#fff;border:2px solid #1f6feb;' +
-  'border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:move;"></div>';
+  `border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:${cursor};"></div>`;
 /**
  * Geoman Free has no Ellipse tool, so we provide a thin controller that
  * owns the manual draw + custom edit handles. Construct once per map and
@@ -95,15 +95,23 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
   };
 
   const attachEditHandles = (layer: EllipseLayer): { remove: () => void } => {
-    const handleIcon = L.divIcon({
+    // Edit handles (axes) get directional resize cursors; the center handle
+    // gets `move` so dragging vs reshaping read differently to the user.
+    const ewIcon = L.divIcon({
       className: '',
-      html: HANDLE_HTML,
+      html: handleHtml('ew-resize'),
+      iconSize: [12, 12],
+      iconAnchor: [6, 6],
+    });
+    const nsIcon = L.divIcon({
+      className: '',
+      html: handleHtml('ns-resize'),
       iconSize: [12, 12],
       iconAnchor: [6, 6],
     });
     const centerIcon = L.divIcon({
       className: '',
-      html: HANDLE_HTML,
+      html: handleHtml('move'),
       iconSize: [14, 14],
       iconAnchor: [7, 7],
     });
@@ -122,17 +130,18 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
       };
     };
 
-    const markerOpts: L.MarkerOptions = { draggable: true, icon: handleIcon };
-    (markerOpts as { pmIgnore?: boolean }).pmIgnore = true;
-    const centerMarkerOpts: L.MarkerOptions = { draggable: true, icon: centerIcon };
-    (centerMarkerOpts as { pmIgnore?: boolean }).pmIgnore = true;
+    const opts = (icon: L.DivIcon): L.MarkerOptions => {
+      const o: L.MarkerOptions = { draggable: true, icon };
+      (o as { pmIgnore?: boolean }).pmIgnore = true;
+      return o;
+    };
 
     const initial = positions();
-    const eHandle = L.marker(initial.e, markerOpts).addTo(map);
-    const wHandle = L.marker(initial.w, markerOpts).addTo(map);
-    const nHandle = L.marker(initial.n, markerOpts).addTo(map);
-    const sHandle = L.marker(initial.s, markerOpts).addTo(map);
-    const cHandle = L.marker(initial.c, centerMarkerOpts).addTo(map);
+    const eHandle = L.marker(initial.e, opts(ewIcon)).addTo(map);
+    const wHandle = L.marker(initial.w, opts(ewIcon)).addTo(map);
+    const nHandle = L.marker(initial.n, opts(nsIcon)).addTo(map);
+    const sHandle = L.marker(initial.s, opts(nsIcon)).addTo(map);
+    const cHandle = L.marker(initial.c, opts(centerIcon)).addTo(map);
 
     const syncHandles = () => {
       const p = positions();

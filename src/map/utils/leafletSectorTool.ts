@@ -48,9 +48,9 @@ export interface LeafletSectorTool {
 // shapes read as one visual family: blue outline, white circular handles
 // with a blue border. Center handle is slightly larger so it's easy to
 // distinguish from the three reshape handles around it.
-const HANDLE_HTML =
+const handleHtml = (cursor: string) =>
   '<div style="width:12px;height:12px;background:#fff;border:2px solid #1f6feb;' +
-  'border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:move;"></div>';
+  `border-radius:50%;box-shadow:0 1px 3px rgba(0,0,0,0.3);cursor:${cursor};"></div>`;
 
 const PREVIEW_STYLE: L.PolylineOptions = {
   color: '#1f6feb',
@@ -113,17 +113,18 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
   };
 
   const attachEditHandles = (layer: SectorLayer): { remove: () => void } => {
-    // Same icon for the three reshape handles (start arm, end arm, radius).
+    // Reshape handles (arms, radius) get a grab cursor; the center handle
+    // gets `move` so dragging vs reshaping read differently to the user.
     const handleIcon = L.divIcon({
       className: '',
-      html: HANDLE_HTML,
+      html: handleHtml('grab'),
       iconSize: [12, 12],
       iconAnchor: [6, 6],
     });
     // Center handle uses the same look, bumped 2px so it's easy to grab.
     const centerIcon = L.divIcon({
       className: '',
-      html: HANDLE_HTML,
+      html: handleHtml('move'),
       iconSize: [14, 14],
       iconAnchor: [7, 7],
     });
