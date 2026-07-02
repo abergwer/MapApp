@@ -81,3 +81,20 @@ round-trip back through `EntityService` (`update` / `remove`), with
 ![Drawing flow](06-drawing-flow.png)
 
 Source: [06-drawing-flow.mmd](06-drawing-flow.mmd)
+
+---
+
+## 7. Drawing entities (class diagram)
+
+A class-level view of the drawing subsystem: the `MapShape` union, the
+`DrawingToolStore` (source of truth), `EntityService` (the single writer),
+the `MapEngine` interface with its Leaflet / MapLibre implementations and
+drawing managers, and the deck.gl `LayerManager` / `DrawnShapeLayers`.
+Arrows show direction: hollow triangle = implements, filled diamond =
+composition, dashed = calls / uses. The `MapEngine → MapWrapper` and
+`MapEngine → ToolBar` edges are the callback round-trips
+(`onComplete`, `onShapeEdited` / `onShapeDeleted` / `onDeselect`).
+
+![Drawing entities class diagram](07-drawing-entities-class.png)
+
+Source: [07-drawing-entities-class.mmd](07-drawing-entities-class.mmd)

@@ -1,0 +1,133 @@
+﻿%% Drawing-entities class diagram. Focus: how a drawn shape flows between the
+%% MobX store (source of truth), the EntityService (single writer), the map
+%% engines (draw + edit), and the deck.gl LayerManager (render + pick).
+%% Arrows point in the direction of the call / dependency; dashed = "uses /
+%% calls", solid diamond = composition, hollow triangle = implements.
+classDiagram
+    direction LR
+
+    class MapShape {
+        <<union type>>
+        +id: string
+        +kind: point|line|polygon|circle|ellipse|sector|route
+        +point: position[lng,lat]
+        +line/route/polygon: positions[lng,lat][]
+        +circle: center + radius(km)
+        +ellipse: center + radiusX + radiusY(km)
+        +sector: center + radius + start/endBearing
+    }
+
+    class DrawingToolStore {
+        <<MobX store — source of truth>>
+        +completedShapes: MapShape[]
+        +selectedId: string | null
+        +activeDrawTool: DrawTool | null
+        -past / future: MapShape[][]
+        +setActiveDrawTool(tool)
+        +setSelectedId(id)
+        +recordShape(shape)
+        +updateShape(shape)
+        +removeShape(id)
+        +commit() undo() redo()
+        +get selectedShape() MapShape
+    }
+
+    class EntityService {
+        <<single writer / CRUD>>
+        +create(shape)  commit + recordShape
+        +update(shape)  commit + updateShape
+        +remove(id)     commit + clearSel + removeShape
+        +get(id) MapShape
+    }
+
+    class MapEngine {
+        <<interface>>
+        +startDrawPoint/Line/Polygon(onComplete)
+        +startDrawCircle/Ellipse/Sector/Route(onComplete)
+        +cancelDrawing()
+        +addShape(shape)
+        +beginEdit(shape)
+        +endEdit(id)
+        +setOnShapeEdited(cb)
+        +setOnShapeDeleted(cb)
+        +setOnDeselect(cb)
+    }
+
+    class LeafletEngine {
+        <<implements MapEngine>>
+        -L.Map
+        delegates draw/edit to manager
+    }
+
+    class MapLibreEngine {
+        <<implements MapEngine>>
+        -maplibregl.Map
+        delegates draw/edit to manager
+    }
+
+    class LeafletDrawingManager {
+        +Geoman draw + edit
+        +ellipse / sector tools
+        +onceCreate() tag + drop native layer
+        +beginEdit() pm.enable + handles
+        +endEdit() disable + sweep temp layers
+    }
+
+    class MapLibreDrawingManager {
+        +MapboxDraw
+        +Drag Ellipse/Sector modes + Route tool
+        +beginEdit() direct_select | simple_select
+        +endEdit() simple_select + silent delete
+    }
+
+    class ToolBar {
+        <<UI>>
+        +handleSelect(tool)
+        +startDraw(engine, tool, entities)
+    }
+
+    class MapWrapper {
+        <<orchestrator>>
+        +reaction(selectedId) beginEdit/endEdit
+        +wires setOnShapeEdited/Deleted/Deselect
+        +keys: Esc deselect, Ctrl+Z undo/redo
+    }
+
+    class LayerManager {
+        <<deck.gl host>>
+        +reaction(buildLayers)
+        +pickObject(x,y) on click
+    }
+
+    class DrawnShapeLayers {
+        +createDrawnShapeLayers(shapes, selectedId)
+        skips selectedId (engine paints it)
+        Scatterplot | Path | Polygon layers
+    }
+
+    %% ── structure ──────────────────────────────────────────────
+    MapEngine <|.. LeafletEngine
+    MapEngine <|.. MapLibreEngine
+    LeafletEngine *-- LeafletDrawingManager
+    MapLibreEngine *-- MapLibreDrawingManager
+    DrawingToolStore o-- "0..*" MapShape : completedShapes
+
+    %% ── create path (draw a new shape) ─────────────────────────
+    ToolBar ..> DrawingToolStore : setActiveDrawTool(tool)
+    ToolBar ..> MapEngine : startDrawX(onComplete)
+    MapEngine ..> ToolBar : onComplete(id, geometry)
+    ToolBar ..> EntityService : create(shape)
+
+    %% ── the single writer mutates the store ────────────────────
+    EntityService --> DrawingToolStore : commit / record / update / remove
+
+    %% ── render path (deck.gl) ──────────────────────────────────
+    LayerManager ..> DrawnShapeLayers : buildLayers(stores)
+    DrawnShapeLayers ..> DrawingToolStore : reads completedShapes + selectedId
+    LayerManager ..> DrawingToolStore : pick hit -> setSelectedId(id)
+
+    %% ── select -> edit handoff & round-trip ────────────────────
+    MapWrapper ..> DrawingToolStore : reaction(selectedId), setSelectedId(null)
+    MapWrapper ..> MapEngine : beginEdit(shape) / endEdit(id)
+    MapEngine ..> MapWrapper : onShapeEdited / onShapeDeleted / onDeselect
+    MapWrapper ..> EntityService : update(shape) / remove(id)
