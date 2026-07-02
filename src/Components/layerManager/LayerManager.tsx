@@ -5,11 +5,13 @@ import { reaction } from 'mobx';
 import { observer } from 'mobx-react-lite';
 import { useMapContext } from '../../map/MapContext';
 import { useStores } from '../../stores/StoreContext';
+import type { MapShape } from '../../stores/DrawingToolStore';
 import { buildLayers } from './index';
+import { DRAWN_SHAPE_LAYER_IDS } from '../Layers/DrawnShapeLayers';
 
 interface LayerManagerProps {
   /** Override the store-driven layers with a custom Deck.gl layer array. */
-  layers?: Layer[];
+  layers: Layer[];
 }
 
 function LayerManagerImpl({ layers }: LayerManagerProps) {
@@ -40,6 +42,11 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
     }
     const viewState = engine.getViewState();
 
+    // Deck.gl v9 initializes its GPU device asynchronously; picking before
+    // the first render throws "assertion failed". `onLoad` flips this flag
+    // once the device is ready so `pickAt` can safely hit-test.
+    let deckReady = false;
+
     const deck = new Deck({
       canvas,
       width,
@@ -47,11 +54,40 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
       controller: false,
       viewState,
       layers: layers ?? buildLayers(stores),
+      onLoad: () => {
+        deckReady = true;
+      },
     });
 
     deckRef.current = deck;
 
-    // Keep Deck's drawing buffer in sync with the container. Without this,
+    // Selection picking. The Deck canvas is `pointer-events:none` so the map
+    // engine underneath handles pan/zoom; Deck never receives native pointer
+    // events, so we hit-test manually with `deck.pickObject` at the cursor.
+    // deck.gl only ever *reads* geometry here — it never mutates it.
+    const pickAt = (ev: MouseEvent) => {
+      const d = deckRef.current;
+      if (!d || !deckReady) return undefined;
+      const rect = container.getBoundingClientRect();
+      return d.pickObject({
+        x: ev.clientX - rect.left,
+        y: ev.clientY - rect.top,
+        radius: 6,
+        layerIds: DRAWN_SHAPE_LAYER_IDS,
+      });
+    };
+
+    // A hit selects that shape (handing it to the engine for editing); misses
+    // are ignored so they don't fight the engine's edit handles — deselect is
+    // via Escape (see MapWrapper).
+    const handlePick = (ev: MouseEvent) => {
+      const info = pickAt(ev);
+      if (info?.object) {
+        stores.drawingToolStore.setSelectedId((info.object as MapShape).id);
+      }
+    };
+    container.addEventListener('click', handlePick);
+
     // Deck holds onto the initial width/height and its viewport projection
     // drifts from the basemap whenever the window/container is resized,
     // making layers appear offset.
@@ -102,6 +138,7 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
       stopLayerReaction();
       stopViewReaction();
       resizeObserver.disconnect();
+      container.removeEventListener('click', handlePick);
       deck.finalize();
       canvas.remove();
       deckRef.current = null;

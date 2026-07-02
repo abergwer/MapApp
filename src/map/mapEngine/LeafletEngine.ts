@@ -152,8 +152,12 @@ export class LeafletEngine implements MapEngine {
     this.drawing?.addShape(shape);
   }
 
-  setEditMode(enabled: boolean): void {
-    this.drawing?.setEditMode(enabled);
+  beginEdit(shape: MapShape): void {
+    this.drawing?.beginEdit(shape);
+  }
+
+  endEdit(id: string): void {
+    this.drawing?.endEdit(id);
   }
 
   setOnShapeEdited(callback: (shape: MapShape) => void): void {

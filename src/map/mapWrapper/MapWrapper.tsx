@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react';
+import { reaction } from 'mobx';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -15,6 +16,7 @@ import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
 import MiniMap from '../../Components/features/MiniMap';
 import MiniVideo from '../../Components/features/MiniVideo';
+import type { MapShape } from '../../stores/DrawingToolStore';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],
@@ -29,7 +31,7 @@ interface MapWrapperProps {
 
 function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, uiVisibilityStore, drawingToolStore } = useStores();
+  const { mapEngineStore, uiVisibilityStore, entityService, drawingToolStore } = useStores();
   const { minimapVisible, videoVisible } = uiVisibilityStore;
 
   useEffect(() => {
@@ -41,6 +43,7 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
     let cancelled = false;
     let handleResize: (() => void) | undefined;
     let unsubscribeViewChange: (() => void) | undefined;
+    let stopEditHandoff: (() => void) | undefined;
 
     // Engines load on demand (dynamic import), so creation is async.
     createMapEngine().then((created) => {
@@ -59,19 +62,31 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
       // their own onViewChange subscription.
       unsubscribeViewChange = eng.onViewChange((vs) => mapEngineStore.setViewState(vs));
 
-      // Round-trip user edits/deletes back into the store. The engine
-      // reconstructs a full MapShape from its painted layer/feature
-      // (tagged by shape id) and hands it off — the store stays the
-      // single source of truth.
-      eng.setOnShapeEdited?.((shape) => drawingToolStore.updateShape(shape));
-      eng.setOnShapeDeleted?.((id) => drawingToolStore.removeShape(id));
+      // Round-trip user edits/deletes back through the EntityService — the
+      // single writer for entity CRUD. The engine reconstructs a full
+      // MapShape from its painted layer/feature (tagged by shape id) and
+      // hands it off; the service keeps the store (and, later, the server)
+      // in sync.
+      eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(shape));
+      eng.setOnShapeDeleted?.((id: string) => entityService.remove(id));
 
-      // Replay the store's current shapes onto the freshly-built engine.
-      // The store is the single writer; we only paint. New shapes added
-      // later (user-drawn via ToolBar, or pushed by a server feed into
-      // `recordShape`) reach the engine through their own draw flow —
-      // this loop only covers what's already there at engine-init time.
-      drawingToolStore.completedShapes.forEach((shape) => eng?.addShape?.(shape));
+      // Selection drives editing. Deck.gl renders every drawn shape; the one
+      // shape whose id is `selectedId` is handed to the engine as a single
+      // editable native feature (and hidden from Deck.gl so it isn't drawn
+      // twice). On deselect it's released back to Deck.gl. `fireImmediately`
+      // re-spawns the editable feature if the engine is swapped while a shape
+      // is selected — so an engine/basemap swap needs no replay-all.
+      stopEditHandoff = reaction(
+        () => drawingToolStore.selectedId,
+        (nextId, prevId) => {
+          if (prevId) eng?.endEdit?.(prevId);
+          if (nextId) {
+            const shape = entityService.get(nextId);
+            if (shape) eng?.beginEdit?.(shape);
+          }
+        },
+        { fireImmediately: true },
+      );
 
       handleResize = () => eng?.resize?.();
       window.addEventListener('resize', handleResize);
@@ -83,11 +98,38 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
         window.removeEventListener('resize', handleResize);
       }
       unsubscribeViewChange?.();
+      stopEditHandoff?.();
       mapEngineStore.setEngine(null);
       eng?.destroy();
       eng = undefined;
     };
-  }, [mapEngineStore, drawingToolStore]);
+  }, [mapEngineStore, entityService, drawingToolStore]);
+
+  // Keyboard shortcuts: Escape deselects (releases the edited shape back to
+  // Deck.gl); Ctrl/Cmd+Z undoes.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      // Ignore shortcuts while the user is typing in a field.
+      const el = event.target as HTMLElement | null;
+      const isTyping =
+        el?.tagName === 'INPUT' || el?.tagName === 'TEXTAREA' || el?.isContentEditable;
+      if (isTyping) return;
+
+      if (event.key === 'Escape') {
+        drawingToolStore.setSelectedId(null);
+        return;
+      }
+
+      const modifier = event.ctrlKey || event.metaKey;
+      if (modifier && event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        drawingToolStore.undo();
+      }
+    };
+
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [drawingToolStore]);
 
   return (
     <MapContext.Provider value={{ containerRef }}>

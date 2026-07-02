@@ -117,11 +117,20 @@ export interface MapEngine {
   removeMeasurements?(): void;
 
   /**
-   * Toggle a "modify" mode where the user can drag/reshape every previously
-   * drawn feature on the map. Optional — engines that don't support it can
-   * omit the method and the UI will hide the affordance.
+   * Begin editing a single shape. The engine paints it as a native editable
+   * feature (MapboxDraw / Geoman) and turns on its handles. Vertex drags /
+   * resizes round-trip back through `setOnShapeEdited`. At most one shape is
+   * ever in edit mode at a time — it's the store's `selectedId`. Optional:
+   * engines without a draw pipeline (e.g. Cesium stub) can omit it.
    */
-  setEditMode?(enabled: boolean): void;
+  beginEdit?(shape: MapShape): void;
+
+  /**
+   * End editing the shape with this id: disable handles and remove the
+   * native editable feature. Deck.gl then resumes rendering it from the
+   * store. Must NOT emit a delete round-trip (the shape still exists).
+   */
+  endEdit?(id: string): void;
 
   /**
    * Swap the basemap tile source at runtime. `url` is an XYZ tile template
@@ -129,7 +138,4 @@ export interface MapEngine {
    * support it can omit the method and the UI hides the affordance.
    */
   setBaseMap?(url: string): void;
-
-  //addEntity(entity: MapEntity): string;
-  //removeEntity(id: string): void;
 }

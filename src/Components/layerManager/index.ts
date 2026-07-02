@@ -4,6 +4,7 @@ import { createMissilesLayer } from '../Layers/MissileLayer';
 import { createDroneLayer } from '../Layers/DroneLayer';
 import { createAirCraftLayer } from '../Layers/AirCraftLayer';
 import { createRangeRingsLayer } from '../Layers/RangeRingsLayer';
+import { createDrawnShapeLayers } from '../Layers/DrawnShapeLayers';
 import type { RootStore } from '../../stores/RootStore';
 
 /**
@@ -16,6 +17,11 @@ import type { RootStore } from '../../stores/RootStore';
  */
 export function buildLayers(stores: RootStore): Layer[] {
   return [
+    // User-drawn shapes (render-only; the selected one is owned by the engine).
+    ...createDrawnShapeLayers(
+      stores.drawingToolStore.completedShapes,
+      stores.drawingToolStore.selectedId,
+    ),
     createPolygonLayer(stores.polygonStore.polygons),
     createMissilesLayer(stores.missileStore.missiles),
     createDroneLayer(stores.droneStore.targets),

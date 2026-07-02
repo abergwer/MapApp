@@ -5,9 +5,10 @@ import LayerManager from './Components/layerManager/LayerManager'
 import MapWrapper from './map/mapWrapper/MapWrapper'
 import { mapEngineLabel } from './map/mapConfig'
 import { useStores } from './stores/StoreContext'
+import { buildLayers } from './Components/layerManager'
 
 function App() {
-  const { mapEngineStore } = useStores()
+  const stores = useStores()
   return (
     <Box
       component="main"
@@ -25,12 +26,12 @@ function App() {
       <Typography color="text.secondary">
         This app uses{' '}
         <Box component="strong" sx={{ color: 'primary.light' }}>
-          {mapEngineLabel[mapEngineStore.selectedEngine]}
+          {mapEngineLabel[stores.mapEngineStore.selectedEngine]}
         </Box>{' '}
         as the selected map engine.
       </Typography>
       <MapWrapper>
-        <LayerManager />
+        <LayerManager layers={buildLayers(stores)} />
       </MapWrapper>
     </Box>
   )

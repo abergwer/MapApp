@@ -174,6 +174,14 @@ export class MapLibreEngine implements MapEngine {
     this.drawing?.addShape(shape);
   }
 
+  beginEdit(shape: MapShape): void {
+    this.drawing?.beginEdit(shape);
+  }
+
+  endEdit(id: string): void {
+    this.drawing?.endEdit(id);
+  }
+
   setOnShapeEdited(callback: (shape: MapShape) => void): void {
     this.drawing?.setOnShapeEdited(callback);
   }
