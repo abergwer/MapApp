@@ -1,24 +1,48 @@
-%% Drawing/measuring tool flow. UI updates DrawingToolStore, then asks
-%% the active engine to start a draw/measure session. Engine completion
-%% callback writes the result back into the store.
+%% Drawing/measuring tool flow. The UI updates DrawingToolStore and asks the
+%% active engine to start a draw session. Completion callbacks flow through
+%% EntityService (the single writer) into the store; Deck.gl renders
+%% completedShapes. Selecting a shape hands it to the engine for editing and
+%% round-trips edits/deletes back through EntityService.
 sequenceDiagram
     actor User
     participant TB as ToolBar / MeasuringTools
     participant DTS as DrawingToolStore
+    participant ES as EntityService
     participant Engine as MapEngine
+    participant Deck as Deck.gl (DrawnShapeLayers)
 
-    User->>TB: pick tool (e.g. Polygon)
-    TB->>DTS: setActiveDrawTool('polygon')
-    TB->>Engine: startDrawPolygon({ onComplete })
+    User->>TB: pick tool (e.g. Rectangle)
+    TB->>DTS: setActiveDrawTool('rectangle')
+    TB->>Engine: startDrawRectangle({ onComplete })
 
     loop draw session
-        User->>Engine: click vertex / drag handle
+        User->>Engine: click / drag corners
     end
-    User->>Engine: finish (double-click / Enter)
+    User->>Engine: finish
 
-    Engine-->>TB: onComplete(coords)
-    TB->>DTS: recordShape({ tool, coords })
-    Note over DTS: completedShapes grows — observers can list / clear them
+    Engine-->>TB: onComplete(id, bounds)
+    TB->>ES: create({ id, kind: 'rectangle', bounds })
+    ES->>DTS: commit() + recordShape(shape)
+    Note over DTS: completedShapes grows (observable)
+    DTS-->>Deck: reaction rebuilds layers → shape painted
+
+    alt Select & edit an existing shape
+        User->>Deck: click shape (pickObject)
+        Deck->>DTS: setSelectedId(id)
+        DTS->>Engine: beginEdit(shape)
+        Note over Deck: selected shape skipped here,<br/>engine owns the editable feature
+        User->>Engine: drag vertex / resize
+        Engine-->>ES: onShapeEdited(shape)
+        ES->>DTS: commit() + updateShape(shape)
+        User->>Engine: press Delete
+        Engine-->>ES: onShapeDeleted(id)
+        ES->>DTS: commit() + removeShape(id)
+    end
+
+    alt Undo / redo
+        User->>DTS: undo() / redo()
+        Note over DTS: swaps completedShapes snapshot
+    end
 
     alt Measuring tool
         User->>TB: pick distance / area

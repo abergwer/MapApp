@@ -12,16 +12,19 @@ classDiagram
         +resize()
         +destroy()
         +startDrawPoint/Line/Polygon()
-        +startDrawCircle/Ellipse/Sector/Route()
+        +startDrawCircle/Ellipse/Sector/Rectangle/Route()
         +startMeasureDistance/Area()
         +removeMeasurements()
         +setBaseMap(url)
-        +setEditMode(on)
+        +beginEdit(shape)
+        +endEdit(id)
     }
 
     class LeafletEngine {
         -L.Map
-        -Geoman (draw/edit)
+        -LeafletDrawingManager
+        -LeafletMeasureManager
+        -Geoman (draw/edit + Rectangle)
         -leafletEllipseTool
         -leafletSectorTool
         +reports zoom = leafletZoom - 1
@@ -29,9 +32,10 @@ classDiagram
 
     class MapLibreEngine {
         -maplibregl.Map
+        -MapLibreDrawingManager
+        -MapLibreMeasureManager
         -MapboxDraw
-        -DragEllipseMode
-        -DragSectorMode
+        -DragEllipse/Sector/RectangleMode
         -MaplibreRouteTool
     }
 

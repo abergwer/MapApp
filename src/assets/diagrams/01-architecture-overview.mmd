@@ -27,6 +27,6 @@ flowchart TB
     EC -. mounts .-> Engine{{"MapEngine<br/>Leaflet | MapLibre | Cesium"}}
 
     LM --> Deck["Deck.gl canvas<br/>(z-index above basemap)"]
-    Deck --> Layers["AirCraft · Drone · Missile<br/>Polygon · RangeRings"]
+    Deck --> Layers["Drawn shapes (incl. rectangles)<br/>AirCraft · Drone · Missile<br/>Polygon · RangeRings"]
 
     MV -. WebRTC .-> Signal[("Signaling server<br/>config.VideoSignalingURL")]

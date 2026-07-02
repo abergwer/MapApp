@@ -72,8 +72,11 @@ Source: [05-layers-data-flow.mmd](05-layers-data-flow.mmd)
 ## 6. Drawing & measuring flow
 
 UI updates `DrawingToolStore`, then asks the active engine to start a
-draw/measure session. The engine's completion callback writes the
-result back into the store.
+draw session. Completion flows through `EntityService` (the single
+writer) into the store, and Deck.gl renders `completedShapes`. Selecting
+a shape hands it to the engine for editing; vertex drags and deletes
+round-trip back through `EntityService` (`update` / `remove`), with
+`commit()` enabling undo/redo.
 
 ![Drawing flow](06-drawing-flow.png)
 

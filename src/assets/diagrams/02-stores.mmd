@@ -32,10 +32,18 @@ classDiagram
         +activeMeasureTool
         +completedShapes
         +measurements
-        +isEditing
+        +selectedId
+        +selectedShape
+        +canUndo
+        +canRedo
         +recordShape()
+        +updateShape()
+        +removeShape()
         +recordMeasurement()
-        +setEditing()
+        +setSelectedId()
+        +commit()
+        +undo()
+        +redo()
     }
 
     class AirCraftStore {

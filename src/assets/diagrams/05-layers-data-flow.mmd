@@ -3,6 +3,7 @@
 %% array to be rebuilt and pushed to Deck.gl in a single batched GPU call.
 flowchart LR
     subgraph Stores["Entity stores (MobX)"]
+        DTS["DrawingToolStore.completedShapes<br/>+ selectedId"]
         DS[DroneStore.targets]
         MS[MissileStore.missiles]
         AS[AirCraftStore.targets]
@@ -14,6 +15,7 @@ flowchart LR
         R[("reaction&#40;&#41;")]
     end
 
+    DTS -- observed --> BL
     DS -- observed --> BL
     MS -- observed --> BL
     AS -- observed --> BL
@@ -24,6 +26,7 @@ flowchart LR
 
     MES["MapEngineStore.viewState"] -- reaction --> Deck
 
+    Deck --> L0["DrawnShapeLayers<br/>polygons+rectangles · areas<br/>lines · points (skips selectedId)"]
     Deck --> L1["AirCraftLayer<br/>IconLayer"]
     Deck --> L2["DroneLayer<br/>IconLayer"]
     Deck --> L3["MissileLayer<br/>PathLayer"]
