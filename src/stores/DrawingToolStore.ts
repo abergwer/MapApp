@@ -79,9 +79,25 @@ const DEMO_SERVER_SHAPES: MapShape[] = [
 export class DrawingToolStore {
   activeDrawTool: DrawTool | null = null;
   activeMeasureTool: MeasureTool | null = null;
-  isEditing = false;
+  /**
+   * The id of the shape currently selected for editing, or null. This is the
+   * whole selection model: deck.gl renders every shape EXCEPT this one, and
+   * the map engine paints exactly this one as an editable native feature.
+   * One id ⇒ one editable shape ⇒ no double-render, no desync.
+   */
+  selectedId: string | null = null;
   completedShapes: MapShape[] = [...DEMO_SERVER_SHAPES];
   measurements: Measurement[] = [];
+
+  /**
+   * Undo/redo as whole-array snapshots. Shapes are treated as immutable
+   * (every mutation replaces a shape object rather than editing it in place),
+   * so a shallow `slice()` is a sound snapshot. `commit()` pushes the current
+   * array onto `past` before a mutation; `undo`/`redo` swap between stacks.
+   */
+  private past: MapShape[][] = [];
+  private future: MapShape[][] = [];
+  private static readonly HISTORY_LIMIT = 50;
 
   constructor() {
     makeAutoObservable(this);
@@ -95,13 +111,44 @@ export class DrawingToolStore {
     this.activeMeasureTool = tool;
   }
 
-  setEditing(value: boolean) {
-    this.isEditing = value;
+  setSelectedId(id: string | null) {
+    this.selectedId = id;
+  }
+
+  /** The shape currently selected for editing, if any. */
+  get selectedShape(): MapShape | undefined {
+    return this.selectedId
+      ? this.completedShapes.find((s) => s.id === this.selectedId)
+      : undefined;
+  }
+
+  // ── Undo / redo ──────────────────────────────────────────────────────
+
+  /** Snapshot the current geometry before a mutation. Called by EntityService. */
+  commit() {
+    this.past.push(this.completedShapes.slice());
+    if (this.past.length > DrawingToolStore.HISTORY_LIMIT) this.past.shift();
+    this.future = [];
+  }
+
+  undo() {
+    const prev = this.past.pop();
+    if (!prev) return;
+    this.future.push(this.completedShapes.slice());
+    this.completedShapes = prev;
+    this.selectedId = null;
+  }
+
+  redo() {
+    const next = this.future.pop();
+    if (!next) return;
+    this.past.push(this.completedShapes.slice());
+    this.completedShapes = next;
+    this.selectedId = null;
   }
 
   recordShape(shape: MapShape) {
     this.completedShapes.push(shape);
-    console.log('Recorded shape:', shape);
   }
 
   /** Replace a shape (matched by id). No-op if id isn't present. */
@@ -109,7 +156,6 @@ export class DrawingToolStore {
     const idx = this.completedShapes.findIndex((s) => s.id === shape.id);
     if (idx === -1) return;
     this.completedShapes[idx] = shape;
-    console.log('Updated shape:', shape);
   }
 
   /** Remove a shape by id. No-op if not found. */
@@ -117,7 +163,6 @@ export class DrawingToolStore {
     const idx = this.completedShapes.findIndex((s) => s.id === id);
     if (idx === -1) return;
     this.completedShapes.splice(idx, 1);
-    console.log('Removed shape:', id);
   }
 
   clearShapes() {
@@ -126,7 +171,6 @@ export class DrawingToolStore {
 
   recordMeasurement(measurement: Omit<Measurement, 'timestamp'>) {
     this.measurements.push({ ...measurement, timestamp: Date.now() });
-    console.log('Recorded measurement:', measurement);
   }
 
   clearMeasurements() {

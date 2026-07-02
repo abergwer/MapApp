@@ -4,6 +4,7 @@ import { MissileStore } from './MissileStore';
 import { PolygonStore } from './PolygonStore';
 import { MapEngineStore } from './MapEngineStore';
 import { DrawingToolStore } from './DrawingToolStore';
+import { EntityService } from './EntityService';
 import { MapStyleStore } from './MapStyleStore';
 import { UIVisibilityStore } from './UIVisibilityStore';
 
@@ -16,6 +17,11 @@ export class RootStore {
   drawingToolStore = new DrawingToolStore();
   mapStyleStore = new MapStyleStore();
   uiVisibilityStore = new UIVisibilityStore();
+
+  // Single writer for drawn-entity CRUD (create / edit / delete). The UI and
+  // map engines mutate entities only through here; `drawingToolStore` stays
+  // the single source of truth. This is the one seam a future server plugs into.
+  entityService = new EntityService(this.drawingToolStore);
 }
 
 export const rootStore = new RootStore();
