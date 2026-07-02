@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
@@ -14,11 +14,11 @@ import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import PanoramaFishEyeIcon from '@mui/icons-material/PanoramaFishEye';
 import PieChartOutlinedIcon from '@mui/icons-material/PieChartOutlined';
 import RouteIcon from '@mui/icons-material/Route';
-import EditIcon from '@mui/icons-material/Edit';
 import CloseIcon from '@mui/icons-material/Close';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
-import type { DrawingToolStore, DrawTool } from '../../stores/DrawingToolStore';
+import type { DrawTool } from '../../stores/DrawingToolStore';
+import type { EntityService } from '../../stores/EntityService';
 
 const DRAW_TOOLS: { id: DrawTool; label: string; Icon: typeof FiberManualRecordIcon; enabled: boolean }[] = [
   { id: 'point', label: 'Point', Icon: FiberManualRecordIcon, enabled: true },
@@ -31,47 +31,47 @@ const DRAW_TOOLS: { id: DrawTool; label: string; Icon: typeof FiberManualRecordI
 ];
 
 /**
- * Wire the engine's draw callback to the store so completed shapes are
- * captured globally instead of dropped to console.log.
+ * Wire the engine's draw callback to the EntityService so completed shapes
+ * are created through the single CRUD writer (and, in future, persisted to
+ * the server) instead of being dropped to console.log.
  */
-function startDraw(engine: MapEngine, tool: DrawTool, store: DrawingToolStore) {
+function startDraw(engine: MapEngine, tool: DrawTool, entities: EntityService) {
   switch (tool) {
     case 'point':
       return engine.startDrawPoint((id, position) =>
-        store.recordShape({ id, kind: 'point', position }),
+        entities.create({ id, kind: 'point', position }),
       );
     case 'line':
       return engine.startDrawLine((id, positions) =>
-        store.recordShape({ id, kind: 'line', positions }),
+        entities.create({ id, kind: 'line', positions }),
       );
     case 'polygon':
       return engine.startDrawPolygon((id, positions) =>
-        store.recordShape({ id, kind: 'polygon', positions }),
+        entities.create({ id, kind: 'polygon', positions }),
       );
     case 'circle':
       return engine.startDrawCircle((id, center, radius) =>
-        store.recordShape({ id, kind: 'circle', center, radius }),
+        entities.create({ id, kind: 'circle', center, radius }),
       );
     case 'ellipse':
       return engine.startDrawEllipse?.((id, center, radiusX, radiusY) =>
-        store.recordShape({ id, kind: 'ellipse', center, radiusX, radiusY }),
+        entities.create({ id, kind: 'ellipse', center, radiusX, radiusY }),
       );
     case 'sector':
       return engine.startDrawSector?.((id, center, radius, startBearing, endBearing) =>
-        store.recordShape({ id, kind: 'sector', center, radius, startBearing, endBearing }),
+        entities.create({ id, kind: 'sector', center, radius, startBearing, endBearing }),
       );
     case 'route':
       return engine.startDrawRoute?.((id, positions) =>
-        store.recordShape({ id, kind: 'route', positions }),
+        entities.create({ id, kind: 'route', positions }),
       );
   }
 }
 
 function ToolBarImpl() {
-  const { mapEngineStore, drawingToolStore } = useStores();
+  const { mapEngineStore, drawingToolStore, entityService } = useStores();
   const engine = mapEngineStore.engine;
   const activeTool = drawingToolStore.activeDrawTool;
-  const editing = drawingToolStore.isEditing;
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const open = Boolean(anchorEl);
@@ -79,52 +79,22 @@ function ToolBarImpl() {
   const closeMenu = () => setAnchorEl(null);
   const openMenu = () => setAnchorEl(buttonRef.current);
 
-  // Make sure edit mode is dropped if the engine swaps out from under us.
-  useEffect(() => {
-    return () => {
-      engine?.setEditMode?.(false);
-    };
-  }, [engine]);
-
   const handleSelect = (tool: DrawTool) => {
     if (!engine) return;
-    if (editing) {
-      engine.setEditMode?.(false);
-      drawingToolStore.setEditing(false);
-    }
     drawingToolStore.setActiveDrawTool(tool);
-    startDraw(engine, tool, drawingToolStore);
+    startDraw(engine, tool, entityService);
     closeMenu();
   };
 
   const handleCancel = () => {
     engine?.cancelDrawing();
-    engine?.setEditMode?.(false);
     drawingToolStore.setActiveDrawTool(null);
-    drawingToolStore.setEditing(false);
+    drawingToolStore.setSelectedId(null);
     closeMenu();
   };
 
-  const handleToggleEdit = () => {
-    if (!engine?.setEditMode) return;
-    const next = !editing;
-    // Drop any in-progress draw before switching modes.
-    if (next) {
-      engine.cancelDrawing();
-      drawingToolStore.setActiveDrawTool(null);
-    }
-    engine.setEditMode(next);
-    drawingToolStore.setEditing(next);
-    closeMenu();
-  };
-
-  const supportsEdit = Boolean(engine?.setEditMode);
   const activeLabel = DRAW_TOOLS.find((t) => t.id === activeTool)?.label;
-  const triggerLabel = editing
-    ? 'Edit mode'
-    : activeLabel
-    ? `Draw: ${activeLabel}`
-    : 'Draw';
+  const triggerLabel = activeLabel ? `Draw: ${activeLabel}` : 'Draw';
 
   return (
     <>
@@ -150,7 +120,7 @@ function ToolBarImpl() {
         {DRAW_TOOLS.map(({ id, label, Icon, enabled }) => (
           <MenuItem
             key={id}
-            selected={activeTool === id && !editing}
+            selected={activeTool === id}
             disabled={!enabled}
             onClick={() => handleSelect(id)}
           >
@@ -161,21 +131,20 @@ function ToolBarImpl() {
           </MenuItem>
         ))}
 
-        {supportsEdit && [
-          <Divider key="edit-divider" />,
-          <MenuItem key="edit" selected={editing} onClick={handleToggleEdit}>
-            <ListItemIcon>
-              <EditIcon fontSize="small" />
-            </ListItemIcon>
-            <ListItemText>{editing ? 'Stop editing' : 'Edit shapes'}</ListItemText>
-          </MenuItem>,
-        ]}
+        <Divider />
+
+        <MenuItem
+          disabled
+          sx={{ opacity: 0.8, fontSize: 12, whiteSpace: 'normal', maxWidth: 220 }}
+        >
+          Click a shape to edit, then Esc to deselect
+        </MenuItem>
 
         <Divider />
 
         <MenuItem
           onClick={handleCancel}
-          disabled={!activeTool && !editing}
+          disabled={!activeTool}
           sx={{ color: 'error.light' }}
         >
           <ListItemIcon>

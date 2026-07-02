@@ -85,8 +85,17 @@ export class MapLibreDrawingManager {
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
       const mode = this.draw.getMode();
       if (mode !== 'direct_select' && mode !== 'simple_select') return;
-      if (this.draw.getSelectedIds().length === 0) return;
+      const ids = this.draw.getSelectedIds();
+      if (ids.length === 0) return;
       ev.preventDefault();
+      // In `direct_select` (the mode a shape enters when selected for editing)
+      // `trash()` deletes the selected *vertex*, not the whole feature — so
+      // deleting an edited shape silently fails. Switch to `simple_select`,
+      // keeping the same features selected, so `trash()` removes the entire
+      // feature and fires the `draw.delete` round-trip.
+      if (mode === 'direct_select') {
+        this.draw.changeMode('simple_select', { featureIds: ids });
+      }
       this.draw.trash();
     };
     document.addEventListener('keydown', this.onKeyDown);
@@ -218,6 +227,39 @@ export class MapLibreDrawingManager {
     feature.id = shape.id;
     feature.properties = { ...feature.properties, [KIND_PROP]: shape.kind };
     this.draw.add(feature as any);
+  }
+
+  // ── Edit handoff ──────────────────────────────────────────────
+
+  /**
+   * Paint the shape as a native feature and select it for editing. Vertex
+   * drags / resizes fire `draw.update`, which round-trips back through
+   * `onShapeEdited`. The custom `direct_select` (DirectMode) handles
+   * circle / ellipse / sector resize.
+   */
+  beginEdit(shape: MapShape): void {
+    this.addShape(shape);
+    // `direct_select` edits vertices, so it only accepts vertex-based
+    // features (line / polygon / circle / ellipse / sector). A point has no
+    // vertices — it moves as a whole — so it uses `simple_select`, which
+    // drags the entire feature. Passing a point to `direct_select` throws.
+    if (shape.kind === 'point') {
+      this.draw.changeMode('simple_select', { featureIds: [shape.id] });
+    } else {
+      this.draw.changeMode('direct_select', { featureId: shape.id });
+    }
+  }
+
+  /**
+   * Remove the editable native feature; Deck.gl resumes rendering the shape
+   * from the store. `draw.delete` (the programmatic API) is silent, so this
+   * does NOT fire the `draw.delete` event / `onShapeDeleted` round-trip.
+   */
+  endEdit(id: string): void {
+    if (this.draw.getMode() !== 'simple_select') {
+      this.draw.changeMode('simple_select');
+    }
+    this.draw.delete(id);
   }
 
   // ── Round-trip callbacks ─────────────────────────────────────────────

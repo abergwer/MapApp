@@ -39,6 +39,8 @@ export class LeafletDrawingManager {
   private onShapeDeleted?: (id: string) => void;
   private selectedLayer?: TaggedLayer;
   private editMode = false;
+  /** Removes the `pm:drag` marker-resync listener wired for the active edit. */
+  private dragSyncCleanup?: () => void;
   private readonly onKeyDown: (ev: KeyboardEvent) => void;
 
   constructor(map: L.Map) {
@@ -131,6 +133,9 @@ export class LeafletDrawingManager {
       const layer = this.findUntaggedEllipseOrSector('ellipse');
       const id = layer ? this.tag(layer, 'ellipse') : newShapeId();
       onComplete(id, center, radiusX / KM_TO_M, radiusY / KM_TO_M);
+      // Hand off to Deck.gl: the shape is in the store now, so drop the
+      // engine's native copy to avoid a double-render (see onceCreate).
+      layer?.remove();
     });
   }
 
@@ -147,6 +152,9 @@ export class LeafletDrawingManager {
       const layer = this.findUntaggedEllipseOrSector('sector');
       const id = layer ? this.tag(layer, 'sector') : newShapeId();
       onComplete(id, center, radius / KM_TO_M, startBearing, endBearing);
+      // Hand off to Deck.gl: the shape is in the store now, so drop the
+      // engine's native copy to avoid a double-render (see onceCreate).
+      layer?.remove();
     });
   }
 
@@ -178,39 +186,82 @@ export class LeafletDrawingManager {
     layer.addTo(this.map);
   }
 
-  // ── Edit mode ────────────────────────────────────────────────────────
+  // ── Edit handoff ─────────────────────────────────────────────────────
 
   /**
-   * Toggle Geoman's global edit plus our custom ellipse/sector editors.
-   * Cancels any in-progress drawing first and freezes map panning so
-   * dragging edit handles can't accidentally pan the basemap.
+   * Paint a single shape and turn on its edit handles. Geoman edits
+   * polygons / lines / points / circles; the custom ellipse/sector tools
+   * edit those. Vertex/handle drags round-trip back through `onShapeEdited`.
+   * At most one shape is edited at a time (the store's `selectedId`).
    */
-  setEditMode(enabled: boolean): void {
-    const map = this.map;
-    this.editMode = enabled;
-    if (enabled) {
-      this.cancelDrawing();
-      map.dragging.disable();
-      map.doubleClickZoom.disable();
-      map.keyboard.disable();
+  beginEdit(shape: MapShape): void {
+    this.cancelDrawing();
+    this.addShape(shape);
+    const layer = this.findLayerById(shape.id);
+    if (!layer) return;
+    this.selectedLayer = layer;
+    this.editMode = true;
+    this.map.scrollWheelZoom.disable();
+    this.map.doubleClickZoom.disable();
+    if (shape.kind === 'ellipse') {
       this.ellipseTool.enableEdit();
+    } else if (shape.kind === 'sector') {
       this.sectorTool.enableEdit();
-      // Ellipse + sector polygons are tagged `pmIgnore`, so Geoman's
-      // global edit skips them. `hideMiddleMarkers` suppresses the
-      // "add-a-vertex" ghost handles between real vertices.
-      map.pm.enableGlobalEditMode({
-        allowSelfIntersection: false,
-        hideMiddleMarkers: true,
-      });
     } else {
-      map.pm.disableGlobalEditMode();
-      this.ellipseTool.disableEdit();
-      this.sectorTool.disableEdit();
-      this.selectedLayer = undefined;
-      map.dragging.enable();
-      map.doubleClickZoom.enable();
-      map.keyboard.enable();
+      const pm = (layer as {
+        pm?: {
+          enable?(o: object): void;
+          enableLayerDrag?(): void;
+          _initMarkers?(): void;
+        };
+      }).pm;
+      const wholeShapeDrag =
+        shape.kind === 'polygon' ||
+        shape.kind === 'line' ||
+        shape.kind === 'route';
+      if (wholeShapeDrag) {
+        pm?.enableLayerDrag?.();
+      }
+      // `hideMiddleMarkers` suppresses the "add-a-vertex" ghost handles.
+      pm?.enable?.({ allowSelfIntersection: false, hideMiddleMarkers: true ,  preventMarkerRemoval: shape.kind === 'line',});
+
+        const resyncHandles = () => pm?._initMarkers?.();
+        layer.on('pm:drag', resyncHandles);
+        this.dragSyncCleanup = () => layer.off('pm:drag', resyncHandles);
+      // }
     }
+  }
+
+  /** Disable handles and remove the editable layer; Deck.gl resumes drawing it. */
+  endEdit(id: string): void {
+    const layer = this.findLayerById(id);
+    this.ellipseTool.disableEdit();
+    this.sectorTool.disableEdit();
+    this.editMode = false;
+    this.map.scrollWheelZoom.enable();
+    this.map.doubleClickZoom.enable();
+    this.map.touchZoom.enable();
+    this.dragSyncCleanup?.();
+    this.dragSyncCleanup = undefined;
+    if (!layer) return;
+    const pm = (layer as {
+      pm?: { disable?(): void; disableLayerDrag?(): void };
+    }).pm;
+    // `disable()` alone leaves the layer-drag mousedown handler attached for
+    // polygons/lines, so drop it explicitly before releasing the layer.
+    pm?.disableLayerDrag?.();
+    pm?.disable?.();
+    if (this.selectedLayer === layer) this.selectedLayer = undefined;
+    layer.remove();
+  }
+
+  /** Find a tagged layer currently on the map by its shape id. */
+  private findLayerById(id: string): TaggedLayer | undefined {
+    let found: TaggedLayer | undefined;
+    this.map.eachLayer((layer) => {
+      if ((layer as TaggedLayer)._shapeId === id) found = layer as TaggedLayer;
+    });
+    return found;
   }
 
   // ── Round-trip callbacks ─────────────────────────────────────────────
@@ -228,8 +279,14 @@ export class LeafletDrawingManager {
   /** Listen for the next `pm:create`, tag the layer, then detach. */
   private onceCreate(handler: (layer: L.Layer) => void): void {
     const wrapped = (e: any) => {
-      handler(e.layer);
+      const layer = e.layer as L.Layer;
+      handler(layer);
       this.map.off('pm:create', wrapped);
+      // In the deck-render-only model the engine keeps no native copy of a
+      // finished shape — it now lives in the store and is painted by Deck.gl.
+      // Remove Geoman's layer, or the shape is drawn twice and edit/delete
+      // act on a stale duplicate.
+      layer.remove();
     };
     this.map.on('pm:create', wrapped);
   }
