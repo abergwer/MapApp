@@ -1,6 +1,7 @@
 import L from 'leaflet';
 import {
   bboxToCenterAndRadii,
+  enableBodyDrag,
   latLngScaleAt,
   sampleEllipsePolygon,
 } from './geoLeaflet';
@@ -20,10 +21,10 @@ export type EllipseDrawResult = {
 
 export interface LeafletEllipseTool {
   /** Begin a two-click bounding-box ellipse draw. */
-  startDraw(onComplete: (result: EllipseDrawResult) => void): void;
+  startDraw(onComplete: (result: EllipseDrawResult, layer: EllipseLayer) => void): void;
   /** Abort the in-progress draw (if any), removing its preview. */
   cancelDraw(): void;
-  /** Attach 4 cardinal + 1 center drag handle to every ellipse on the map. */
+  /** Attach 4 cardinal resize handles + whole-body move drag to every ellipse. */
   enableEdit(): void;
   /** Remove all currently-attached ellipse edit handles. */
   disableEdit(): void;
@@ -95,8 +96,9 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
   };
 
   const attachEditHandles = (layer: EllipseLayer): { remove: () => void } => {
-    // Edit handles (axes) get directional resize cursors; the center handle
-    // gets `move` so dragging vs reshaping read differently to the user.
+    // Axis handles get directional resize cursors; the ellipse body itself is
+    // draggable (see `enableBodyDrag` below) so moving vs reshaping read
+    // differently to the user.
     const ewIcon = L.divIcon({
       className: '',
       html: handleHtml('ew-resize'),
@@ -109,12 +111,6 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
       iconSize: [12, 12],
       iconAnchor: [6, 6],
     });
-    const centerIcon = L.divIcon({
-      className: '',
-      html: handleHtml('move'),
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
-    });
 
     const positions = () => {
       const [lng, lat] = layer._ellipseMeta.center;
@@ -126,7 +122,6 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
         w: L.latLng(lat, lng - rLng),
         n: L.latLng(lat + rLat, lng),
         s: L.latLng(lat - rLat, lng),
-        c: L.latLng(lat, lng),
       };
     };
 
@@ -141,7 +136,6 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
     const wHandle = L.marker(initial.w, opts(ewIcon)).addTo(map);
     const nHandle = L.marker(initial.n, opts(nsIcon)).addTo(map);
     const sHandle = L.marker(initial.s, opts(nsIcon)).addTo(map);
-    const cHandle = L.marker(initial.c, opts(centerIcon)).addTo(map);
 
     const syncHandles = () => {
       const p = positions();
@@ -149,7 +143,6 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
       wHandle.setLatLng(p.w);
       nHandle.setLatLng(p.n);
       sHandle.setLatLng(p.s);
-      cHandle.setLatLng(p.c);
     };
 
     const rebuild = () => {
@@ -179,12 +172,6 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
       rebuild();
     };
 
-    const onCenterDrag = () => {
-      const c = cHandle.getLatLng();
-      layer._ellipseMeta.center = [c.lng, c.lat];
-      rebuild();
-    };
-
     const onDragEnd = () => {
       const feature = (layer as EllipseLayer & { feature?: GeoJSON.Feature }).feature;
       if (feature) {
@@ -202,20 +189,33 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
     wHandle.on('drag', onAxisDrag('x', wHandle)).on('dragend', onDragEnd);
     nHandle.on('drag', onAxisDrag('y', nHandle)).on('dragend', onDragEnd);
     sHandle.on('drag', onAxisDrag('y', sHandle)).on('dragend', onDragEnd);
-    cHandle.on('drag', onCenterDrag).on('dragend', onDragEnd);
+
+    // Whole-shape body drag: grab the ellipse fill anywhere and move it, like
+    // polygon/line body dragging. Translates the parametric center (never the
+    // sampled points) so the stored geometry stays canonical.
+    const bodyDrag = enableBodyDrag(
+      map,
+      layer,
+      (dLng, dLat) => {
+        const [lng, lat] = layer._ellipseMeta.center;
+        layer._ellipseMeta.center = [lng + dLng, lat + dLat];
+        rebuild();
+      },
+      onDragEnd,
+    );
 
     return {
       remove: () => {
+        bodyDrag.remove();
         eHandle.remove();
         wHandle.remove();
         nHandle.remove();
         sHandle.remove();
-        cHandle.remove();
       },
     };
   };
 
-  const startDraw = (onComplete: (result: EllipseDrawResult) => void): void => {
+  const startDraw = (onComplete: (result: EllipseDrawResult, layer: EllipseLayer) => void): void => {
     // Drop any prior in-progress draw so we don't stack handlers.
     activeDrawCleanup?.();
 
@@ -271,14 +271,15 @@ export function createLeafletEllipseTool(map: L.Map): LeafletEllipseTool {
       // commit and programmatic `addShape` go through the same path.
       preview?.remove();
       preview = null;
-      buildLayer({
+      const layer = buildLayer({
         center: [center.lng, center.lat],
         radiusX,
         radiusY,
-      }).addTo(map);
+      });
+      layer.addTo(map);
 
       detachHandlers();
-      onComplete({ center: [center.lng, center.lat], radiusX, radiusY });
+      onComplete({ center: [center.lng, center.lat], radiusX, radiusY }, layer);
     };
 
     const onKeyDown = (e: KeyboardEvent) => {

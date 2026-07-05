@@ -2,6 +2,7 @@ import L from 'leaflet';
 import {
   bearingTo,
   destination,
+  enableBodyDrag,
   sampleSectorPolygon,
   sweepClockwise,
 } from './geoLeaflet';
@@ -23,10 +24,10 @@ export type SectorDrawResult = {
 
 export interface LeafletSectorTool {
   /** Begin a three-click sector draw: center → start arm → end arm. */
-  startDraw(onComplete: (result: SectorDrawResult) => void): void;
+  startDraw(onComplete: (result: SectorDrawResult, layer: SectorLayer) => void): void;
   /** Abort the in-progress draw (if any), removing its preview. */
   cancelDraw(): void;
-  /** Attach drag handles (center + start arm + end arm + radius) to every sector. */
+  /** Attach reshape handles (start/end arms + radius) + whole-body move drag to every sector. */
   enableEdit(): void;
   /** Remove all currently-attached sector edit handles. */
   disableEdit(): void;
@@ -113,20 +114,14 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
   };
 
   const attachEditHandles = (layer: SectorLayer): { remove: () => void } => {
-    // Reshape handles (arms, radius) get a grab cursor; the center handle
-    // gets `move` so dragging vs reshaping read differently to the user.
+    // Reshape handles (arms, radius) get a grab cursor; the sector body itself
+    // is draggable (see `enableBodyDrag` below) so moving vs reshaping read
+    // differently to the user.
     const handleIcon = L.divIcon({
       className: '',
       html: handleHtml('grab'),
       iconSize: [12, 12],
       iconAnchor: [6, 6],
-    });
-    // Center handle uses the same look, bumped 2px so it's easy to grab.
-    const centerIcon = L.divIcon({
-      className: '',
-      html: handleHtml('move'),
-      iconSize: [14, 14],
-      iconAnchor: [7, 7],
     });
 
     const positions = () => {
@@ -140,7 +135,7 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
       );
       const midBearing = layer._sectorMeta.startBearing + sweep / 2;
       const mid = destination(c, layer._sectorMeta.radius, midBearing);
-      return { c, start, end, mid };
+      return { start, end, mid };
     };
 
     const markerOpts = (icon: L.DivIcon): L.MarkerOptions => {
@@ -153,14 +148,12 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
     const startHandle = L.marker(initial.start, markerOpts(handleIcon)).addTo(map);
     const endHandle = L.marker(initial.end, markerOpts(handleIcon)).addTo(map);
     const radiusHandle = L.marker(initial.mid, markerOpts(handleIcon)).addTo(map);
-    const centerHandle = L.marker(initial.c, markerOpts(centerIcon)).addTo(map);
 
     const syncHandles = () => {
       const p = positions();
       startHandle.setLatLng(p.start);
       endHandle.setLatLng(p.end);
       radiusHandle.setLatLng(p.mid);
-      centerHandle.setLatLng(p.c);
     };
 
     const rebuild = () => {
@@ -194,12 +187,6 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
       rebuild();
     };
 
-    const onCenterDrag = () => {
-      const c = centerHandle.getLatLng();
-      layer._sectorMeta.center = [c.lng, c.lat];
-      rebuild();
-    };
-
     const onDragEnd = () => {
       const feature = (layer as SectorLayer & { feature?: GeoJSON.Feature }).feature;
       if (feature) {
@@ -217,19 +204,32 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
     startHandle.on('drag', onArmDrag('start', startHandle)).on('dragend', onDragEnd);
     endHandle.on('drag', onArmDrag('end', endHandle)).on('dragend', onDragEnd);
     radiusHandle.on('drag', onRadiusDrag).on('dragend', onDragEnd);
-    centerHandle.on('drag', onCenterDrag).on('dragend', onDragEnd);
+
+    // Whole-shape body drag: grab the sector fill anywhere and move it, like
+    // polygon/line body dragging. Translates the parametric center (never the
+    // sampled points) so the stored geometry stays canonical.
+    const bodyDrag = enableBodyDrag(
+      map,
+      layer,
+      (dLng, dLat) => {
+        const [lng, lat] = layer._sectorMeta.center;
+        layer._sectorMeta.center = [lng + dLng, lat + dLat];
+        rebuild();
+      },
+      onDragEnd,
+    );
 
     return {
       remove: () => {
+        bodyDrag.remove();
         startHandle.remove();
         endHandle.remove();
         radiusHandle.remove();
-        centerHandle.remove();
       },
     };
   };
 
-  const startDraw = (onComplete: (result: SectorDrawResult) => void): void => {
+  const startDraw = (onComplete: (result: SectorDrawResult, layer: SectorLayer) => void): void => {
     activeDrawCleanup?.();
 
     let center: L.LatLng | null = null;
@@ -311,10 +311,11 @@ export function createLeafletSectorTool(map: L.Map): LeafletSectorTool {
       // commit and programmatic `addShape` go through the same path.
       preview?.remove();
       preview = null;
-      buildLayer(meta).addTo(map);
+      const layer = buildLayer(meta);
+      layer.addTo(map);
 
       detachHandlers();
-      onComplete(meta);
+      onComplete(meta, layer);
     };
 
     const onKeyDown = (e: KeyboardEvent) => {

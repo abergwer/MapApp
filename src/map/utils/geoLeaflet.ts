@@ -97,4 +97,64 @@ export function bboxToCenterAndRadii(
   return { center, radiusX, radiusY };
 }
 
+/**
+ * Whole-shape body drag for a custom parametric path (ellipse / sector).
+ *
+ * Geoman's `enableLayerDrag` only works on native shapes it owns; our
+ * ellipse/sector layers are `pmIgnore` sampled polygons whose real geometry
+ * lives in `_ellipseMeta` / `_sectorMeta`. So we translate the *parametric*
+ * center instead of the sampled points: `onMoveBy` receives the lat/lng delta
+ * of each pointer step (caller shifts its center + re-samples), and `onEnd`
+ * fires once on release (caller persists the move).
+ *
+ * The initial `mousedown` is swallowed so the map neither pans nor emits a
+ * background `click` on release — which the engine treats as a deselect,
+ * and which would otherwise flash the shape at its pre-drag position.
+ */
+export function enableBodyDrag(
+  map: L.Map,
+  layer: L.Path,
+  onMoveBy: (deltaLng: number, deltaLat: number) => void,
+  onEnd: () => void,
+): { remove: () => void } {
+  const el = layer.getElement() as SVGElement | undefined;
+  const prevCursor = el?.style.cursor ?? '';
+  if (el) el.style.cursor = 'move';
+
+  let prev: L.LatLng | null = null;
+
+  const onMove = (e: L.LeafletMouseEvent): void => {
+    if (!prev) return;
+    onMoveBy(e.latlng.lng - prev.lng, e.latlng.lat - prev.lat);
+    prev = e.latlng;
+  };
+
+  const end = (): void => {
+    if (!prev) return;
+    prev = null;
+    map.off('mousemove', onMove);
+    map.off('mouseup', end);
+    map.dragging.enable();
+    onEnd();
+  };
+
+  const onDown = (e: L.LeafletMouseEvent): void => {
+    L.DomEvent.stop(e.originalEvent);
+    prev = e.latlng;
+    map.dragging.disable();
+    map.on('mousemove', onMove);
+    map.on('mouseup', end);
+  };
+
+  layer.on('mousedown', onDown);
+
+  return {
+    remove: (): void => {
+      layer.off('mousedown', onDown);
+      end();
+      if (el) el.style.cursor = prevCursor;
+    },
+  };
+}
+
 export { sweepClockwise };
