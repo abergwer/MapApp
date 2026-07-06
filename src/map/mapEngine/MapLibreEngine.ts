@@ -190,6 +190,10 @@ export class MapLibreEngine implements MapEngine {
     this.drawing?.setOnShapeDeleted(callback);
   }
 
+  setOnDeselect(callback: () => void): void {
+    this.drawing?.setOnDeselect(callback);
+  }
+
   // ── Measurement (delegated) ──────────────────────────────────────────
 
   startMeasureDistance(onComplete: (distanceKm: number) => void): void {

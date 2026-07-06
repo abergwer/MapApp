@@ -36,7 +36,21 @@ export class MapLibreDrawingManager {
   private cancelCurrentDraw?: () => void;
   private onShapeEdited?: (shape: MapShape) => void;
   private onShapeDeleted?: (id: string) => void;
+  private onDeselect?: () => void;
+  /** Pending timer that arms the background-click deselect after edit starts. */
+  private bgClickTimer?: ReturnType<typeof setTimeout>;
   private readonly onKeyDown: (ev: KeyboardEvent) => void;
+
+  /**
+   * Clicking empty map background exits edit mode. MapLibre fires `click` on
+   * every canvas click, so we use MapboxDraw's `getFeatureIdsAt` to check
+   * whether the click landed on a draw feature (the edited shape or a vertex
+   * handle). Only a click that hits no draw feature counts as "background".
+   */
+  private readonly onBackgroundClick = (e: maplibregl.MapMouseEvent): void => {
+    const ids = this.draw.getFeatureIdsAt(e.point);
+    if (ids.length === 0) this.onDeselect?.();
+  };
 
   constructor(map: maplibregl.Map) {
     this.map = map;
@@ -248,6 +262,12 @@ export class MapLibreDrawingManager {
     } else {
       this.draw.changeMode('direct_select', { featureId: shape.id });
     }
+
+    // Arm "click background to exit edit" — deferred one tick so the very
+    // click that selected this shape doesn't immediately deselect it.
+    this.bgClickTimer = setTimeout(() => {
+      this.map.on('click', this.onBackgroundClick);
+    }, 0);
   }
 
   /**
@@ -256,6 +276,12 @@ export class MapLibreDrawingManager {
    * does NOT fire the `draw.delete` event / `onShapeDeleted` round-trip.
    */
   endEdit(id: string): void {
+    // Disarm the background-click deselect (whether armed or still pending).
+    if (this.bgClickTimer !== undefined) {
+      clearTimeout(this.bgClickTimer);
+      this.bgClickTimer = undefined;
+    }
+    this.map.off('click', this.onBackgroundClick);
     if (this.draw.getMode() !== 'simple_select') {
       this.draw.changeMode('simple_select');
     }
@@ -272,13 +298,26 @@ export class MapLibreDrawingManager {
     this.onShapeDeleted = callback;
   }
 
+  /** Called when the user clicks empty map background while editing. */
+  setOnDeselect(callback: () => void): void {
+    this.onDeselect = callback;
+  }
+
   // ── Internals ────────────────────────────────────────────────────────
 
   /** Listen for the next `draw.create`, hand back the feature, then detach. */
   private onceCreate(handler: (feature: any) => void): void {
     const wrapped = (e: any) => {
-      handler(e.features[0]);
+      const feature = e.features[0];
+      handler(feature);
       this.map.off('draw.create', wrapped);
+      // In the deck-render-only model the engine keeps no native copy of a
+      // finished shape — it now lives in the store and is painted by Deck.gl.
+      // Remove MapboxDraw's copy, or the shape is drawn twice (native +
+      // Deck.gl) and dragging it shows an "original" ghost at the pre-drag
+      // position because the store only catches up on `draw.update` (mouseup).
+      // `draw.delete(id)` is silent (no round-trip), so no onShapeDeleted fires.
+      if (feature?.id != null) this.draw.delete(String(feature.id));
     };
     this.map.on('draw.create', wrapped);
   }

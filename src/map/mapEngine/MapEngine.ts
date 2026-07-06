@@ -102,6 +102,13 @@ export interface MapEngine {
   setOnShapeDeleted?(callback: (id: string) => void): void;
 
   /**
+   * Fires when the user clicks empty map background while a shape is being
+   * edited. Pair with `DrawingToolStore.setSelectedId(null)` to exit edit
+   * mode. Engine-specific (currently Leaflet). Optional.
+   */
+  setOnDeselect?(callback: () => void): void;
+
+  /**
    * Draw a polyline and report its total great-circle length in kilometres.
    * The engine is also responsible for displaying the result on the map
    * (e.g. as a label at the line endpoint). Optional.
