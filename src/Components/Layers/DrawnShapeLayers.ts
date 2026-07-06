@@ -1,7 +1,21 @@
-import { PathLayer, PolygonLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { IconLayer, PathLayer, PolygonLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import type { MapShape } from '../../stores/DrawingToolStore';
 import { ellipseRing, sectorRing } from '../../map/utils/geo';
+
+/**
+ * Map-pin marker for drawn points, inlined as an SVG data URL so there's no
+ * atlas image to ship or load. `anchorY` (see below) puts the pin's tip on the
+ * coordinate; the fill/stroke live in the SVG since IconLayer can't tint an
+ * RGB icon without a mask.
+ */
+const PIN_ICON = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">` +
+  `<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" ` +
+  `fill="rgb(0, 122, 255)" stroke="rgb(0, 70, 150)"  stroke-width="1.5"/>` +
+  `<circle cx="12" cy="12" r="4.5" fill="rgb(135, 206, 255)"/>` +
+  `</svg>`,
+)}`;
 
 /**
  * Deck.gl rendering for user-drawn shapes. The shape whose id equals
@@ -82,20 +96,21 @@ export function createDrawnShapeLayers(
       capRounded: true,
       jointRounded: true,
     }),
-    new ScatterplotLayer({
+    new IconLayer({
       id: 'drawn-points',
       data: points,
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 255, 160],
       getPosition: (s) => s.position,
-      getRadius: 6,
-      radiusUnits: 'pixels',
-      getFillColor: [255, 80, 80, 230],
-      getLineColor: [120, 0, 0, 255],
-      getLineWidth: 1,
-      lineWidthUnits: 'pixels',
-      stroked: true,
+      getIcon: () => ({
+        url: PIN_ICON,
+        width: 24,
+        height: 36,
+        anchorY: 36, // pin tip sits exactly on the coordinate
+      }),
+      getSize: 36,
+      sizeUnits: 'pixels',
     }),
   ];
 }
