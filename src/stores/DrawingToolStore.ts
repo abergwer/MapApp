@@ -104,6 +104,11 @@ export class DrawingToolStore {
   }
 
   setActiveDrawTool(tool: DrawTool | null) {
+    // Activating a draw tool must clear any pending edit selection. Otherwise
+    // the first click on the map (starting the new draw) is treated as a
+    // background click by the engine's edit-mode click handler, which
+    // deselects the old shape and calls `endEdit`, aborting the new draw.
+    if (tool !== null) this.selectedId = null;
     this.activeDrawTool = tool;
   }
 

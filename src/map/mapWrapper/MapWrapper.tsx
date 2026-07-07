@@ -70,6 +70,10 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
       eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(shape));
       eng.setOnShapeDeleted?.((id: string) => entityService.remove(id));
 
+      // Clicking empty map background (Leaflet) exits edit mode by clearing
+      // the selection — the edit handoff reaction then releases the shape.
+      eng.setOnDeselect?.(() => drawingToolStore.setSelectedId(null));
+
       // Selection drives editing. Deck.gl renders every drawn shape; the one
       // shape whose id is `selectedId` is handed to the engine as a single
       // editable native feature (and hidden from Deck.gl so it isn't drawn
