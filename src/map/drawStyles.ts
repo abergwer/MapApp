@@ -32,15 +32,18 @@ export const drawStyles = [
     }
   },
 
-  // Midpoint handles — render invisible so users can't click them to
-  // insert a new vertex between existing nodes.
+  // Midpoint handles — click one to insert a new vertex between existing
+  // nodes. Smaller + hollow-looking so they're visually distinct from real
+  // vertices below.
   {
     id: 'gl-draw-line-midpoint',
     type: 'circle',
     filter: ['all', ['==', '$type', 'Point'], ['==', 'meta', 'midpoint']],
     paint: {
-      'circle-radius': 0,
-      'circle-opacity': 0
+      'circle-radius': 4,
+      'circle-color': '#ffffff',
+      'circle-stroke-color': '#0000ff',
+      'circle-stroke-width': 2
     }
   },
 

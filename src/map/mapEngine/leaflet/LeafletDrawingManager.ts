@@ -360,10 +360,12 @@ export class LeafletDrawingManager {
     if (!pm) return;
 
     if (DRAGGABLE_KINDS.has(kind)) pm.enableLayerDrag?.();
-    // `hideMiddleMarkers` hides the "add-a-vertex" ghost handles.
+    // `hideMiddleMarkers: false` shows the midpoint "add-a-vertex" handles:
+    // clicking one splits the edge and inserts a real vertex, which the
+    // existing `pm:edit` round-trip picks up automatically.
     pm.enable?.({
       allowSelfIntersection: false,
-      hideMiddleMarkers: true,
+      hideMiddleMarkers: false,
       preventMarkerRemoval: kind === 'line',
     });
 
