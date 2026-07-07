@@ -7,6 +7,7 @@ import { DrawingToolStore } from './DrawingToolStore';
 import { EntityService } from './EntityService';
 import { MapStyleStore } from './MapStyleStore';
 import { UIVisibilityStore } from './UIVisibilityStore';
+import { LayerVisibilityStore } from './LayerVisibilityStore';
 
 export class RootStore {
   droneStore = new DroneStore();
@@ -17,6 +18,7 @@ export class RootStore {
   drawingToolStore = new DrawingToolStore();
   mapStyleStore = new MapStyleStore();
   uiVisibilityStore = new UIVisibilityStore();
+  layerVisibilityStore = new LayerVisibilityStore();
 
   // Single writer for drawn-entity CRUD (create / edit / delete). The UI and
   // map engines mutate entities only through here; `drawingToolStore` stays

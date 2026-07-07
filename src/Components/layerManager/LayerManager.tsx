@@ -17,9 +17,26 @@ interface LayerManagerProps {
 function LayerManagerImpl({ layers }: LayerManagerProps) {
   const { containerRef } = useMapContext();
   const stores = useStores();
-  const { mapEngineStore } = stores;
+  const { mapEngineStore, layerVisibilityStore } = stores;
   const engine = mapEngineStore.engine;
   const deckRef = useRef<Deck | null>(null);
+
+  // Register the incoming layers with the store (so the LayersPanel lists
+  // exactly what's on the map) and hide the ones the user toggled off.
+  // `observer` re-renders this component when a toggle changes.
+  //
+  // Hidden layers are kept in the array with `visible: false` instead of
+  // being filtered out: removing a layer makes Deck.gl *finalize* that
+  // instance, and re-inserting the same finalized instance later doesn't
+  // remount it (toggle-on would do nothing). `clone()` also returns fresh
+  // instances, so Deck never sees a stale, already-used layer object.
+  const visibleLayers = layers.map((layer) =>
+    layer.clone({ visible: layerVisibilityStore.isVisible(String(layer.id)) }),
+  );
+
+  useEffect(() => {
+    layerVisibilityStore.registerLayers(layers.map((layer) => String(layer.id)));
+  }, [layers, layerVisibilityStore]);
 
   useEffect(() => {
     if (!engine || !containerRef.current) return;
@@ -53,7 +70,7 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
       height,
       controller: false,
       viewState,
-      layers: layers ?? buildLayers(stores),
+      layers: visibleLayers,
       onLoad: () => {
         deckReady = true;
       },
@@ -148,10 +165,10 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
 
   // Allow an explicit `layers` prop override to bypass the store-driven path.
   useEffect(() => {
-    if (deckRef.current && layers) {
-      deckRef.current.setProps({ layers });
+    if (deckRef.current && visibleLayers) {
+      deckRef.current.setProps({ layers: visibleLayers });
     }
-  }, [layers]);
+  });
 
   return null;
 }

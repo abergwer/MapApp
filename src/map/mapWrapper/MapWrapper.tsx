@@ -14,6 +14,7 @@ import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
+import LayersPanel from '../../Components/features/LayersPanel';
 import MiniMap from '../../Components/features/MiniMap';
 import MiniVideo from '../../Components/features/MiniVideo';
 import type { MapShape } from '../../stores/DrawingToolStore';
@@ -166,6 +167,7 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
           >
             <ToolBar />
             {showMeasureTools && <MeasuringTools />}
+            <LayersPanel />
             <MapStyleBar />
           </Stack>
 
