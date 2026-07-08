@@ -8,5 +8,5 @@
     "dark": "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
     "satellite": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
   },
-  "VideoSignalingURL": "http://localhost:3000"
+  "VideoSignalingURL": "http://172.28.54.122:3000"
 }
