@@ -9,14 +9,7 @@ import { mapEngineLabel } from '../mapConfig';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
-import CoordinatesBar from '../../Components/features/CoordinatesBar';
 import './MapWrapper.css';
-import ToolBar from '../../Components/features/ToolBar';
-import MeasuringTools from '../../Components/features/MeasuringTools';
-import MapStyleBar from '../../Components/features/MapStyleBar';
-import LayersPanel from '../../Components/features/LayersPanel';
-import MiniMap from '../../Components/features/MiniMap';
-import MiniVideo from '../../Components/features/MiniVideo';
 import type { MapShape } from '../../stores/DrawingToolStore';
 
 const defaultOptions = {
@@ -25,15 +18,34 @@ const defaultOptions = {
 };
 
 interface MapWrapperProps {
+  /** Non-positioned overlays (e.g. `LayerManager`, which uses `MapContext`). */
   children?: ReactNode;
-  /** Show the measure tools group in the toolbar. Default: true. */
-  showMeasureTools?: boolean;
+  /** Top-left overlay stack — toolbar row (draw tools, measure, layers, style). */
+  topLeft?: ReactNode;
+  /**
+   * Top-right overlay. Shifted 44px left of the map edge so it never overlaps
+   * the engines' +/- zoom controls (Leaflet & MapLibre pin them at top-right).
+   */
+  topRight?: ReactNode;
+  /** Bottom-left overlay — typically the coordinates readout. */
+  bottomLeft?: ReactNode;
+  /**
+   * Bottom-right overlay. Lifted 36px above the map edge to clear the engine
+   * scale bar. Renders as a flex column so children stack vertically; the
+   * last child sits at the bottom, earlier children stack above it.
+   */
+  bottomRight?: ReactNode;
 }
 
-function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) {
+function MapWrapperImpl({
+  children,
+  topLeft,
+  topRight,
+  bottomLeft,
+  bottomRight,
+}: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, uiVisibilityStore, entityService, drawingToolStore } = useStores();
-  const { minimapVisible, videoVisible } = uiVisibilityStore;
+  const { mapEngineStore, entityService, drawingToolStore } = useStores();
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -160,40 +172,49 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
         >
           <Box ref={containerRef} sx={{ flex: 1, minWidth: 0, minHeight: 0 }} />
 
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1100 }}
-          >
-            <ToolBar />
-            {showMeasureTools && <MeasuringTools />}
-            <LayersPanel />
-            <MapStyleBar />
-          </Stack>
+          {topLeft && (
+            <Stack
+              direction="row"
+              spacing={1}
+              sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1100 }}
+            >
+              {topLeft}
+            </Stack>
+          )}
 
-          <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
-            <CoordinatesBar />
-          </Box>
-
-          {/* Bottom-right, lifted above the engine scale bar (~20px tall). */}
-          {minimapVisible && (
-            <Box sx={{ position: 'absolute', bottom: 36, right: 12, zIndex: 1100 }}>
-              <MiniMap />
+          {/* Top-right, shifted left so it never covers the engines' +/- zoom
+              controls (Leaflet & MapLibre both pin them at top-right, ~44px). */}
+          {topRight && (
+            <Box sx={{ position: 'absolute', top: 12, right: 56, zIndex: 1100 }}>
+              {topRight}
             </Box>
           )}
 
-          {/* Mini video sits directly above the minimap slot on the right. */}
-          {videoVisible && (
+          {bottomLeft && (
+            <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
+              {bottomLeft}
+            </Box>
+          )}
+
+          {/* Bottom-right, lifted 36px above the map edge to clear the engine
+              scale bar. Column layout: since the box is anchored by its bottom
+              edge, the LAST child renders at the bottom and earlier children
+              stack above it (gap: 8px). Callers pass items visually top-to-
+              bottom (e.g. <MiniVideo /> then <MiniMap />). */}
+          {bottomRight && (
             <Box
               sx={{
                 position: 'absolute',
-                // 36 (minimap bottom) + 150 (minimap height) + 8 (gap) = 194
-                bottom: minimapVisible ? 194 : 36,
+                bottom: 40,
                 right: 12,
                 zIndex: 1100,
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: 1,
               }}
             >
-              <MiniVideo onClose={() => uiVisibilityStore.setVideoVisible(false)} />
+              {bottomRight}
             </Box>
           )}
         </Box>

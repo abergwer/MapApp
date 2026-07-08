@@ -6,9 +6,18 @@ import MapWrapper from './map/mapWrapper/MapWrapper'
 import { mapEngineLabel } from './map/mapConfig'
 import { useStores } from './stores/StoreContext'
 import { buildLayers } from './Components/layerManager'
+import ToolBar from './Components/features/ToolBar'
+import MeasuringTools from './Components/features/MeasuringTools'
+import LayersPanel from './Components/features/LayersPanel'
+import MapStyleBar from './Components/features/MapStyleBar'
+import ClockBar from './Components/features/ClockBar'
+import CoordinatesBar from './Components/features/CoordinatesBar'
+import MiniMap from './Components/features/MiniMap'
+import MiniVideo from './Components/features/MiniVideo'
 
 function App() {
   const stores = useStores()
+  const layers = buildLayers(stores)
   return (
     <Box
       component="main"
@@ -30,8 +39,25 @@ function App() {
         </Box>{' '}
         as the selected map engine.
       </Typography>
-      <MapWrapper>
-        <LayerManager layers={buildLayers(stores)} />
+      <MapWrapper
+        topLeft={
+          <>
+            <ToolBar />
+            <MeasuringTools />
+            <LayersPanel />
+            <MapStyleBar />
+          </>
+        }
+        topRight={<ClockBar />}
+        bottomLeft={<CoordinatesBar />}
+        bottomRight={
+          <>
+            <MiniVideo />
+            <MiniMap />
+          </>
+        }
+      >
+        <LayerManager layers={layers} />
       </MapWrapper>
     </Box>
   )

@@ -70,12 +70,18 @@ function createBasemapLayer() {
  *    the redundant `setProps` + GPU redraw.
  */
 function MiniMapImpl() {
-  const { mapEngineStore } = useStores();
+  const { mapEngineStore, uiVisibilityStore } = useStores();
   const engine = mapEngineStore.engine;
+  const visible = uiVisibilityStore.minimapVisible;
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
+    // Bail out cleanly when the panel is off — the JSX below returns null in
+    // that case, so the refs won't be attached to any DOM element. Including
+    // `visible` in the deps below is what makes the deck (re-)create when the
+    // user toggles the minimap on, and get finalized on toggle-off.
+    if (!visible) return;
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!engine || !canvas || !container) return;
@@ -140,9 +146,9 @@ function MiniMapImpl() {
       resizeObserver.disconnect();
       deck.finalize();
     };
-  }, [engine, mapEngineStore]);
+  }, [engine, mapEngineStore, visible]);
 
-  if (!engine) return null;
+  if (!engine || !visible) return null;
 
   return (
     <Paper
