@@ -25,14 +25,54 @@ const defaultOptions = {
 
 interface MapWrapperProps {
   children?: ReactNode;
-  /** Show the measure tools group in the toolbar. Default: true. */
-  showMeasureTools?: boolean;
+  /**
+   * Shapes to render on the map. The host owns the array (e.g. from the
+   * server); the map re-hydrates whenever the array reference changes.
+   *
+   * A hydration wipes local selection + undo/redo history, so pass a
+   * *stable* reference between server pushes — only build a new array
+   * when the server actually sent one.
+   */
+  shapes?: MapShape[];
+  /** Notified after a new shape is drawn by the user. */
+  onShapeCreate?: (shape: MapShape) => void;
+  /** Notified after an existing shape is edited (drag/resize/rotate). */
+  onShapeUpdate?: (shape: MapShape) => void;
+  /** Notified after a shape is deleted. */
+  onShapeDelete?: (id: string) => void;
 }
 
-function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) {
+function MapWrapperImpl({
+  children,
+  shapes,
+  onShapeCreate,
+  onShapeUpdate,
+  onShapeDelete,
+}: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, uiVisibilityStore, entityService, drawingToolStore } = useStores();
+  const { mapEngineStore, uiVisibilityStore, drawingToolStore, entityService } = useStores();
   const { minimapVisible, videoVisible } = uiVisibilityStore;
+
+  // Register outbound notification callbacks. `EntityService` fires these
+  // *after* every successful create / update / delete so the host app can
+  // mirror the change (persist, log, sync to a server, …) without touching
+  // the internal store. Hooks are strictly outbound — nothing here writes
+  // back into the map.
+  useEffect(() => {
+    entityService.setHooks({
+      onCreate: onShapeCreate,
+      onUpdate: onShapeUpdate,
+      onDelete: onShapeDelete,
+    });
+    return () => entityService.setHooks({});
+  }, [entityService, onShapeCreate, onShapeUpdate, onShapeDelete]);
+
+  // Hydrate from the host-provided shape array. Uses the silent inbound
+  // path so it doesn't fire `onShape*` back at the host. Re-runs whenever
+  // the array reference changes (initial load + server pushes).
+  useEffect(() => {
+    if (shapes) entityService.hydrate(shapes);
+  }, [shapes, entityService]);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -62,24 +102,21 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
       // their own onViewChange subscription.
       unsubscribeViewChange = eng.onViewChange((vs) => mapEngineStore.setViewState(vs));
 
-      // Round-trip user edits/deletes back through the EntityService — the
-      // single writer for entity CRUD. The engine reconstructs a full
-      // MapShape from its painted layer/feature (tagged by shape id) and
-      // hands it off; the service keeps the store (and, later, the server)
-      // in sync.
+      // Round-trip user edits/deletes back through the entity service —
+      // the single writer that also fans out to any hook subscribers.
       eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(shape));
       eng.setOnShapeDeleted?.((id: string) => entityService.remove(id));
 
       // Clicking empty map background (Leaflet) exits edit mode by clearing
-      // the selection — the edit handoff reaction then releases the shape.
+      // the selection — the edit-handoff reaction below releases the shape.
       eng.setOnDeselect?.(() => drawingToolStore.setSelectedId(null));
 
-      // Selection drives editing. Deck.gl renders every drawn shape; the one
-      // shape whose id is `selectedId` is handed to the engine as a single
-      // editable native feature (and hidden from Deck.gl so it isn't drawn
-      // twice). On deselect it's released back to Deck.gl. `fireImmediately`
-      // re-spawns the editable feature if the engine is swapped while a shape
-      // is selected — so an engine/basemap swap needs no replay-all.
+      // Selection drives editing. Deck.gl renders every shape in
+      // `drawingToolStore`; the one shape whose id is `selectedId` is handed
+      // to the engine as a single editable native feature (and hidden from
+      // Deck.gl so it isn't drawn twice). `fireImmediately` also re-spawns
+      // the editable feature when the engine is swapped while a shape is
+      // selected.
       stopEditHandoff = reaction(
         () => drawingToolStore.selectedId,
         (nextId, prevId) => {
@@ -107,10 +144,11 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
       eng?.destroy();
       eng = undefined;
     };
-  }, [mapEngineStore, entityService, drawingToolStore]);
+  }, [mapEngineStore, drawingToolStore, entityService]);
 
-  // Keyboard shortcuts: Escape deselects (releases the edited shape back to
-  // Deck.gl); Ctrl/Cmd+Z undoes.
+  // Keyboard shortcuts: Escape deselects the active edit store's selection
+  // (releases the edited shape back to Deck.gl); Ctrl/Cmd+Z undoes on the
+  // drawing store (the primary user-facing history).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       // Ignore shortcuts while the user is typing in a field.
@@ -165,7 +203,7 @@ function MapWrapperImpl({ children, showMeasureTools = true }: MapWrapperProps) 
             sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1100 }}
           >
             <ToolBar />
-            {showMeasureTools && <MeasuringTools />}
+            <MeasuringTools />
             <MapStyleBar />
           </Stack>
 
