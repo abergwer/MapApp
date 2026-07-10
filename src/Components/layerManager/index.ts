@@ -16,11 +16,13 @@ import type { RootStore } from '../../stores/RootStore';
  * underlying store collections change.
  */
 export function buildLayers(stores: RootStore): Layer[] {
+  const { drawingToolStore } = stores;
   return [
-    // User-drawn shapes (render-only; the selected one is owned by the engine).
+    // User-drawn shapes. The map engine's native edit tools drive the same
+    // store via `entityService`; deck.gl only renders and picks here.
     ...createDrawnShapeLayers(
-      stores.drawingToolStore.completedShapes,
-      stores.drawingToolStore.selectedId,
+      drawingToolStore.completedShapes,
+      drawingToolStore.selectedId,
     ),
     createPolygonLayer(stores.polygonStore.polygons),
     createMissilesLayer(stores.missileStore.missiles),
