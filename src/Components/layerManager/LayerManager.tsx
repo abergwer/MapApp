@@ -6,11 +6,10 @@ import { observer } from 'mobx-react-lite';
 import { useMapContext } from '../../map/MapContext';
 import { useStores } from '../../stores/StoreContext';
 import type { MapShape } from '../../stores/DrawingToolStore';
-import { buildLayers } from './index';
 import { DRAWN_SHAPE_LAYER_IDS } from '../Layers/DrawnShapeLayers';
 
 interface LayerManagerProps {
-  /** Override the store-driven layers with a custom Deck.gl layer array. */
+  /** Deck.gl layer array to render on top of the map. */
   layers: Layer[];
 }
 
@@ -53,7 +52,7 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
       height,
       controller: false,
       viewState,
-      layers: layers ?? buildLayers(stores),
+      layers,
       onLoad: () => {
         deckReady = true;
       },
@@ -117,25 +116,11 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
       },
     );
 
-    // Bridge MobX -> Deck.gl. When any observable consumed by buildLayers()
-    // changes (drone positions, missile paths, ...), rebuild the layer array
-    // and push it imperatively into Deck. This skips React re-rendering for
-    // high-frequency entity updates and is the main reason MobX is a good fit
-    // for this app.
-    const stopLayerReaction = layers
-      ? () => {}
-      : reaction(
-          () => buildLayers(stores),
-          (nextLayers) => {
-            const deck = deckRef.current;
-            if (!deck) return;
-            deck.setProps({ layers: nextLayers });
-          },
-          { fireImmediately: false },
-        );
+    // Bridge MobX -> Deck.gl. Layer array is owned by the parent (typically
+    // via `buildLayers(stores)`), so layer refresh is handled by the `layers`
+    // prop effect below — no reaction is needed here.
 
     return () => {
-      stopLayerReaction();
       stopViewReaction();
       resizeObserver.disconnect();
       container.removeEventListener('click', handlePick);
@@ -146,9 +131,9 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine]);
 
-  // Allow an explicit `layers` prop override to bypass the store-driven path.
+  // Push updated layer arrays into the already-initialized Deck instance.
   useEffect(() => {
-    if (deckRef.current && layers) {
+    if (deckRef.current) {
       deckRef.current.setProps({ layers });
     }
   }, [layers]);
