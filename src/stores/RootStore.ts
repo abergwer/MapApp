@@ -18,9 +18,9 @@ export class RootStore {
   mapStyleStore = new MapStyleStore();
   uiVisibilityStore = new UIVisibilityStore();
 
-  // Single writer for drawn-entity CRUD (create / edit / delete). The UI and
-  // map engines mutate entities only through here; `drawingToolStore` stays
-  // the single source of truth. This is the one seam a future server plugs into.
+  // Single writer for drawn-entity CRUD. Every create / edit / delete goes
+  // through here so external consumers can subscribe via `setHooks(...)` and
+  // observe every change without touching the store directly.
   entityService = new EntityService(this.drawingToolStore);
 }
 
