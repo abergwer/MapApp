@@ -31,7 +31,7 @@ export interface Measurement {
  * In a real app, swap for a websocket / fetch hook that calls
  * `recordShape` as messages arrive.
  */
-const DEMO_SERVER_SHAPES: MapShape[] = [
+export const DEMO_SERVER_SHAPES: MapShape[] = [
   { id: newShapeId(), kind: 'point', position: [34.7818, 32.0853] },
   {
     id: newShapeId(),
@@ -65,7 +65,7 @@ export class DrawingToolStore {
    * One id ⇒ one editable shape ⇒ no double-render, no desync.
    */
   selectedId: string | null = null;
-  completedShapes: MapShape[] = [...DEMO_SERVER_SHAPES];
+  completedShapes: MapShape[] = [];
   measurements: Measurement[] = [];
 
   /**
@@ -151,6 +151,19 @@ export class DrawingToolStore {
 
   clearShapes() {
     this.completedShapes = [];
+  }
+
+    /**
+   * Replace the entire shape array wholesale. Used for server-driven
+   * hydration (initial payload or bulk resync). Clears selection + history
+   * because a server-authoritative snapshot isn't part of the local
+   * undo/redo timeline.
+   */
+  setShapes(shapes: MapShape[]) {
+    this.completedShapes = shapes.slice();
+    this.selectedId = null;
+    this.past = [];
+    this.future = [];
   }
 
   recordMeasurement(measurement: Omit<Measurement, 'timestamp'>) {
