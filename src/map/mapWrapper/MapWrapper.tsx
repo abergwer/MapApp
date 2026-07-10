@@ -16,7 +16,7 @@ import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
 import MiniMap from '../../Components/features/MiniMap';
 import MiniVideo from '../../Components/features/MiniVideo';
-import type { MapShape } from '../../stores/DrawingToolStore';
+import type { MapShape } from '../../stores/shapes';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],

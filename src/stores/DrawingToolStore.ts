@@ -1,4 +1,11 @@
 import { makeAutoObservable } from 'mobx';
+import { newShapeId, type MapShape } from './shapes';
+
+// Re-exported so existing consumers can keep importing `MapShape` /
+// `newShapeId` from `DrawingToolStore` without churn. New code should
+// import from `./shapes` directly.
+export { newShapeId };
+export type { MapShape };
 
 export type DrawTool =
   | 'point'
@@ -10,34 +17,6 @@ export type DrawTool =
   | 'route';
 
 export type MeasureTool = 'distance' | 'area';
-
-export type MapShape =
-  | { id: string; kind: 'point'; position: [number, number] }
-  | { id: string; kind: 'line'; positions: [number, number][] }
-  | { id: string; kind: 'polygon'; positions: [number, number][] }
-  | { id: string; kind: 'circle'; center: [number, number]; radius: number }
-  | {
-      id: string;
-      kind: 'ellipse';
-      center: [number, number];
-      radiusX: number;
-      radiusY: number;
-    }
-  | {
-      id: string;
-      kind: 'sector';
-      center: [number, number];
-      radius: number;
-      startBearing: number;
-      endBearing: number;
-    }
-  | { id: string; kind: 'route'; positions: [number, number][] };
-
-/** Generate a unique id for a shape. Uses native UUID if available. */
-export const newShapeId = (): string =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `shape-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export interface Measurement {
   kind: MeasureTool;

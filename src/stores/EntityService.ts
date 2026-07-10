@@ -1,4 +1,5 @@
-import type { DrawingToolStore, MapShape } from './DrawingToolStore';
+import type { DrawingToolStore } from './DrawingToolStore';
+import type { MapShape } from './shapes';
 
 /**
  * The single writer for drawn-entity CRUD.
