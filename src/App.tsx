@@ -6,9 +6,12 @@ import MapWrapper from './map/mapWrapper/MapWrapper'
 import { mapEngineLabel } from './map/mapConfig'
 import { useStores } from './stores/StoreContext'
 import { buildLayers } from './Components/layerManager'
+import { DEMO_SERVER_SHAPES } from './stores/DrawingToolStore'
+import type { MapShape } from './stores/shapes'
 
 function App() {
   const stores = useStores()
+
   return (
     <Box
       component="main"
@@ -30,7 +33,21 @@ function App() {
         </Box>{' '}
         as the selected map engine.
       </Typography>
-      <MapWrapper>
+
+      {/*
+        Data contract with the map:
+        • Inbound:  `shapes` — the array the host owns (initial payload +
+                    any live updates from the server). The map re-hydrates
+                    whenever the array reference changes.
+        • Outbound: `onShape*` fire on user draw / edit / delete so the
+                    host can push the change back to the server.
+      */}
+      <MapWrapper
+        shapes={DEMO_SERVER_SHAPES}
+        onShapeCreate={(shape: MapShape) => console.log('[App] shape created', shape)}
+        onShapeUpdate={(shape: MapShape) => console.log('[App] shape updated', shape)}
+        onShapeDelete={(id: string) => console.log('[App] shape deleted', id)}
+      >
         <LayerManager layers={buildLayers(stores)} />
       </MapWrapper>
     </Box>
