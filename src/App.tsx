@@ -5,12 +5,20 @@ import LayerManager from './Components/layerManager/LayerManager'
 import MapWrapper from './map/mapWrapper/MapWrapper'
 import { mapEngineLabel } from './map/mapConfig'
 import { useStores } from './stores/StoreContext'
-import { buildLayers } from './Components/layerManager'
-import { DEMO_SERVER_SHAPES } from './stores/DrawingToolStore'
-import type { MapShape } from './stores/shapes'
+import { buildLiveDataLayers, liveDataStore, LiveDataBridge, useLiveShapes } from './bridge'
+import { createDrawnShapeLayers } from './Components/Layers/DrawnShapeLayers'
 
 function App() {
   const stores = useStores()
+  const { drawingToolStore } = stores
+  // Drawn shapes (server-hydrated + user-drawn) + bridge layers. The other
+  // app demo layers (drones/missiles/aircraft) are intentionally excluded.
+  const layers = [
+    ...createDrawnShapeLayers(drawingToolStore.completedShapes, drawingToolStore.selectedId),
+    ...buildLiveDataLayers(liveDataStore),
+  ]
+  // Server-backed shape sync: initial payload (targets only) + CRUD callbacks.
+  const { shapes, onShapeCreate, onShapeUpdate, onShapeDelete } = useLiveShapes(liveDataStore)
 
   return (
     <Box
@@ -33,6 +41,7 @@ function App() {
         </Box>{' '}
         as the selected map engine.
       </Typography>
+      
 
       {/*
         Data contract with the map:
@@ -43,13 +52,15 @@ function App() {
                     host can push the change back to the server.
       */}
       <MapWrapper
-        shapes={DEMO_SERVER_SHAPES}
-        onShapeCreate={(shape: MapShape) => console.log('[App] shape created', shape)}
-        onShapeUpdate={(shape: MapShape) => console.log('[App] shape updated', shape)}
-        onShapeDelete={(id: string) => console.log('[App] shape deleted', id)}
+        shapes={shapes}
+        onShapeCreate={onShapeCreate}
+        onShapeUpdate={onShapeUpdate}
+        onShapeDelete={onShapeDelete}
       >
-        <LayerManager layers={buildLayers(stores)} />
+        <LayerManager layers={layers} />
       </MapWrapper>
+      {/* Renderless: fetches REST + WS data into the stores — without it nothing loads. */}
+      <LiveDataBridge store={liveDataStore} />
     </Box>
   )
 }
