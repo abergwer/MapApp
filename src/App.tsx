@@ -5,7 +5,6 @@ import LayerManager from './Components/layerManager/LayerManager'
 import MapWrapper from './map/mapWrapper/MapWrapper'
 import { mapEngineLabel } from './map/mapConfig'
 import { useStores } from './stores/StoreContext'
-import { buildLayers } from './Components/layerManager'
 import ToolBar from './Components/features/ToolBar'
 import MeasuringTools from './Components/features/MeasuringTools'
 import LayersPanel from './Components/features/LayersPanel'
@@ -14,10 +13,11 @@ import ClockBar from './Components/features/ClockBar'
 import CoordinatesBar from './Components/features/CoordinatesBar'
 import MiniMap from './Components/features/MiniMap'
 import MiniVideo from './Components/features/MiniVideo'
+import { buildLiveDataLayers, liveDataStore, LiveDataBridge } from './bridge'
 
 function App() {
   const stores = useStores()
-  const layers = buildLayers(stores)
+  const layers = [...buildLiveDataLayers(liveDataStore)]
   return (
     <Box
       component="main"
@@ -59,6 +59,8 @@ function App() {
       >
         <LayerManager layers={layers} />
       </MapWrapper>
+      {/* Renderless: fetches REST + WS data into the stores — without it nothing loads. */}
+      <LiveDataBridge store={liveDataStore} />
     </Box>
   )
 }

@@ -8,8 +8,8 @@ import { styled } from '@mui/material/styles';
 import { useMapContext } from '../../map/MapContext';
 import { useStores } from '../../stores/StoreContext';
 import type { MapShape } from '../../stores/DrawingToolStore';
+import type { LayerGroup } from '../../stores/LayerVisibilityStore';
 import { LAYER_GROUPS } from './index';
-import { DRAWN_SHAPE_LAYER_IDS } from '../Layers/DrawnShapeLayers';
 
 /**
  * Deck.gl overlay canvas. `z-index: 400` sits above Leaflet's tile/overlay
@@ -29,11 +29,13 @@ const OverlayCanvas = styled('canvas')({
 interface LayerManagerProps {
   /** Deck.gl layers to render as an overlay on top of the map engine. */
   layers: Layer[];
+  /** Extra LayersPanel groups from feature packages (e.g. the server bridge). */
+  extraGroups?: readonly LayerGroup[];
 }
 
-function LayerManagerImpl({ layers }: LayerManagerProps) {
+function LayerManagerImpl({ layers, extraGroups }: LayerManagerProps) {
   const { containerRef } = useMapContext();
-  const { mapEngineStore, layerVisibilityStore, drawingToolStore } = useStores();
+  const { mapEngineStore, layerVisibilityStore, editSource } = useStores();
   const engine = mapEngineStore.engine;
   const deckRef = useRef<Deck | null>(null);
   // Callback-style ref via `useState` so the deck-creation effect below can
@@ -53,8 +55,8 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
 
   // Static group config — register once (idempotent).
   useEffect(() => {
-    layerVisibilityStore.registerGroups([...LAYER_GROUPS]);
-  }, [layerVisibilityStore]);
+    layerVisibilityStore.registerGroups([...LAYER_GROUPS, ...(extraGroups ?? [])]);
+  }, [layerVisibilityStore, extraGroups]);
 
   // Build a Deck.gl instance bound to whichever engine is active. Recreates
   // on engine swap so the overlay always tracks the current basemap.
@@ -91,10 +93,10 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
         x: event.clientX - rect.left,
         y: event.clientY - rect.top,
         radius: 6,
-        layerIds: DRAWN_SHAPE_LAYER_IDS,
+        layerIds: [...editSource.pickableLayerIds],
       });
       if (info?.object) {
-        drawingToolStore.setSelectedId((info.object as MapShape).id);
+        editSource.setSelectedId((info.object as MapShape).id);
       }
     };
     container.addEventListener('click', onContainerClick);

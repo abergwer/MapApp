@@ -6,15 +6,18 @@ import './index.css'
 import App from './App.tsx'
 import theme from './theme'
 import { StoreProvider } from './stores/StoreProvider'
+import { NetworkProvider } from './network'
 window.global = window
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <StoreProvider>
-        <App />
-      </StoreProvider>
+      <NetworkProvider>
+        <StoreProvider>
+          <App />
+        </StoreProvider>
+      </NetworkProvider>
     </ThemeProvider>
   </StrictMode>,
 )

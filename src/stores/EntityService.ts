@@ -1,4 +1,5 @@
 import type { DrawingToolStore, MapShape } from './DrawingToolStore';
+import type { EditableEntitySource } from './EditableEntitySource';
 
 /**
  * The single writer for drawn-entity CRUD.
@@ -31,11 +32,24 @@ import type { DrawingToolStore, MapShape } from './DrawingToolStore';
  *
  * Nothing in ToolBar / MapWrapper / the engines changes when that happens.
  */
-export class EntityService {
+export class EntityService implements EditableEntitySource {
   private readonly store: DrawingToolStore;
 
-  constructor(store: DrawingToolStore) {
+  /** Deck.gl layer ids this source renders (see `EditableEntitySource`). */
+  readonly pickableLayerIds: readonly string[];
+
+  constructor(store: DrawingToolStore, pickableLayerIds: readonly string[]) {
     this.store = store;
+    this.pickableLayerIds = pickableLayerIds;
+  }
+
+  /** Id of the shape currently selected for editing (MobX-observable). */
+  get selectedId(): string | null {
+    return this.store.selectedId;
+  }
+
+  setSelectedId(id: string | null): void {
+    this.store.setSelectedId(id);
   }
 
   /** Persist a freshly drawn entity. */

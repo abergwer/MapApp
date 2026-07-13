@@ -45,7 +45,7 @@ function MapWrapperImpl({
   bottomRight,
 }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, entityService, drawingToolStore } = useStores();
+  const { mapEngineStore, drawingToolStore, editSource } = useStores();
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -75,17 +75,17 @@ function MapWrapperImpl({
       // their own onViewChange subscription.
       unsubscribeViewChange = eng.onViewChange((vs) => mapEngineStore.setViewState(vs));
 
-      // Round-trip user edits/deletes back through the EntityService — the
+      // Round-trip user edits/deletes back through the edit source — the
       // single writer for entity CRUD. The engine reconstructs a full
       // MapShape from its painted layer/feature (tagged by shape id) and
-      // hands it off; the service keeps the store (and, later, the server)
+      // hands it off; the source keeps its store (and, later, the server)
       // in sync.
-      eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(shape));
-      eng.setOnShapeDeleted?.((id: string) => entityService.remove(id));
+      eng.setOnShapeEdited?.((shape: MapShape) => editSource.update(shape));
+      eng.setOnShapeDeleted?.((id: string) => editSource.remove(id));
 
       // Clicking empty map background (Leaflet) exits edit mode by clearing
       // the selection — the edit handoff reaction then releases the shape.
-      eng.setOnDeselect?.(() => drawingToolStore.setSelectedId(null));
+      eng.setOnDeselect?.(() => editSource.setSelectedId(null));
 
       // Selection drives editing. Deck.gl renders every drawn shape; the one
       // shape whose id is `selectedId` is handed to the engine as a single
@@ -94,11 +94,11 @@ function MapWrapperImpl({
       // re-spawns the editable feature if the engine is swapped while a shape
       // is selected — so an engine/basemap swap needs no replay-all.
       stopEditHandoff = reaction(
-        () => drawingToolStore.selectedId,
+        () => editSource.selectedId,
         (nextId, prevId) => {
           if (prevId) eng?.endEdit?.(prevId);
           if (nextId) {
-            const shape = entityService.get(nextId);
+            const shape = editSource.get(nextId);
             if (shape) eng?.beginEdit?.(shape);
           }
         },
@@ -120,7 +120,7 @@ function MapWrapperImpl({
       eng?.destroy();
       eng = undefined;
     };
-  }, [mapEngineStore, entityService, drawingToolStore]);
+  }, [mapEngineStore, editSource, drawingToolStore]);
 
   // Keyboard shortcuts: Escape deselects (releases the edited shape back to
   // Deck.gl); Ctrl/Cmd+Z undoes.
@@ -133,7 +133,7 @@ function MapWrapperImpl({
       if (isTyping) return;
 
       if (event.key === 'Escape') {
-        drawingToolStore.setSelectedId(null);
+        editSource.setSelectedId(null);
         return;
       }
 
@@ -146,7 +146,7 @@ function MapWrapperImpl({
 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [drawingToolStore]);
+  }, [drawingToolStore, editSource]);
 
   return (
     <MapContext.Provider value={{ containerRef }}>
