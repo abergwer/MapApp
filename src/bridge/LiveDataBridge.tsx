@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { message, useWebSocket } from '../network'
-import type { MapShape } from '../stores/DrawingToolStore'
 import { liveDataApi, DEMO_SERVER_WS_URL } from './liveDataApi'
 import type { LiveDataStore } from './LiveDataStore'
 import type { MissileTrack, Target, Vessel } from './types'
@@ -18,14 +17,12 @@ export interface LiveDataBridgeProps {
  * store. It touches nothing outside the bridge — no app stores, no
  * EntityService — only `LiveDataStore`:
  *
- *   REST reads  (useQuery)    -> zones + drawn-shapes snapshots
- *   REST writes (useMutation) -> /api/shapes CRUD, exposed as a DEV console
- *                                playground (`liveShapes.*`)
+ *   REST reads  (useQuery)    -> zones snapshot
  *   WS          (useWebSocket)-> live `vesselUpdate` / `targetUpdate` /
  *                                `missileUpdate` frames
  *
- * Server shapes land in `store.shapes` and render read-only through the
- * app's `createDrawnShapeLayers` factory (see `buildLiveDataLayers`).
+ * Drawn-shape sync (initial snapshot + CRUD) lives in `useLiveShapes`,
+ * which the host wires into `MapWrapper` directly.
  *
  * Outgoing WS example: on connect it sends a typed `subscribe` message
  * telling the server which channels to broadcast to this client.
@@ -50,39 +47,6 @@ export function LiveDataBridge({ store }: LiveDataBridgeProps) {
     if (zonesFailed) console.error('[bridge] zones failed:', zonesError?.message)
     if (zones) store.setZones(zones)
   }, [zones, zonesLoading, zonesFailed, zonesError, store])
-
-  // Drawn shapes snapshot — kept in the bridge's own store.
-  const { data: shapes, refetch: refetchShapes } = liveDataApi.useQuery('getShapes')
-  useEffect(() => {
-    if (shapes) store.setShapes(shapes)
-  }, [shapes, store])
-
-  // Typed write endpoints (useMutation). Only POST/PUT/PATCH/DELETE endpoints
-  // are accepted here — passing a GET endpoint is a compile error. Each
-  // success refetches the snapshot, so the map updates immediately.
-  const sync = { onSuccess: () => void refetchShapes() }
-  const createShape = liveDataApi.useMutation('createShape', sync)
-  const updateShape = liveDataApi.useMutation('updateShape', sync)
-  const deleteShape = liveDataApi.useMutation('deleteShape', sync)
-
-  // The bridge owns no UI that edits shapes, so the write endpoints are
-  // exposed as a DEV-only console playground (same pattern as the app's
-  // `rootStore` exposure). Try in the browser console:
-  //   liveShapes.create({ id: 'x1', kind: 'circle', center: [34.9, 32.5], radius: 4 })
-  //   liveShapes.update({ id: 'x1', kind: 'circle', center: [34.9, 32.5], radius: 8 })
-  //   liveShapes.remove('x1')
-  useEffect(() => {
-    if (!import.meta.env.DEV) return
-    const w = window as typeof window & { liveShapes?: unknown }
-    w.liveShapes = {
-      create: (shape: MapShape) => createShape.mutate(shape),
-      update: (shape: MapShape) => updateShape.mutate(shape),
-      remove: (id: string) => deleteShape.mutate(id),
-    }
-    return () => {
-      delete w.liveShapes
-    }
-  }, [createShape.mutate, updateShape.mutate, deleteShape.mutate])
 
   // Live updates, routed by the frame's `type` field. The server sends an
   // immediate snapshot on connect, so no separate REST fetch is needed.

@@ -9,7 +9,6 @@ import {
 import droneIcon from '../assets/drone.png'
 import aircraftIcon from '../assets/aircraft.png'
 import missileIcon from '../assets/missile.png'
-import { createDrawnShapeLayers } from '../Components/Layers/DrawnShapeLayers'
 import type { LiveDataStore } from './LiveDataStore'
 import type { MissileTrack, Target, Vessel, Zone } from './types'
 
@@ -110,14 +109,12 @@ function createMissileHeadLayer(missiles: MissileTrack[]) {
 /**
  * Build the Deck.gl layers for the server-fed data. Mirrors
  * `buildLayers(stores)` — MobX tracks the observable reads done here, so the
- * caller re-renders as the store updates. Server shapes reuse the app's
- * `createDrawnShapeLayers` factory, so they render exactly like user-drawn
- * shapes (read-only — no shape is selected for editing).
+ * caller re-renders as the store updates. Server shapes are NOT rendered
+ * here — they flow through `useLiveShapes` into `MapWrapper`, which owns
+ * their rendering and editing.
  */
 export function buildLiveDataLayers(store: LiveDataStore): Layer[] {
   return [
-    // Server shapes through the same factory the app's own shapes use.
-    ...createDrawnShapeLayers(store.shapes, null),
     createZoneLayer(store.zones),
     createVesselTrailLayer(store),
     createVesselLayer(store.vessels),

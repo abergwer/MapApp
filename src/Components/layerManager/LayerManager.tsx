@@ -1,10 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useRef } from 'react';
 import { Deck } from '@deck.gl/core';
 import type { Layer } from '@deck.gl/core';
 import { reaction } from 'mobx';
 import { observer } from 'mobx-react-lite';
-import { styled } from '@mui/material/styles';
 import { useMapContext } from '../../map/MapContext';
 import { useStores } from '../../stores/StoreContext';
 import type { MapShape } from '../../stores/DrawingToolStore';
@@ -13,46 +11,41 @@ import { DRAWN_SHAPE_LAYER_IDS } from '../Layers/DrawnShapeLayers';
 interface LayerManagerProps {
   /** Deck.gl layer array to render on top of the map. */
   layers: Layer[];
-  /** Extra LayersPanel groups from feature packages (e.g. the server bridge). */
-  extraGroups?: readonly LayerGroup[];
 }
 
-function LayerManagerImpl({ layers, extraGroups }: LayerManagerProps) {
+function LayerManagerImpl({ layers }: LayerManagerProps) {
   const { containerRef } = useMapContext();
-  const { mapEngineStore, layerVisibilityStore, editSource } = useStores();
+  const stores = useStores();
+  const { mapEngineStore } = stores;
   const engine = mapEngineStore.engine;
   const deckRef = useRef<Deck | null>(null);
-  // Callback-style ref via `useState` so the deck-creation effect below can
-  // depend on the canvas DOM node and (re)run once React has attached it.
-  const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
 
-  // Clone each layer with its effective `visible` flag (group AND per-layer).
-  //
-  // NOTE: hidden layers must stay in the array with `visible: false` — never
-  // filtered out. Removing a layer makes Deck.gl *finalize* that instance,
-  // and re-inserting the same finalized object later silently fails
-  // (toggle-on would do nothing). `clone()` also hands Deck a fresh
-  // instance so it never sees a stale, already-used layer.
-  const visibleLayers = layers.map((layer) =>
-    layer.clone({ visible: layerVisibilityStore.isLayerVisible(String(layer.id)) }),
-  );
-
-  // Static group config — register once (idempotent).
   useEffect(() => {
-    layerVisibilityStore.registerGroups([...LAYER_GROUPS, ...(extraGroups ?? [])]);
-  }, [layerVisibilityStore, extraGroups]);
+    if (!engine || !containerRef.current) return;
 
-  // Build a Deck.gl instance bound to whichever engine is active. Recreates
-  // on engine swap so the overlay always tracks the current basemap.
-  useEffect(() => {
     const container = containerRef.current;
-    if (!engine || !canvas || !container) return;
+
+    // Sit above Leaflet tile/overlay panes (z-index 2-6) but below controls.
+    // The `deck-overlay` class lets MapStyleBar apply a counter-brightness
+    // filter so layers stay readable when the basemap is dimmed.
+    const canvas = document.createElement('canvas');
+    canvas.className = 'deck-overlay';
+    canvas.style.cssText =
+      'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:400;';
+    container.appendChild(canvas);
+
     const { width, height } = container.getBoundingClientRect();
-    if (width === 0 || height === 0) return;
+    if (width === 0 || height === 0) {
+      canvas.remove();
+      return;
+    }
+    const viewState = engine.getViewState();
 
     // Deck.gl v9 initializes its GPU device asynchronously; picking before
-    // the device is ready throws. `deckReady` flips true from `onLoad`.
+    // the first render throws "assertion failed". `onLoad` flips this flag
+    // once the device is ready so `pickAt` can safely hit-test.
     let deckReady = false;
+
     const deck = new Deck({
       canvas,
       width,
@@ -64,49 +57,61 @@ function LayerManagerImpl({ layers, extraGroups }: LayerManagerProps) {
         deckReady = true;
       },
     });
+
     deckRef.current = deck;
 
-    // Selection picking. The canvas is pointer-events:none so the map engine
-    // handles pan/zoom; we hit-test on the container's clicks and only ACT
-    // on hits — misses defer to the engine's edit handles (deselect is
-    // Escape, wired in MapWrapper).
-    const onContainerClick = (event: MouseEvent) => {
-      if (!deckReady) return;
+    // Selection picking. The Deck canvas is `pointer-events:none` so the map
+    // engine underneath handles pan/zoom; Deck never receives native pointer
+    // events, so we hit-test manually with `deck.pickObject` at the cursor.
+    // deck.gl only ever *reads* geometry here — it never mutates it.
+    const pickAt = (ev: MouseEvent) => {
+      const d = deckRef.current;
+      if (!d || !deckReady) return undefined;
       const rect = container.getBoundingClientRect();
-      const info = deck.pickObject({
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
+      return d.pickObject({
+        x: ev.clientX - rect.left,
+        y: ev.clientY - rect.top,
         radius: 6,
-        layerIds: [...editSource.pickableLayerIds],
+        layerIds: DRAWN_SHAPE_LAYER_IDS,
       });
+    };
+
+    // A hit selects that shape (handing it to the engine for editing); misses
+    // are ignored so they don't fight the engine's edit handles — deselect is
+    // via Escape (see MapWrapper).
+    const handlePick = (ev: MouseEvent) => {
+      const info = pickAt(ev);
       if (info?.object) {
-        editSource.setSelectedId((info.object as MapShape).id);
+        stores.drawingToolStore.setSelectedId((info.object as MapShape).id);
       }
     };
-    container.addEventListener('click', onContainerClick);
+    container.addEventListener('click', handlePick);
 
-    // Deck holds its initial width/height forever; without this its
-    // projection drifts from the basemap on any container resize.
+    // Deck holds onto the initial width/height and its viewport projection
+    // drifts from the basemap whenever the window/container is resized,
+    // making layers appear offset.
     const resizeObserver = new ResizeObserver(() => {
-      const rect = container.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      deck.setProps({
-        width: rect.width,
-        height: rect.height,
-        viewState: engine.getViewState(),
-      });
+      const deck = deckRef.current;
+      if (!deck) return;
+      const { width, height } = container.getBoundingClientRect();
+      if (width === 0 || height === 0) return;
+      deck.setProps({ width, height, viewState: engine.getViewState() });
       deck.redraw('resize');
     });
     resizeObserver.observe(container);
 
-    // MapWrapper owns the single `engine.onViewChange` subscription and fans
-    // it out via `mapEngineStore.viewState`. Synchronous `redraw` makes the
-    // overlay paint in the same frame as the basemap (no one-frame "shake").
-    const stopViewSync = reaction(
+    // Keep Deck.gl viewport in sync with whichever map engine is active.
+    // MapWrapper owns the single `engine.onViewChange` subscription and
+    // republishes view state on the store; we observe it here. Forcing a
+    // synchronous redraw makes the overlay paint in the same frame as the
+    // basemap, preventing the one-frame lag that looks like "shaking".
+    const stopViewReaction = reaction(
       () => mapEngineStore.viewState,
-      (viewState) => {
-        if (!viewState) return;
-        deck.setProps({ viewState });
+      (vs) => {
+        if (!vs) return;
+        const deck = deckRef.current;
+        if (!deck) return;
+        deck.setProps({ viewState: vs });
         deck.redraw('view-sync');
       },
     );
@@ -118,14 +123,13 @@ function LayerManagerImpl({ layers, extraGroups }: LayerManagerProps) {
     return () => {
       stopViewReaction();
       resizeObserver.disconnect();
-      container.removeEventListener('click', onContainerClick);
+      container.removeEventListener('click', handlePick);
       deck.finalize();
+      canvas.remove();
       deckRef.current = null;
     };
-    // `visibleLayers` is pushed via the trailing effect below — its changes
-    // must NOT recreate the whole deck instance.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [engine, canvas]);
+  }, [engine]);
 
   // Push updated layer arrays into the already-initialized Deck instance.
   useEffect(() => {
@@ -139,4 +143,3 @@ function LayerManagerImpl({ layers, extraGroups }: LayerManagerProps) {
 
 const LayerManager = observer(LayerManagerImpl);
 export default LayerManager;
-

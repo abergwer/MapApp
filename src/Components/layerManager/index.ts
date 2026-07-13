@@ -6,52 +6,6 @@ import { createAirCraftLayer } from '../Layers/AirCraftLayer';
 import { createRangeRingsLayer } from '../Layers/RangeRingsLayer';
 import { createDrawnShapeLayers } from '../Layers/DrawnShapeLayers';
 import type { RootStore } from '../../stores/RootStore';
-import type { LayerGroup } from '../../stores/LayerVisibilityStore';
-
-/**
- * Groups shown in the LayersPanel. Each entry bundles the Deck.gl layer ids
- * backed by the same store — or derived from the same data — so the user
- * gets one switch per concept, with an expandable list of per-layer toggles
- * for fine-tuning.
- *
- * Keep the sub-layer ids in sync with the `id:` strings in the layer
- * factories under `../Layers/*.ts`.
- */
-export const LAYER_GROUPS: readonly LayerGroup[] = [
-  {
-    id: 'drawn-shapes',
-    label: 'Drawn Shapes',
-    layers: [
-      { id: 'drawn-polygons', label: 'Polygons' },
-      { id: 'drawn-areas', label: 'Circles / Ellipses / Sectors' },
-      { id: 'drawn-lines', label: 'Lines & Routes' },
-      { id: 'drawn-points', label: 'Points' },
-    ],
-  },
-  {
-    id: 'polygons',
-    label: 'Polygons',
-    layers: [{ id: 'sample-polygons', label: 'Sample Polygons' }],
-  },
-  {
-    id: 'drones',
-    label: 'Drones + Rings',
-    layers: [
-      { id: 'drone-layer', label: 'Drones' },
-      { id: 'range-rings', label: 'Range Rings' },
-    ],
-  },
-  {
-    id: 'missiles',
-    label: 'Missiles',
-    layers: [{ id: 'missiles-layer', label: 'Missiles' }],
-  },
-  {
-    id: 'aircraft',
-    label: 'Aircraft',
-    layers: [{ id: 'aircraft-layer', label: 'Aircraft' }],
-  },
-];
 
 /**
  * Build the array of Deck.gl layers from the current store state.
@@ -77,4 +31,3 @@ export function buildLayers(stores: RootStore): Layer[] {
     createRangeRingsLayer(stores.droneStore.targets),
   ];
 }
-

@@ -4,11 +4,12 @@ import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { observer } from 'mobx-react-lite';
-import { createMapEngine } from '../EngineFactory';
+import { createMapEngine } from '../engineFactory';
 import { mapEngineLabel } from '../mapConfig';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
+import CoordinatesBar from '../../Components/features/CoordinatesBar';
 import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
@@ -23,7 +24,6 @@ const defaultOptions = {
 };
 
 interface MapWrapperProps {
-  /** Non-positioned overlays (e.g. `LayerManager`, which uses `MapContext`). */
   children?: ReactNode;
   /**
    * Shapes to render on the map. The host owns the array (e.g. from the
@@ -118,11 +118,11 @@ function MapWrapperImpl({
       // the editable feature when the engine is swapped while a shape is
       // selected.
       stopEditHandoff = reaction(
-        () => editSource.selectedId,
+        () => drawingToolStore.selectedId,
         (nextId, prevId) => {
           if (prevId) eng?.endEdit?.(prevId);
           if (nextId) {
-            const shape = editSource.get(nextId);
+            const shape = entityService.get(nextId);
             if (shape) eng?.beginEdit?.(shape);
           }
         },
@@ -158,7 +158,7 @@ function MapWrapperImpl({
       if (isTyping) return;
 
       if (event.key === 'Escape') {
-        editSource.setSelectedId(null);
+        drawingToolStore.setSelectedId(null);
         return;
       }
 
@@ -171,7 +171,7 @@ function MapWrapperImpl({
 
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [drawingToolStore, editSource]);
+  }, [drawingToolStore]);
 
   return (
     <MapContext.Provider value={{ containerRef }}>
@@ -218,25 +218,18 @@ function MapWrapperImpl({
             </Box>
           )}
 
-          {/* Bottom-right, lifted 36px above the map edge to clear the engine
-              scale bar. Column layout: since the box is anchored by its bottom
-              edge, the LAST child renders at the bottom and earlier children
-              stack above it (gap: 8px). Callers pass items visually top-to-
-              bottom (e.g. <MiniVideo /> then <MiniMap />). */}
-          {bottomRight && (
+          {/* Mini video sits directly above the minimap slot on the right. */}
+          {videoVisible && (
             <Box
               sx={{
                 position: 'absolute',
-                bottom: 40,
+                // 36 (minimap bottom) + 150 (minimap height) + 8 (gap) = 194
+                bottom: minimapVisible ? 194 : 36,
                 right: 12,
                 zIndex: 1100,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-end',
-                gap: 1,
               }}
             >
-              {bottomRight}
+              <MiniVideo onClose={() => uiVisibilityStore.setVideoVisible(false)} />
             </Box>
           )}
         </Box>

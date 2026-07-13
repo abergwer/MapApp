@@ -30,75 +30,67 @@ const TICK_MS = 1000
 // Data
 // ---------------------------------------------------------------------------
 
-/** Vessels cruising the Mediterranean off the Israeli coast. */
-const vessels = [
-  { id: 'v1', name: 'MV Carmel', position: [34.55, 32.9], heading: 200, speedKts: 14 },
-  { id: 'v2', name: 'MV Galil', position: [34.4, 32.3], heading: 20, speedKts: 10 },
-  { id: 'v3', name: 'SS Negev', position: [34.3, 31.9], heading: 90, speedKts: 8 },
-  { id: 'v4', name: 'MV Sharon', position: [34.6, 32.1], heading: 320, speedKts: 16 },
-  { id: 'v5', name: 'SS Arava', position: [34.2, 31.6], heading: 45, speedKts: 12 },
-]
+/** Vessels cruising the Mediterranean off the Israeli coast. (Disabled — the
+ * server currently serves only the two seed polygons.) */
+const vessels = []
 
 /** Vessels are kept inside this sea box; heading reflects at the borders. */
 const SEA_BOX = { west: 33.6, east: 34.75, south: 31.4, north: 33.2 }
 
 /**
  * Editable drawn shapes (`MapShape` union from the app's DrawingToolStore),
- * managed via the CRUD /api/shapes routes. These seed the app on load and
- * receive every draw / edit / delete the user makes on the map.
+ * managed via the CRUD /api/shapes routes. The initial seed is two polygons;
+ * every other entity is added later by the user drawing on the map,
+ * arriving through POST/PUT/DELETE /api/shapes.
  */
 const shapes = [
-  { id: 's1', kind: 'point', position: [34.99, 32.79] },
   {
-    id: 's2',
+    id: 'polygon-1',
     kind: 'polygon',
     positions: [
-      [35.0, 32.62],
-      [35.08, 32.62],
-      [35.08, 32.68],
-      [35.0, 32.68],
+      [34.95, 32.75],
+      [35.05, 32.75],
+      [35.05, 32.83],
+      [34.95, 32.83],
     ],
   },
-  { id: 's3', kind: 'circle', center: [35.1, 32.8], radius: 3 },
-  { id: 's4', kind: 'ellipse', center: [34.92, 32.62], radiusX: 4, radiusY: 2 },
   {
-    id: 's5',
-    kind: 'sector',
-    center: [35.05, 32.72],
-    radius: 5,
-    startBearing: 30,
-    endBearing: 110,
+    id: 'polygon-2',
+    kind: 'polygon',
+    positions: [
+      [34.78, 32.0],
+      [34.9, 32.0],
+      [34.9, 32.1],
+      [34.78, 32.1],
+    ],
+  },
+  {
+    id: 'polygon-3',
+    kind: 'polygon',
+    positions: [
+      [35.78, 32.0],
+      [35.9, 32.0],
+      [35.9, 32.1],
+      [35.78, 32.1],
+    ],
   },
 ]
 
 /** Drones/aircraft/missiles roam over this land box. */
 const LAND_BOX = { west: 34.3, east: 35.6, south: 29.6, north: 33.2 }
 
-/** Airborne targets (drones + aircraft) wandering over land. */
-const drones = [
-  { id: 'd1', position: [34.8, 32.1], heading: 45, speedKts: 60 },
-  { id: 'd2', position: [35.0, 32.8], heading: 180, speedKts: 50 },
-  { id: 'd3', position: [35.2, 31.8], heading: 270, speedKts: 70 },
-  { id: 'd4', position: [34.9, 31.3], heading: 10, speedKts: 55 },
-]
+/** Airborne targets (drones + aircraft) wandering over land. (Disabled.) */
+const drones = []
 
-const aircraft = [
-  { id: 'a1', position: [34.6, 32.0], heading: 90, speedKts: 240 },
-  { id: 'a2', position: [35.4, 32.9], heading: 200, speedKts: 300 },
-  { id: 'a3', position: [35.0, 30.5], heading: 330, speedKts: 260 },
-  { id: 'a4', position: [34.5, 31.6], heading: 140, speedKts: 280 },
-]
+const aircraft = []
 
 /**
  * Missiles fly a straight trajectory from origin to target; the broadcast
  * `path` grows one point per tick. On arrival a new random flight starts.
  */
 const MISSILE_STEPS = 30
-const missiles = [
-  { id: 'm1', progress: 0, origin: [35.4, 33.1], target: [34.8, 32.0] },
-  { id: 'm2', progress: 8, origin: [34.4, 31.5], target: [35.2, 32.4] },
-  { id: 'm3', progress: 16, origin: [35.5, 30.2], target: [34.7, 31.9] },
-]
+// Disabled — the server currently serves only the two seed polygons.
+const missiles = []
 
 const randomIn = (min, max) => min + Math.random() * (max - min)
 
@@ -119,41 +111,8 @@ function missilePath(m) {
   return { id: m.id, path: points }
 }
 
-const zones = [
-  {
-    id: 'z1',
-    name: 'Haifa Port Zone',
-    color: [64, 160, 255],
-    ring: [
-      [34.88, 32.86],
-      [34.72, 32.86],
-      [34.72, 32.76],
-      [34.88, 32.76],
-    ],
-  },
-  {
-    id: 'z2',
-    name: 'Ashdod Anchorage',
-    color: [80, 220, 130],
-    ring: [
-      [34.6, 31.88],
-      [34.44, 31.88],
-      [34.44, 31.74],
-      [34.6, 31.74],
-    ],
-  },
-  {
-    id: 'z3',
-    name: 'Restricted Area',
-    color: [255, 90, 90],
-    ring: [
-      [34.35, 32.55],
-      [34.1, 32.6],
-      [34.05, 32.35],
-      [34.3, 32.3],
-    ],
-  },
-]
+// Zones disabled — the server currently serves only the two seed polygons.
+const zones = []
 
 // ---------------------------------------------------------------------------
 // Simulation: advance each mover along its heading, jitter it a little and
