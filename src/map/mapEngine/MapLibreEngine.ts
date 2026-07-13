@@ -120,22 +120,31 @@ export class MapLibreEngine implements MapEngine {
   }
 
   // ── Drawing (delegated) ──────────────────────────────────────────────
+  //
+  // Each `startDraw*` first cancels any pending measure listener so
+  // switching from a measure tool to a draw tool doesn't leave a stale
+  // `draw.create` handler that would fire on — and corrupt — the next
+  // drawn feature (see `MapLibreMeasureManager.cancel`).
 
   startDrawPoint(onComplete: (id: string, position: [number, number]) => void): void {
+    this.measure?.cancel();
     this.drawing?.startDrawPoint(onComplete);
   }
 
   startDrawLine(onComplete: (id: string, positions: [number, number][]) => void): void {
+    this.measure?.cancel();
     this.drawing?.startDrawLine(onComplete);
   }
 
   startDrawPolygon(onComplete: (id: string, positions: [number, number][]) => void): void {
+    this.measure?.cancel();
     this.drawing?.startDrawPolygon(onComplete);
   }
 
   startDrawCircle(
     onComplete: (id: string, center: [number, number], radius: number) => void,
   ): void {
+    this.measure?.cancel();
     this.drawing?.startDrawCircle(onComplete);
   }
 
@@ -147,6 +156,7 @@ export class MapLibreEngine implements MapEngine {
       radiusY: number,
     ) => void,
   ): void {
+    this.measure?.cancel();
     this.drawing?.startDrawEllipse(onComplete);
   }
 
@@ -159,15 +169,18 @@ export class MapLibreEngine implements MapEngine {
       endBearing: number,
     ) => void,
   ): void {
+    this.measure?.cancel();
     this.drawing?.startDrawSector(onComplete);
   }
 
   startDrawRoute(onUpdate: (id: string, positions: [number, number][]) => void): void {
+    this.measure?.cancel();
     this.drawing?.startDrawRoute(onUpdate);
   }
 
   cancelDrawing(): void {
     this.drawing?.cancelDrawing();
+    this.measure?.cancel();
   }
 
   addShape(shape: MapShape): void {
@@ -195,12 +208,18 @@ export class MapLibreEngine implements MapEngine {
   }
 
   // ── Measurement (delegated) ──────────────────────────────────────────
+  //
+  // Each `startMeasure*` first cancels any pending draw listener so
+  // switching from a draw tool to a measure tool doesn't leave a stale
+  // `draw.create` handler attached to the next drawn feature.
 
   startMeasureDistance(onComplete: (distanceKm: number) => void): void {
+    this.drawing?.cancelDrawing();
     this.measure?.startMeasureDistance(onComplete);
   }
 
   startMeasureArea(onComplete: (areaKm2: number) => void): void {
+    this.drawing?.cancelDrawing();
     this.measure?.startMeasureArea(onComplete);
   }
 
