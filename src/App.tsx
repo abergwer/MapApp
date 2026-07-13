@@ -14,10 +14,14 @@ import CoordinatesBar from './Components/features/CoordinatesBar'
 import MiniMap from './Components/features/MiniMap'
 import MiniVideo from './Components/features/MiniVideo'
 import { buildLiveDataLayers, liveDataStore, LiveDataBridge } from './bridge'
+import { buildLayers } from './Components/layerManager'
+import { DEMO_SERVER_SHAPES } from './stores/DrawingToolStore'
+import type { MapShape } from './stores/shapes'
 
 function App() {
   const stores = useStores()
   const layers = [...buildLiveDataLayers(liveDataStore)]
+
   return (
     <Box
       component="main"
@@ -58,6 +62,22 @@ function App() {
         }
       >
         <LayerManager layers={layers} />
+
+      {/*
+        Data contract with the map:
+        • Inbound:  `shapes` — the array the host owns (initial payload +
+                    any live updates from the server). The map re-hydrates
+                    whenever the array reference changes.
+        • Outbound: `onShape*` fire on user draw / edit / delete so the
+                    host can push the change back to the server.
+      */}
+      <MapWrapper
+        shapes={DEMO_SERVER_SHAPES}
+        onShapeCreate={(shape: MapShape) => console.log('[App] shape created', shape)}
+        onShapeUpdate={(shape: MapShape) => console.log('[App] shape updated', shape)}
+        onShapeDelete={(id: string) => console.log('[App] shape deleted', id)}
+      >
+        <LayerManager layers={buildLayers(stores)} />
       </MapWrapper>
       {/* Renderless: fetches REST + WS data into the stores — without it nothing loads. */}
       <LiveDataBridge store={liveDataStore} />

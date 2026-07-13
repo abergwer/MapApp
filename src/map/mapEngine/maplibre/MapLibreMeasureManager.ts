@@ -24,6 +24,13 @@ export class MapLibreMeasureManager {
   private labels: maplibregl.Marker[] = [];
   private layerIds: string[] = [];
   private counter = 0;
+  /**
+   * Active `draw.create` listener, tracked so `cancel()` can detach it when
+   * the user switches to a draw tool without completing the measurement.
+   * Otherwise the stale listener would fire on the next drawn shape and
+   * silently corrupt it (e.g. `freeze()` deletes the MapboxDraw feature).
+   */
+  private pendingCreate?: (e: any) => void;
 
   constructor(map: maplibregl.Map, draw: MapboxDraw) {
     this.map = map;
@@ -31,6 +38,7 @@ export class MapLibreMeasureManager {
   }
 
   startMeasureDistance(onComplete: (distanceKm: number) => void): void {
+    this.cancel();
     this.draw.changeMode('draw_line_string');
     this.onceCreate((feature) => {
       const coords = feature.geometry.coordinates as LngLat[];
@@ -48,6 +56,7 @@ export class MapLibreMeasureManager {
   }
 
   startMeasureArea(onComplete: (areaKm2: number) => void): void {
+    this.cancel();
     this.draw.changeMode('draw_polygon');
     this.onceCreate((feature) => {
       const ring = feature.geometry.coordinates[0] as LngLat[];
@@ -68,13 +77,31 @@ export class MapLibreMeasureManager {
     this.layerIds = [];
   }
 
+  /**
+   * Cancel a pending measure draw (detach the `draw.create` listener and
+   * reset the mode). Frozen overlays are left alone — use `removeAll` for
+   * those. Called by the engine's `cancelDrawing()` so switching to a
+   * drawing tool mid-measure doesn't leave a stale listener behind.
+   */
+  cancel(): void {
+    if (this.pendingCreate) {
+      this.map.off('draw.create', this.pendingCreate);
+      this.pendingCreate = undefined;
+    }
+    if (this.draw.getMode() !== 'simple_select') {
+      this.draw.changeMode('simple_select');
+    }
+  }
+
   // ── Internals ────────────────────────────────────────────────────────
 
   private onceCreate(handler: (feature: any) => void): void {
     const wrapped = (e: any) => {
+      this.pendingCreate = undefined;
       handler(e.features[0]);
       this.map.off('draw.create', wrapped);
     };
+    this.pendingCreate = wrapped;
     this.map.on('draw.create', wrapped);
   }
 

@@ -22,16 +22,10 @@ export class RootStore {
   uiVisibilityStore = new UIVisibilityStore();
   layerVisibilityStore = new LayerVisibilityStore();
 
-  // Single writer for drawn-entity CRUD (create / edit / delete). The UI and
-  // map engines mutate entities only through here; `drawingToolStore` stays
-  // the single source of truth. This is the one seam a future server plugs into.
-  entityService = new EntityService(this.drawingToolStore, DRAWN_SHAPE_LAYER_IDS);
-
-  // The store driving map editing. LayerManager (pick → select) and
-  // MapWrapper (select → engine beginEdit, engine round-trips) only talk to
-  // this interface — point it at any other `EditableEntitySource` to swap
-  // the editing store without touching the pipeline.
-  editSource: EditableEntitySource = this.entityService;
+  // Single writer for drawn-entity CRUD. Every create / edit / delete goes
+  // through here so external consumers can subscribe via `setHooks(...)` and
+  // observe every change without touching the store directly.
+  entityService = new EntityService(this.drawingToolStore);
 }
 
 export const rootStore = new RootStore();

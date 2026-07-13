@@ -10,7 +10,12 @@ import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
 import './MapWrapper.css';
-import type { MapShape } from '../../stores/DrawingToolStore';
+import ToolBar from '../../Components/features/ToolBar';
+import MeasuringTools from '../../Components/features/MeasuringTools';
+import MapStyleBar from '../../Components/features/MapStyleBar';
+import MiniMap from '../../Components/features/MiniMap';
+import MiniVideo from '../../Components/features/MiniVideo';
+import type { MapShape } from '../../stores/shapes';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],
@@ -20,32 +25,54 @@ const defaultOptions = {
 interface MapWrapperProps {
   /** Non-positioned overlays (e.g. `LayerManager`, which uses `MapContext`). */
   children?: ReactNode;
-  /** Top-left overlay stack — toolbar row (draw tools, measure, layers, style). */
-  topLeft?: ReactNode;
   /**
-   * Top-right overlay. Shifted 44px left of the map edge so it never overlaps
-   * the engines' +/- zoom controls (Leaflet & MapLibre pin them at top-right).
+   * Shapes to render on the map. The host owns the array (e.g. from the
+   * server); the map re-hydrates whenever the array reference changes.
+   *
+   * A hydration wipes local selection + undo/redo history, so pass a
+   * *stable* reference between server pushes — only build a new array
+   * when the server actually sent one.
    */
-  topRight?: ReactNode;
-  /** Bottom-left overlay — typically the coordinates readout. */
-  bottomLeft?: ReactNode;
-  /**
-   * Bottom-right overlay. Lifted 36px above the map edge to clear the engine
-   * scale bar. Renders as a flex column so children stack vertically; the
-   * last child sits at the bottom, earlier children stack above it.
-   */
-  bottomRight?: ReactNode;
+  shapes?: MapShape[];
+  /** Notified after a new shape is drawn by the user. */
+  onShapeCreate?: (shape: MapShape) => void;
+  /** Notified after an existing shape is edited (drag/resize/rotate). */
+  onShapeUpdate?: (shape: MapShape) => void;
+  /** Notified after a shape is deleted. */
+  onShapeDelete?: (id: string) => void;
 }
 
 function MapWrapperImpl({
   children,
-  topLeft,
-  topRight,
-  bottomLeft,
-  bottomRight,
+  shapes,
+  onShapeCreate,
+  onShapeUpdate,
+  onShapeDelete,
 }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, drawingToolStore, editSource } = useStores();
+  const { mapEngineStore, uiVisibilityStore, drawingToolStore, entityService } = useStores();
+  const { minimapVisible, videoVisible } = uiVisibilityStore;
+
+  // Register outbound notification callbacks. `EntityService` fires these
+  // *after* every successful create / update / delete so the host app can
+  // mirror the change (persist, log, sync to a server, …) without touching
+  // the internal store. Hooks are strictly outbound — nothing here writes
+  // back into the map.
+  useEffect(() => {
+    entityService.setHooks({
+      onCreate: onShapeCreate,
+      onUpdate: onShapeUpdate,
+      onDelete: onShapeDelete,
+    });
+    return () => entityService.setHooks({});
+  }, [entityService, onShapeCreate, onShapeUpdate, onShapeDelete]);
+
+  // Hydrate from the host-provided shape array. Uses the silent inbound
+  // path so it doesn't fire `onShape*` back at the host. Re-runs whenever
+  // the array reference changes (initial load + server pushes).
+  useEffect(() => {
+    if (shapes) entityService.hydrate(shapes);
+  }, [shapes, entityService]);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -75,24 +102,21 @@ function MapWrapperImpl({
       // their own onViewChange subscription.
       unsubscribeViewChange = eng.onViewChange((vs) => mapEngineStore.setViewState(vs));
 
-      // Round-trip user edits/deletes back through the edit source — the
-      // single writer for entity CRUD. The engine reconstructs a full
-      // MapShape from its painted layer/feature (tagged by shape id) and
-      // hands it off; the source keeps its store (and, later, the server)
-      // in sync.
-      eng.setOnShapeEdited?.((shape: MapShape) => editSource.update(shape));
-      eng.setOnShapeDeleted?.((id: string) => editSource.remove(id));
+      // Round-trip user edits/deletes back through the entity service —
+      // the single writer that also fans out to any hook subscribers.
+      eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(shape));
+      eng.setOnShapeDeleted?.((id: string) => entityService.remove(id));
 
       // Clicking empty map background (Leaflet) exits edit mode by clearing
-      // the selection — the edit handoff reaction then releases the shape.
-      eng.setOnDeselect?.(() => editSource.setSelectedId(null));
+      // the selection — the edit-handoff reaction below releases the shape.
+      eng.setOnDeselect?.(() => drawingToolStore.setSelectedId(null));
 
-      // Selection drives editing. Deck.gl renders every drawn shape; the one
-      // shape whose id is `selectedId` is handed to the engine as a single
-      // editable native feature (and hidden from Deck.gl so it isn't drawn
-      // twice). On deselect it's released back to Deck.gl. `fireImmediately`
-      // re-spawns the editable feature if the engine is swapped while a shape
-      // is selected — so an engine/basemap swap needs no replay-all.
+      // Selection drives editing. Deck.gl renders every shape in
+      // `drawingToolStore`; the one shape whose id is `selectedId` is handed
+      // to the engine as a single editable native feature (and hidden from
+      // Deck.gl so it isn't drawn twice). `fireImmediately` also re-spawns
+      // the editable feature when the engine is swapped while a shape is
+      // selected.
       stopEditHandoff = reaction(
         () => editSource.selectedId,
         (nextId, prevId) => {
@@ -120,10 +144,11 @@ function MapWrapperImpl({
       eng?.destroy();
       eng = undefined;
     };
-  }, [mapEngineStore, editSource, drawingToolStore]);
+  }, [mapEngineStore, drawingToolStore, entityService]);
 
-  // Keyboard shortcuts: Escape deselects (releases the edited shape back to
-  // Deck.gl); Ctrl/Cmd+Z undoes.
+  // Keyboard shortcuts: Escape deselects the active edit store's selection
+  // (releases the edited shape back to Deck.gl); Ctrl/Cmd+Z undoes on the
+  // drawing store (the primary user-facing history).
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       // Ignore shortcuts while the user is typing in a field.
@@ -172,27 +197,24 @@ function MapWrapperImpl({
         >
           <Box ref={containerRef} sx={{ flex: 1, minWidth: 0, minHeight: 0 }} />
 
-          {topLeft && (
-            <Stack
-              direction="row"
-              spacing={1}
-              sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1100 }}
-            >
-              {topLeft}
-            </Stack>
-          )}
+          <Stack
+            direction="row"
+            spacing={1}
+            sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1100 }}
+          >
+            <ToolBar />
+            <MeasuringTools />
+            <MapStyleBar />
+          </Stack>
 
-          {/* Top-right, shifted left so it never covers the engines' +/- zoom
-              controls (Leaflet & MapLibre both pin them at top-right, ~44px). */}
-          {topRight && (
-            <Box sx={{ position: 'absolute', top: 12, right: 56, zIndex: 1100 }}>
-              {topRight}
-            </Box>
-          )}
+          <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
+            <CoordinatesBar />
+          </Box>
 
-          {bottomLeft && (
-            <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
-              {bottomLeft}
+          {/* Bottom-right, lifted above the engine scale bar (~20px tall). */}
+          {minimapVisible && (
+            <Box sx={{ position: 'absolute', bottom: 36, right: 12, zIndex: 1100 }}>
+              <MiniMap />
             </Box>
           )}
 

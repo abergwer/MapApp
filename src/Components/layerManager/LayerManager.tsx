@@ -8,26 +8,10 @@ import { styled } from '@mui/material/styles';
 import { useMapContext } from '../../map/MapContext';
 import { useStores } from '../../stores/StoreContext';
 import type { MapShape } from '../../stores/DrawingToolStore';
-import type { LayerGroup } from '../../stores/LayerVisibilityStore';
-import { LAYER_GROUPS } from './index';
-
-/**
- * Deck.gl overlay canvas. `z-index: 400` sits above Leaflet's tile/overlay
- * panes (2-6) but below UI controls; `pointer-events: none` lets pan/zoom
- * pass through to the map engine below. The `deck-overlay` className is
- * kept so MapStyleBar's CSS can tint the layers when the basemap is dimmed.
- */
-const OverlayCanvas = styled('canvas')({
-  position: 'absolute',
-  inset: 0,
-  width: '100%',
-  height: '100%',
-  pointerEvents: 'none',
-  zIndex: 400,
-});
+import { DRAWN_SHAPE_LAYER_IDS } from '../Layers/DrawnShapeLayers';
 
 interface LayerManagerProps {
-  /** Deck.gl layers to render as an overlay on top of the map engine. */
+  /** Deck.gl layer array to render on top of the map. */
   layers: Layer[];
   /** Extra LayersPanel groups from feature packages (e.g. the server bridge). */
   extraGroups?: readonly LayerGroup[];
@@ -74,8 +58,8 @@ function LayerManagerImpl({ layers, extraGroups }: LayerManagerProps) {
       width,
       height,
       controller: false,
-      viewState: engine.getViewState(),
-      layers: visibleLayers,
+      viewState,
+      layers,
       onLoad: () => {
         deckReady = true;
       },
@@ -127,8 +111,12 @@ function LayerManagerImpl({ layers, extraGroups }: LayerManagerProps) {
       },
     );
 
+    // Bridge MobX -> Deck.gl. Layer array is owned by the parent (typically
+    // via `buildLayers(stores)`), so layer refresh is handled by the `layers`
+    // prop effect below — no reaction is needed here.
+
     return () => {
-      stopViewSync();
+      stopViewReaction();
       resizeObserver.disconnect();
       container.removeEventListener('click', onContainerClick);
       deck.finalize();
@@ -139,23 +127,14 @@ function LayerManagerImpl({ layers, extraGroups }: LayerManagerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine, canvas]);
 
-  // Push fresh layers into the existing Deck instance on every render — that
-  // fires on a visibility toggle (MobX -> observer re-render) or when App
-  // rebuilds the `layers` prop (entity updates).
+  // Push updated layer arrays into the already-initialized Deck instance.
   useEffect(() => {
-    deckRef.current?.setProps({ layers: visibleLayers });
-  });
+    if (deckRef.current) {
+      deckRef.current.setProps({ layers });
+    }
+  }, [layers]);
 
-  // The canvas has to sit *inside* the map engine's DOM container (so pan/
-  // zoom pass-through works and the counter-brightness filter aligns), but
-  // LayerManager is rendered as a sibling of that container. A portal hooks
-  // the JSX-owned canvas into that DOM node.
-  const container = containerRef.current;
-  if (!engine || !container) return null;
-  return createPortal(
-    <OverlayCanvas ref={setCanvas} className="deck-overlay" />,
-    container,
-  );
+  return null;
 }
 
 const LayerManager = observer(LayerManagerImpl);

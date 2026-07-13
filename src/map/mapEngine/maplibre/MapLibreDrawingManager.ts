@@ -37,6 +37,7 @@ export class MapLibreDrawingManager {
   private onShapeEdited?: (shape: MapShape) => void;
   private onShapeDeleted?: (id: string) => void;
   private onDeselect?: () => void;
+  private currentCreateHandler?: (e: any) => void;
   /** Pending timer that arms the background-click deselect after edit starts. */
   private bgClickTimer?: ReturnType<typeof setTimeout>;
   private readonly onKeyDown: (ev: KeyboardEvent) => void;
@@ -217,6 +218,10 @@ export class MapLibreDrawingManager {
   cancelDrawing(): void {
     this.cancelCurrentDraw?.();
     this.cancelCurrentDraw = undefined;
+    if (this.currentCreateHandler) {
+    this.map.off('draw.create', this.currentCreateHandler);
+    this.currentCreateHandler = undefined;
+  }
     if (this.draw.getMode() !== 'simple_select') {
       this.draw.changeMode('simple_select');
     }
@@ -307,10 +312,14 @@ export class MapLibreDrawingManager {
 
   /** Listen for the next `draw.create`, hand back the feature, then detach. */
   private onceCreate(handler: (feature: any) => void): void {
+     if (this.currentCreateHandler) {
+    this.map.off('draw.create', this.currentCreateHandler);
+  }
     const wrapped = (e: any) => {
       const feature = e.features[0];
       handler(feature);
       this.map.off('draw.create', wrapped);
+      this.currentCreateHandler = undefined;
       // In the deck-render-only model the engine keeps no native copy of a
       // finished shape — it now lives in the store and is painted by Deck.gl.
       // Remove MapboxDraw's copy, or the shape is drawn twice (native +
@@ -319,6 +328,7 @@ export class MapLibreDrawingManager {
       // `draw.delete(id)` is silent (no round-trip), so no onShapeDeleted fires.
       if (feature?.id != null) this.draw.delete(String(feature.id));
     };
+      this.currentCreateHandler = wrapped;
     this.map.on('draw.create', wrapped);
   }
 
