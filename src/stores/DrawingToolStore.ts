@@ -1,4 +1,11 @@
 import { makeAutoObservable } from 'mobx';
+import { newShapeId, type MapShape } from './shapes';
+
+// Re-exported so existing consumers can keep importing `MapShape` /
+// `newShapeId` from `DrawingToolStore` without churn. New code should
+// import from `./shapes` directly.
+export { newShapeId };
+export type { MapShape };
 
 export type DrawTool =
   | 'point'
@@ -10,34 +17,6 @@ export type DrawTool =
   | 'route';
 
 export type MeasureTool = 'distance' | 'area';
-
-export type MapShape =
-  | { id: string; kind: 'point'; position: [number, number] }
-  | { id: string; kind: 'line'; positions: [number, number][] }
-  | { id: string; kind: 'polygon'; positions: [number, number][] }
-  | { id: string; kind: 'circle'; center: [number, number]; radius: number }
-  | {
-      id: string;
-      kind: 'ellipse';
-      center: [number, number];
-      radiusX: number;
-      radiusY: number;
-    }
-  | {
-      id: string;
-      kind: 'sector';
-      center: [number, number];
-      radius: number;
-      startBearing: number;
-      endBearing: number;
-    }
-  | { id: string; kind: 'route'; positions: [number, number][] };
-
-/** Generate a unique id for a shape. Uses native UUID if available. */
-export const newShapeId = (): string =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : `shape-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export interface Measurement {
   kind: MeasureTool;
@@ -52,7 +31,7 @@ export interface Measurement {
  * In a real app, swap for a websocket / fetch hook that calls
  * `recordShape` as messages arrive.
  */
-const DEMO_SERVER_SHAPES: MapShape[] = [
+export const DEMO_SERVER_SHAPES: MapShape[] = [
   { id: newShapeId(), kind: 'point', position: [34.7818, 32.0853] },
   {
     id: newShapeId(),
@@ -86,7 +65,7 @@ export class DrawingToolStore {
    * One id ⇒ one editable shape ⇒ no double-render, no desync.
    */
   selectedId: string | null = null;
-  completedShapes: MapShape[] = [...DEMO_SERVER_SHAPES];
+  completedShapes: MapShape[] = [];
   measurements: Measurement[] = [];
 
   /**
@@ -172,6 +151,19 @@ export class DrawingToolStore {
 
   clearShapes() {
     this.completedShapes = [];
+  }
+
+    /**
+   * Replace the entire shape array wholesale. Used for server-driven
+   * hydration (initial payload or bulk resync). Clears selection + history
+   * because a server-authoritative snapshot isn't part of the local
+   * undo/redo timeline.
+   */
+  setShapes(shapes: MapShape[]) {
+    this.completedShapes = shapes.slice();
+    this.selectedId = null;
+    this.past = [];
+    this.future = [];
   }
 
   recordMeasurement(measurement: Omit<Measurement, 'timestamp'>) {

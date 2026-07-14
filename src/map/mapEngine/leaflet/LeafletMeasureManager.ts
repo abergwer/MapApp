@@ -18,6 +18,13 @@ import {
  */
 export class LeafletMeasureManager {
   private overlays: L.Layer[] = [];
+  /**
+   * Active `pm:create` listener, tracked so `cancel()` can detach it when
+   * the user switches to a draw tool without completing the measurement.
+   * Otherwise the stale listener would fire on the next drawn shape and
+   * corrupt it (e.g. calling `getLatLngs()` on an `L.Circle` throws).
+   */
+  private pendingCreate?: (e: { layer: L.Layer }) => void;
 
   private readonly map: L.Map;
 
@@ -26,6 +33,7 @@ export class LeafletMeasureManager {
   }
 
   startMeasureDistance(onComplete: (distanceKm: number) => void): void {
+    this.cancel();
     this.map.pm.enableDraw('Line');
     this.onceCreate((layer: L.Polyline) => {
       const latlngs = layer.getLatLngs() as L.LatLng[];
@@ -56,6 +64,7 @@ export class LeafletMeasureManager {
   }
 
   startMeasureArea(onComplete: (areaKm2: number) => void): void {
+    this.cancel();
     this.map.pm.enableDraw('Polygon');
     this.onceCreate((layer: L.Polygon) => {
       const ring: LngLat[] = (layer.getLatLngs()[0] as L.LatLng[]).map((p) => [
@@ -76,13 +85,30 @@ export class LeafletMeasureManager {
     this.overlays = [];
   }
 
+  /**
+   * Cancel a pending measure draw (disable Geoman's draw mode and detach
+   * the pending `pm:create` listener). Frozen overlays are left alone —
+   * use `removeAll` for those. Called by the engine's `cancelDrawing()` so
+   * switching to a drawing tool mid-measure doesn't leave a stale listener
+   * that would then fire on the next drawn shape.
+   */
+  cancel(): void {
+    this.map.pm.disableDraw();
+    if (this.pendingCreate) {
+      this.map.off('pm:create', this.pendingCreate);
+      this.pendingCreate = undefined;
+    }
+  }
+
   // ── Internals ────────────────────────────────────────────────────────
 
   private onceCreate<T extends L.Layer>(handler: (layer: T) => void): void {
     const wrapped = (e: any) => {
+      this.pendingCreate = undefined;
       handler(e.layer as T);
       this.map.off('pm:create', wrapped);
     };
+    this.pendingCreate = wrapped;
     this.map.on('pm:create', wrapped);
   }
 

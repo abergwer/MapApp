@@ -146,6 +146,7 @@ export class LeafletEngine implements MapEngine {
 
   cancelDrawing(): void {
     this.drawing?.cancelDrawing();
+    this.measure?.cancel();
   }
 
   addShape(shape: MapShape): void {
@@ -173,12 +174,18 @@ export class LeafletEngine implements MapEngine {
   }
 
   // ── Measurement (delegated) ──────────────────────────────────────────
+  //
+  // Each `startMeasure*` first cancels any pending draw listener so
+  // switching from a draw tool to a measure tool doesn't leave a stale
+  // `pm:create` handler attached to the next completed shape.
 
   startMeasureDistance(onComplete: (distanceKm: number) => void): void {
+    this.drawing?.cancelDrawing();
     this.measure?.startMeasureDistance(onComplete);
   }
 
   startMeasureArea(onComplete: (areaKm2: number) => void): void {
+    this.drawing?.cancelDrawing();
     this.measure?.startMeasureArea(onComplete);
   }
 
