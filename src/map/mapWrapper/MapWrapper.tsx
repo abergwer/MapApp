@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { observer } from 'mobx-react-lite';
-import { createMapEngine } from '../engineFactory';
+import { createMapEngine } from '../EngineFactory';
 import { useMapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
@@ -12,7 +12,7 @@ const defaultOptions = {
   zoom: 10,
 };
 
-interface MapCanvasProps {
+interface MapWrapperProps {
   /** Overlays that must sit on the map surface (LayerManager, CoordinatesBar, …). */
   children?: ReactNode;
 }
@@ -21,7 +21,7 @@ interface MapCanvasProps {
  * Map surface only: DOM host + engine lifecycle.
  * Must render under MapProvider (for containerRef) and typically inside AppShell.mapWorkspace.
  */
-function MapCanvasImpl({ children }: MapCanvasProps) {
+function MapWrapperImpl({ children }: MapWrapperProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { containerRef } = useMapContext();
   const { mapEngineStore, entityService, drawingToolStore } = useStores();
@@ -87,5 +87,5 @@ function MapCanvasImpl({ children }: MapCanvasProps) {
   );
 }
 
-const MapCanvas = observer(MapCanvasImpl);
-export default MapCanvas;
+const MapWrapper = observer(MapWrapperImpl);
+export default MapWrapper;
