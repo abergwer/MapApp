@@ -1,0 +1,127 @@
+/* Structural layout only — colors and surfaces come from the MUI theme + tokens.css */
+
+.panelRoot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-panel-gap);
+  min-height: 0;
+  min-width: 0;
+  padding: var(--app-space-1) 0 var(--app-space-4);
+}
+
+.toolsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--app-tools-grid-gap);
+  padding: var(--app-space-3);
+}
+
+.toolsGrid[data-cols='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.toolsGrid[data-cols='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.mapTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--app-space-3);
+}
+
+.mapTypeGrid[data-cols='1'] {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+.entityList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-1);
+  min-width: 0;
+}
+
+.entityItemList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-1);
+  padding: 0 var(--app-space-5) 7px 40px;
+  margin: 0;
+  list-style: none;
+}
+
+.entityItemButton {
+  cursor: pointer;
+}
+
+.entityItemButtonSelected {
+  color: var(--app-color-primary-light);
+}
+
+.brightnessRow {
+  display: flex;
+  flex-direction: column;
+  gap: var(--app-space-3);
+}
+
+.brightnessHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sectionHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.sectionActions {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-3);
+  flex-shrink: 0;
+  padding-inline-end: var(--app-space-4);
+}
+
+.sectionHeaderStart {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
+}
+
+.collapseIcon {
+  transition: transform var(--app-transition-fast);
+}
+
+.collapseIconExpanded {
+  transform: rotate(0deg);
+}
+
+.collapseIconCollapsed {
+  transform: rotate(180deg);
+}
+
+.sectionHeaderButton {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.mapTypeHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-3);
+}

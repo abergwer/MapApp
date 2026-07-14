@@ -1,0 +1,89 @@
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--app-color-status-idle);
+  flex-shrink: 0;
+}
+
+.statusDotLive {
+  composes: statusDot;
+  background: var(--app-color-live);
+  box-shadow: var(--app-color-live-glow);
+}
+
+.videoOverlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.crosshair {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.crosshair::before,
+.crosshair::after {
+  content: '';
+  position: absolute;
+  background: var(--app-color-overlay-line);
+}
+
+.crosshair::before {
+  width: 1px;
+  height: 22px;
+}
+
+.crosshair::after {
+  width: 22px;
+  height: 1px;
+}
+
+.cornerFrame {
+  position: absolute;
+  inset: 10px;
+}
+
+.cornerBracket {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: var(--app-color-overlay-corner);
+  opacity: 0.85;
+}
+
+.cornerTopLeft {
+  composes: cornerBracket;
+  top: 0;
+  left: 0;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.cornerTopRight {
+  composes: cornerBracket;
+  top: 0;
+  right: 0;
+  border-top: 2px solid;
+  border-right: 2px solid;
+}
+
+.cornerBottomLeft {
+  composes: cornerBracket;
+  bottom: 0;
+  left: 0;
+  border-bottom: 2px solid;
+  border-left: 2px solid;
+}
+
+.cornerBottomRight {
+  composes: cornerBracket;
+  bottom: 0;
+  right: 0;
+  border-bottom: 2px solid;
+  border-right: 2px solid;
+}

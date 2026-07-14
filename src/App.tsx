@@ -1,65 +1,65 @@
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
 import { observer } from 'mobx-react-lite'
 import LayerManager from './Components/layerManager/LayerManager'
-import MapWrapper from './map/mapWrapper/MapWrapper'
 import { mapEngineLabel } from './map/mapConfig'
 import { useStores } from './stores/StoreContext'
 import { buildLayers } from './Components/layerManager'
-import ToolBar from './Components/features/ToolBar'
-import MeasuringTools from './Components/features/MeasuringTools'
-import LayersPanel from './Components/features/LayersPanel'
-import MapStyleBar from './Components/features/MapStyleBar'
 import ClockBar from './Components/features/ClockBar'
 import CoordinatesBar from './Components/features/CoordinatesBar'
-import MiniMap from './Components/features/MiniMap'
-import MiniVideo from './Components/features/MiniVideo'
+import { MapProvider } from './map/mapWrapper/MapProvider'
+import { AppShell } from './Components/features/app-shell'
+import MapOverlay from './map/mapWrapper/MapOverlay'
+import MapCanvas from './map/mapWrapper/MapCanvas'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { LayersPanel } from './Components/features/layers'
+import { MapToolsPanel } from './Components/features/map-tools'
+import EntitiesPanel from './Components/features/entities/components/EntitiesPanel'
+import { FloatingWindowsHost, RightDockPanel } from './Components/features/live-view'
 
 function App() {
   const stores = useStores()
-  const layers = buildLayers(stores)
+  const { mapEngineStore } = stores;
+  const rightPanelRef = useRef<HTMLElement | null>(null);
+  const [dockDropActive, setDockDropActive] = useState(false);
+
+  const triggerMapResize = useCallback(() => {
+    mapEngineStore.engine?.resize?.();
+  }, [mapEngineStore]);
+
+
+  const leftPanelSlots = useMemo(
+    () => ({
+      entities: <EntitiesPanel />,
+      mapTools: <MapToolsPanel />,
+      layers: <LayersPanel />,
+    }), [],);
+
   return (
-    <Box
-      component="main"
-      sx={{
-        minHeight: '100svh',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        p: { xs: 2, md: 4 },
-      }}
-    >
-      <Typography variant="h3" component="h1">
-        Map Engine Orchestrator
-      </Typography>
-      <Typography color="text.secondary">
-        This app uses{' '}
-        <Box component="strong" sx={{ color: 'primary.light' }}>
-          {mapEngineLabel[stores.mapEngineStore.selectedEngine]}
-        </Box>{' '}
-        as the selected map engine.
-      </Typography>
-      <MapWrapper
-        topLeft={
-          <>
-            <ToolBar />
-            <MeasuringTools />
-            <LayersPanel />
-            <MapStyleBar />
-          </>
+    <MapProvider>
+      <AppShell
+        appTitle="Map Engine Orchestrator"
+        engineLabel={mapEngineLabel[mapEngineStore.selectedEngine]}
+        topBarActions={<ClockBar />}
+        leftPanelSlots={leftPanelSlots}
+        onLayoutChange={triggerMapResize}
+        mapWorkspace={
+          <MapCanvas>
+            <LayerManager layers={buildLayers(stores)} />
+            <MapOverlay position="bottomLeft">
+              <CoordinatesBar />
+            </MapOverlay>
+          </MapCanvas>
         }
-        topRight={<ClockBar />}
-        bottomLeft={<CoordinatesBar />}
-        bottomRight={
-          <>
-            <MiniVideo />
-            <MiniMap />
-          </>
+        mapFloatingWindows={
+          <FloatingWindowsHost
+            dockDropRef={rightPanelRef}
+            onDropActiveChange={setDockDropActive}
+          />
         }
-      >
-        <LayerManager layers={layers} />
-      </MapWrapper>
-    </Box>
+
+        rightPanel={<RightDockPanel dropActive={dockDropActive} />}
+      />
+    </MapProvider>
+
   )
 }
 

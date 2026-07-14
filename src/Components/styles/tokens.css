@@ -1,0 +1,134 @@
+/**
+ * MapApp design tokens — single source of truth for the UI system.
+ * Change values here to update fonts, colors, spacing, and radii app-wide.
+ */
+:root {
+  /* ── Typography ─────────────────────────────────────────────────────── */
+  --app-font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --app-font-family-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+
+  --app-font-size-2xs: 0.5625rem; /* 9px */
+  --app-font-size-xs: 0.6875rem; /* 11px */
+  --app-font-size-sm: 0.8125rem; /* 13px */
+  --app-font-size-md: 0.875rem; /* 14px */
+  --app-font-size-label: 0.75rem; /* 12px */
+  --app-font-size-tiny: 0.625rem; /* 10px */
+
+  --app-font-weight-normal: 400;
+  --app-font-weight-semibold: 600;
+  --app-font-weight-bold: 700;
+
+  --app-letter-spacing-panel-title: 0.12em;
+  --app-letter-spacing-section-title: 0.08em;
+  --app-letter-spacing-meta: 0.04em;
+  --app-letter-spacing-live: 0.08em;
+
+  /* ── Colors: app surfaces ───────────────────────────────────────────── */
+  --app-color-bg-app: #0f1115;
+  --app-color-bg-shell: #0b121b;
+  --app-color-bg-surface: rgba(20, 24, 32, 0.95);
+  --app-color-bg-surface-soft: rgba(20, 24, 32, 0.92);
+  --app-color-bg-surface-muted: rgba(20, 24, 32, 0.88);
+  --app-color-bg-card: rgba(18, 28, 42, 0.94);
+  --app-color-bg-card-header: rgba(255, 255, 255, 0.02);
+  --app-color-bg-card-header-hover: rgba(255, 255, 255, 0.03);
+  --app-color-bg-map: #1f2937;
+  --app-color-bg-control: rgba(8, 12, 18, 0.65);
+  --app-color-bg-control-hover: rgba(8, 12, 18, 0.75);
+  --app-color-bg-media: #111827;
+  --app-color-bg-video: #000000;
+
+  /* ── Colors: text ───────────────────────────────────────────────────── */
+  --app-color-text-primary: #f8fafc;
+  --app-color-text-secondary: #f3f4f6;
+  --app-color-text-muted: rgba(203, 213, 225, 0.62);
+  --app-color-text-subtle: rgba(255, 255, 255, 0.45);
+  --app-color-text-faint: rgba(255, 255, 255, 0.35);
+  --app-color-text-control: rgba(226, 232, 240, 0.85);
+  --app-color-text-meta: rgba(255, 255, 255, 0.65);
+
+  /* ── Colors: brand / primary ────────────────────────────────────────── */
+  --app-color-primary: #2f8cff;
+  --app-color-primary-mui: #2563eb;
+  --app-color-primary-light: #93c5fd;
+  --app-color-primary-border: rgba(96, 165, 250, 0.95);
+  --app-color-primary-border-soft: rgba(96, 165, 250, 0.45);
+  --app-color-primary-border-faint: rgba(47, 140, 255, 0.28);
+  --app-color-primary-hover-bg: rgba(47, 140, 255, 0.12);
+  --app-color-primary-hover-bg-strong: rgba(47, 140, 255, 0.14);
+  --app-color-primary-rail-hover-bg: rgba(47, 140, 255, 0.08);
+  --app-color-primary-active-bg: linear-gradient(
+    180deg,
+    rgba(47, 140, 255, 0.42) 0%,
+    rgba(29, 100, 220, 0.28) 100%
+  );
+  --app-color-primary-glow: 0 0 0 1px rgba(47, 140, 255, 0.35),
+    0 0 20px rgba(47, 140, 255, 0.28);
+  --app-color-rail-icon-glow: 0 0 2px rgba(147, 197, 253, 0.95),
+    0 0 7px rgba(96, 165, 250, 0.75), 0 0 14px rgba(47, 140, 255, 0.45);
+
+  /* ── Colors: borders ────────────────────────────────────────────────── */
+  --app-color-border-subtle: rgba(255, 255, 255, 0.06);
+  --app-color-border-default: rgba(255, 255, 255, 0.08);
+  --app-color-border-card: rgba(96, 130, 170, 0.28);
+  --app-color-border-section: rgba(96, 130, 170, 0.14);
+  --app-color-border-control: rgba(96, 130, 170, 0.22);
+  --app-color-border-control-soft: rgba(255, 255, 255, 0.08);
+
+  /* ── Colors: semantic ───────────────────────────────────────────────── */
+  --app-color-danger: #f87171;
+  --app-color-danger-light: #fca5a5;
+  --app-color-danger-bg: rgba(127, 29, 29, 0.22);
+  --app-color-danger-border: rgba(248, 113, 113, 0.42);
+  --app-color-live: #34d399;
+  --app-color-live-bg: rgba(16, 185, 129, 0.18);
+  --app-color-live-border: rgba(52, 211, 153, 0.45);
+  --app-color-live-glow: 0 0 6px rgba(52, 211, 153, 0.75);
+  --app-color-status-idle: rgba(148, 163, 184, 0.55);
+  --app-color-overlay-scrim: rgba(0, 0, 0, 0.55);
+  --app-color-overlay-line: rgba(255, 255, 255, 0.58);
+  --app-color-overlay-corner: rgba(255, 255, 255, 0.62);
+
+  /* ── Spacing ────────────────────────────────────────────────────────── */
+  --app-space-1: 2px;
+  --app-space-2: 3px;
+  --app-space-3: 6px;
+  --app-space-4: 8px;
+  --app-space-5: 10px;
+  --app-space-6: 12px;
+  --app-space-7: 16px;
+
+  --app-tools-grid-gap: var(--app-space-7);
+
+  /* ── Radius ─────────────────────────────────────────────────────────── */
+  --app-radius-sm: 4px;
+  --app-radius-md: 6px;
+  --app-radius-lg: 8px;
+  --app-radius-pill: 999px;
+
+  /* ── Shadows ────────────────────────────────────────────────────────── */
+  --app-shadow-card: 0 0 0 1px rgba(47, 140, 255, 0.1),
+    0 2px 12px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  --app-shadow-brand-icon: 0 1px 4px rgba(0, 0, 0, 0.35);
+
+  /* ── Icon sizes ─────────────────────────────────────────────────────── */
+  --app-icon-size-xs: 16px;
+  --app-icon-size-tool: 18px;
+  --app-icon-size-sm: 22px;
+  --app-icon-size-md: 24px;
+  --app-icon-size-lg: 28px;
+  --app-icon-size-rail-active: 30px;
+  --app-icon-size-brand: 30px;
+
+  /* ── Motion ─────────────────────────────────────────────────────────── */
+  --app-transition-fast: 0.15s ease;
+  --app-transition-normal: 0.18s ease;
+
+  /* ── Panel layout helpers ─────────────────────────────────────────── */
+  --app-panel-gap: var(--app-space-5);
+  --app-panel-padding-y: var(--app-space-4);
+  --app-panel-header-gap: var(--app-space-2);
+  --app-section-header-padding: 9px var(--app-space-5);
+  --app-section-body-padding: var(--app-space-5);
+  --app-media-aspect-ratio: 16 / 9;
+}

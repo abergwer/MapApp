@@ -1,0 +1,33 @@
+.icon {
+  width: var(--app-icon-size-sm);
+  height: var(--app-icon-size-sm);
+  object-fit: contain;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+.iconToolTile {
+  width: var(--app-icon-size-tool);
+  height: var(--app-icon-size-tool);
+}
+
+.iconToneLight {
+  composes: icon;
+  filter: brightness(0) invert(0.82);
+}
+
+.iconToneActive {
+  composes: icon;
+  filter: brightness(0) invert(1);
+}
+
+.iconToneDanger {
+  composes: icon;
+  filter: brightness(0) saturate(100%) invert(55%) sepia(90%) saturate(1200%)
+    hue-rotate(314deg) brightness(102%);
+}
+
+.iconToneMuted {
+  composes: icon;
+  filter: brightness(0) invert(0.55);
+}

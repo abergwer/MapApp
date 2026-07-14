@@ -1,0 +1,33 @@
+@import './tokens.css';
+
+/*
+ * Global base styles — tokens.css is the single source of truth.
+ * Feature CSS modules should use var(--app-*) rather than hardcoded values.
+ */
+html,
+body,
+#root {
+  height: 100%;
+  overflow: hidden;
+}
+
+#root {
+  height: 100svh;
+}
+
+body {
+  margin: 0;
+  font-family: var(--app-font-family);
+  font-size: var(--app-font-size-sm);
+  font-weight: var(--app-font-weight-normal);
+  color: var(--app-color-text-primary);
+  background: var(--app-color-bg-app);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code,
+pre,
+.mono {
+  font-family: var(--app-font-family-mono);
+}

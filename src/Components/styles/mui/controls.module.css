@@ -1,0 +1,18 @@
+/**
+ * MUI control surfaces that do not support theme variants (e.g. IconButton).
+ * Tokens: features/styles/tokens.css
+ */
+
+.panelCollapse {
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--app-color-border-control);
+  border-radius: var(--app-radius-sm);
+  background-color: var(--app-color-bg-control);
+  color: var(--app-color-text-control);
+}
+
+.panelCollapse:hover {
+  background-color: var(--app-color-primary-hover-bg);
+  border-color: var(--app-color-primary-border-soft);
+}

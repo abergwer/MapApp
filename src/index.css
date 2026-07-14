@@ -1,14 +1,1 @@
-/*
- * Global resets only — colors, fonts and surfaces all come from the
- * Material UI theme + CssBaseline (see src/theme.ts and src/main.tsx).
- */
-html,
-body,
-#root {
-  height: 100%;
-}
-
-body {
-  margin: 0;
-}
-
+@import './Components/styles/global.css';

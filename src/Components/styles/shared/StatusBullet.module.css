@@ -1,0 +1,44 @@
+/* Shared status indicator — visual source of truth for on / off / partial (+ semantic). */
+
+.bullet {
+  flex-shrink: 0;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+
+.sizeSm {
+  width: 6px;
+  height: 6px;
+}
+
+.sizeMd {
+  width: 8px;
+  height: 8px;
+}
+
+.toneOn {
+  background: var(--app-color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-color-primary) 22%, transparent);
+}
+
+.tonePartial {
+  background: transparent;
+  border: 2px solid var(--app-color-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-color-primary) 16%, transparent);
+}
+
+.toneOff {
+  background: transparent;
+  border: 1.5px solid var(--app-color-text-muted);
+  opacity: 0.55;
+}
+
+.toneDanger {
+  background: var(--app-color-danger);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-color-danger) 22%, transparent);
+}
+
+.toneLive {
+  background: var(--app-color-live);
+  box-shadow: var(--app-color-live-glow);
+}

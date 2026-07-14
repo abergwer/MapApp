@@ -1,0 +1,47 @@
+/* Layers panel — layout only. Status look lives in shared StatusBullet. */
+
+.groupRow {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-2);
+  width: 100%;
+  min-width: 0;
+  padding-inline-end: var(--app-space-3);
+}
+
+.expandHitSpacer {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.expandIcon {
+  transition: transform var(--app-transition-fast);
+}
+
+.expandIconOpen {
+  transform: rotate(180deg);
+}
+
+.count {
+  margin-inline-start: auto;
+}
+
+.subRow {
+  display: flex;
+  align-items: center;
+  gap: var(--app-space-3);
+  min-height: 32px;
+  padding: 2px 4px;
+  border-radius: var(--app-radius-sm);
+  cursor: pointer;
+}
+
+.subRow:hover {
+  background-color: var(--app-color-primary-hover-bg);
+}
+
+.childLabel {
+  flex: 1;
+  min-width: 0;
+}
