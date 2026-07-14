@@ -1,6 +1,7 @@
 export { useLiveShapes } from './useLiveShapes'
-export { LiveDataStore, liveDataStore } from './LiveDataStore'
+export { LiveDataStore, liveDataStore, type TargetKind } from './LiveDataStore'
 export { buildLiveDataLayers } from './liveDataLayers'
+export { TargetCard } from './TargetCard'
 export { liveDataApi, DEMO_SERVER_URL } from './liveDataApi'
 export {
   LiveDataSocketProvider,

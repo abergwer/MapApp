@@ -66,16 +66,31 @@ const shapes = [
 /** Drones/aircraft roam over this land box. */
 const LAND_BOX = { west: 34.3, east: 35.6, south: 29.6, north: 33.2 }
 
-/** Airborne targets (drones + aircraft) wandering over land, moved every tick. */
+/** A small patrol area around a seed position, so targets stay in sight. */
+function patrolBox([lng, lat], radiusDeg) {
+  return {
+    west: lng - radiusDeg,
+    east: lng + radiusDeg,
+    south: lat - radiusDeg,
+    north: lat + radiusDeg,
+  }
+}
+
+/**
+ * Airborne targets (drones + aircraft), moved every tick. Each target
+ * bounces inside its own patrol box so it never wanders off. drone-1
+ * patrols tightly around the app's initial map center, so it is always
+ * on screen (and clickable in the e2e tests).
+ */
 const drones = [
-  { id: 'drone-1', position: [34.85, 31.9], heading: 45, speedKts: 80 },
-  { id: 'drone-2', position: [35.15, 32.4], heading: 210, speedKts: 95 },
-  { id: 'drone-3', position: [34.6, 30.8], heading: 120, speedKts: 70 },
+  { id: 'drone-1', position: [34.75, 32.07], heading: 270, speedKts: 8, box: patrolBox([34.75, 32.07], 0.08) },
+  { id: 'drone-2', position: [35.15, 32.4], heading: 210, speedKts: 95, box: patrolBox([35.15, 32.4], 0.3) },
+  { id: 'drone-3', position: [34.6, 30.8], heading: 120, speedKts: 70, box: patrolBox([34.6, 30.8], 0.3) },
 ]
 
 const aircraft = [
-  { id: 'aircraft-1', position: [34.95, 31.3], heading: 300, speedKts: 420 },
-  { id: 'aircraft-2', position: [35.35, 32.9], heading: 160, speedKts: 380 },
+  { id: 'aircraft-1', position: [34.95, 31.3], heading: 300, speedKts: 420, box: patrolBox([34.95, 31.3], 0.4) },
+  { id: 'aircraft-2', position: [35.35, 32.9], heading: 160, speedKts: 380, box: patrolBox([35.35, 32.9], 0.4) },
 ]
 
 // ---------------------------------------------------------------------------
@@ -83,13 +98,14 @@ const aircraft = [
 // bounce off its bounding box so nothing wanders off-screen.
 // ---------------------------------------------------------------------------
 
-// ~ deg/s at the given speed. Exaggerated (x50) so movement is visible.
-const DEG_PER_KT = (1 / 60 / 3600) * 50
+// Knots -> degrees per second, exaggerated (x50) so movement is visible.
+// 1 kt = 1 nm/h = (1/60)° per hour = 1/216000 ° per second.
+const DEG_PER_KT_PER_S = (1 / 60 / 3600) * 50
 
 function moveInBox(entity, box) {
   entity.heading += (Math.random() - 0.5) * 10
   const rad = (entity.heading * Math.PI) / 180
-  const dist = entity.speedKts * DEG_PER_KT * (TICK_MS / 1000) * 3600
+  const dist = entity.speedKts * DEG_PER_KT_PER_S * (TICK_MS / 1000)
   let [lng, lat] = entity.position
   lng += Math.sin(rad) * dist
   lat += Math.cos(rad) * dist
@@ -106,8 +122,8 @@ function moveInBox(entity, box) {
 }
 
 function tickTargets() {
-  for (const d of drones) moveInBox(d, LAND_BOX)
-  for (const a of aircraft) moveInBox(a, LAND_BOX)
+  for (const d of drones) moveInBox(d, d.box ?? LAND_BOX)
+  for (const a of aircraft) moveInBox(a, a.box ?? LAND_BOX)
 }
 
 // ---------------------------------------------------------------------------

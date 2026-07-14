@@ -60,32 +60,37 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
 
     deckRef.current = deck;
 
-    // Selection picking. The Deck canvas is `pointer-events:none` so the map
-    // engine underneath handles pan/zoom; Deck never receives native pointer
-    // events, so we hit-test manually with `deck.pickObject` at the cursor.
-    // deck.gl only ever *reads* geometry here — it never mutates it.
-    const pickAt = (ev: MouseEvent) => {
-      const d = deckRef.current;
-      if (!d || !deckReady) return undefined;
+    const onContainerClick = (event: MouseEvent) => {
+      if (!deckReady) return;
       const rect = container.getBoundingClientRect();
-      return d.pickObject({
-        x: ev.clientX - rect.left,
-        y: ev.clientY - rect.top,
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+
+      // Selection picking for user-drawn shapes. A hit selects that shape
+      // (handing it to the engine for editing); misses are ignored so they
+      // don't fight the engine's edit handles — deselect is via Escape
+      // (see MapWrapper).
+      const shapeInfo = deck.pickObject({
+        x,
+        y,
         radius: 6,
         layerIds: DRAWN_SHAPE_LAYER_IDS,
       });
-    };
+      if (shapeInfo?.object) {
+        stores.drawingToolStore.setSelectedId((shapeInfo.object as MapShape).id);
+        return;
+      }
 
-    // A hit selects that shape (handing it to the engine for editing); misses
-    // are ignored so they don't fight the engine's edit handles — deselect is
-    // via Escape (see MapWrapper).
-    const handlePick = (ev: MouseEvent) => {
-      const info = pickAt(ev);
-      if (info?.object) {
-        stores.drawingToolStore.setSelectedId((info.object as MapShape).id);
+      // The overlay canvas is `pointer-events: none` and Deck runs with
+      // `controller: false`, so deck.gl never dispatches DOM events and
+      // layer-level `onClick` handlers never fire on their own. Pick the
+      // interactive entity layers here and invoke their handler manually.
+      const entityInfo = deck.pickObject({ x, y, radius: 6 });
+      if (entityInfo?.object) {
+        entityInfo.layer?.props.onClick?.(entityInfo, event as never);
       }
     };
-    container.addEventListener('click', handlePick);
+    container.addEventListener('click', onContainerClick);
 
     // Deck holds onto the initial width/height and its viewport projection
     // drifts from the basemap whenever the window/container is resized,
@@ -123,7 +128,7 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
     return () => {
       stopViewReaction();
       resizeObserver.disconnect();
-      container.removeEventListener('click', handlePick);
+      container.removeEventListener('click', onContainerClick);
       deck.finalize();
       canvas.remove();
       deckRef.current = null;

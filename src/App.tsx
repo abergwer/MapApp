@@ -9,6 +9,7 @@ import {
   buildLiveDataLayers,
   liveDataStore,
   LiveDataSocketProvider,
+  TargetCard,
   useLiveShapes,
 } from './bridge'
 import { createDrawnShapeLayers } from './Components/Layers/DrawnShapeLayers'
@@ -64,6 +65,8 @@ function App() {
         onShapeDelete={onShapeDelete}
       >
         <LayerManager layers={layers} />
+        {/* Overlay card for the target selected on the map (portal into the map box). */}
+        <TargetCard store={liveDataStore} />
       </MapWrapper>
     </Box>
   )
