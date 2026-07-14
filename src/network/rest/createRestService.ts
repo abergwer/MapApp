@@ -72,18 +72,18 @@ export function createRestService<TEndpoints extends EndpointMap>(
   }
 
   // React-Query-like state (data/isLoading/isError) without React Query.
-  // Same restriction as useQuery: only read endpoints are allowed here.
-  function useRequest<K extends ReadName<TEndpoints>>(
+  // Works for ANY declared endpoint — unknown names fail at compile time.
+  // Reads auto-fetch on mount; for writes pass `enabled: false` and fire
+  // manually via `refetch()`.
+  function useRequest<K extends keyof TEndpoints & string>(
     name: K,
     ...[vars, options]: Args<TEndpoints[K], Omit<UseRequestOptions, 'body'>>
   ): UseRequestResult<ResponseOf<TEndpoints[K]>> {
-    const { method, path } = resolve(name, vars)
-    return useClientRequest<ResponseOf<TEndpoints[K]>>(
-      client,
-      method,
-      path,
-      options,
-    )
+    const { method, path, body } = resolve(name, vars)
+    return useClientRequest<ResponseOf<TEndpoints[K]>>(client, method, path, {
+      ...options,
+      body,
+    })
   }
 
   // Cached read request. Only read endpoints are allowed here.

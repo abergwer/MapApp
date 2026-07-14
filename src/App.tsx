@@ -5,7 +5,12 @@ import LayerManager from './Components/layerManager/LayerManager'
 import MapWrapper from './map/mapWrapper/MapWrapper'
 import { mapEngineLabel } from './map/mapConfig'
 import { useStores } from './stores/StoreContext'
-import { buildLiveDataLayers, liveDataStore, LiveDataBridge, useLiveShapes } from './bridge'
+import {
+  buildLiveDataLayers,
+  liveDataStore,
+  LiveDataSocketProvider,
+  useLiveShapes,
+} from './bridge'
 import { createDrawnShapeLayers } from './Components/Layers/DrawnShapeLayers'
 
 function App() {
@@ -17,7 +22,8 @@ function App() {
     ...createDrawnShapeLayers(drawingToolStore.completedShapes, drawingToolStore.selectedId),
     ...buildLiveDataLayers(liveDataStore),
   ]
-  // Server-backed shape sync: initial payload (targets only) + CRUD callbacks.
+  // Server-backed shape sync over the shared bridge WebSocket: initial
+  // snapshot + CRUD messages.
   const { shapes, onShapeCreate, onShapeUpdate, onShapeDelete } = useLiveShapes(liveDataStore)
 
   return (
@@ -59,10 +65,21 @@ function App() {
       >
         <LayerManager layers={layers} />
       </MapWrapper>
-      {/* Renderless: fetches REST + WS data into the stores — without it nothing loads. */}
-      <LiveDataBridge store={liveDataStore} />
     </Box>
   )
 }
 
-export default observer(App)
+const ObservedApp = observer(App)
+
+/**
+ * The bridge's WebSocket lives in `LiveDataSocketProvider`; its incoming
+ * frames feed `liveDataStore` and `useLiveShapes` sends shape CRUD over the
+ * same socket, so the provider must sit above the component using the hook.
+ */
+export default function AppWithLiveData() {
+  return (
+    <LiveDataSocketProvider>
+      <ObservedApp />
+    </LiveDataSocketProvider>
+  )
+}

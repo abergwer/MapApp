@@ -1,9 +1,6 @@
 import { makeAutoObservable } from 'mobx'
 import type { MapShape } from '../stores/DrawingToolStore'
-import type { MissileTrack, Target, Vessel, Zone } from './types'
-
-/** Max positions kept per vessel for the trail layer. */
-const TRAIL_LENGTH = 60
+import type { Target } from './types'
 
 /**
  * MobX source of truth for the server-fed entities. Plain data only — no
@@ -12,26 +9,19 @@ const TRAIL_LENGTH = 60
  * this store; the app's production stores are never imported or mutated.
  */
 export class LiveDataStore {
-  vessels: Vessel[] = []
-  zones: Zone[] = []
   drones: Target[] = []
   aircraft: Target[] = []
-  missiles: MissileTrack[] = []
   /**
-   * Drawn shapes fetched from REST /api/shapes (same `MapShape` union the
-   * app uses). Rendered read-only through `createDrawnShapeLayers` in
-   * `buildLiveDataLayers`.
+   * Drawn shapes hydrated once from the WS `shapeSnapshot` frame (same
+   * `MapShape` union the app uses). Passed to `MapWrapper`'s `shapes` prop
+   * by `useLiveShapes`; after hydration the map is authoritative.
    */
   shapes: MapShape[] = []
-  /** Recent positions per vessel id, oldest first (for trail rendering). */
-  trails = new Map<string, [number, number][]>()
+  /** True once the initial `shapeSnapshot` has been applied. */
+  shapesHydrated = false
 
   constructor() {
     makeAutoObservable(this)
-  }
-
-  setZones(zones: Zone[]) {
-    this.zones = zones
   }
 
   setTargets(drones: Target[], aircraft: Target[]) {
@@ -39,24 +29,16 @@ export class LiveDataStore {
     this.aircraft = aircraft
   }
 
-  setMissiles(missiles: MissileTrack[]) {
-    this.missiles = missiles
-  }
-
-  setShapes(shapes: MapShape[]) {
+  /**
+   * Applies the server's shape snapshot exactly once. Reconnect snapshots
+   * are ignored — swapping the array reference mid-session would re-hydrate
+   * the map and wipe its selection/undo history, and the server state
+   * already reflects the map's edits (they are pushed on every change).
+   */
+  hydrateShapes(shapes: MapShape[]) {
+    if (this.shapesHydrated) return
     this.shapes = shapes
-  }
-
-  /** Full snapshot from WS; also extends the per-vessel trails. */
-  setVessels(vessels: Vessel[]) {
-    this.vessels = vessels
-    for (const vessel of vessels) {
-      const trail = this.trails.get(vessel.id) ?? []
-      const last = trail[trail.length - 1]
-      if (!last || last[0] !== vessel.position[0] || last[1] !== vessel.position[1]) {
-        this.trails.set(vessel.id, [...trail, vessel.position].slice(-TRAIL_LENGTH))
-      }
-    }
+    this.shapesHydrated = true
   }
 }
 

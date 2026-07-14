@@ -1,22 +1,16 @@
 /**
  * Demo data server for testing the `network` package against the map package.
  *
- * REST (JSON, CORS enabled):
- *   GET    /api/vessels    -> Vessel[]    initial vessel snapshot
- *   GET    /api/zones      -> Zone[]      static maritime zones (polygons)
- *   GET    /api/shapes     -> MapShape[]  editable drawn shapes
+ * Client -> server: REST (JSON, CORS enabled)
  *   POST   /api/shapes     -> MapShape    create (client supplies the id)
  *   PUT    /api/shapes/:id -> MapShape    update
  *   DELETE /api/shapes/:id -> { ok }      remove
  *
- * WebSocket (ws://localhost:4000/ws):
+ * Server -> client: WebSocket (ws://localhost:4000/ws)
+ *   Sends on connect:
+ *     { type: 'shapeSnapshot', shapes: MapShape[] }  editable drawn shapes
  *   Broadcasts every second:
- *     { type: 'vesselUpdate',  vessels: Vessel[] }              (channel 'vessels')
- *     { type: 'targetUpdate',  drones: Target[], aircraft: Target[] } ('targets')
- *     { type: 'missileUpdate', missiles: Missile[] }            (channel 'missiles')
- *   Accepts from clients:
- *     { type: 'subscribe', channels: ('vessels'|'targets'|'missiles')[] }
- *   A client only receives the channels it subscribed to (default: all).
+ *     { type: 'targetUpdate', drones: Target[], aircraft: Target[] }
  *
  * All coordinates are GeoJSON-compatible [lng, lat].
  */
@@ -30,18 +24,11 @@ const TICK_MS = 1000
 // Data
 // ---------------------------------------------------------------------------
 
-/** Vessels cruising the Mediterranean off the Israeli coast. (Disabled — the
- * server currently serves only the two seed polygons.) */
-const vessels = []
-
-/** Vessels are kept inside this sea box; heading reflects at the borders. */
-const SEA_BOX = { west: 33.6, east: 34.75, south: 31.4, north: 33.2 }
-
 /**
  * Editable drawn shapes (`MapShape` union from the app's DrawingToolStore),
- * managed via the CRUD /api/shapes routes. The initial seed is two polygons;
- * every other entity is added later by the user drawing on the map,
- * arriving through POST/PUT/DELETE /api/shapes.
+ * managed via the CRUD /api/shapes REST routes. The initial seed is a few
+ * polygons; every other entity is added later by the user drawing on the
+ * map, arriving through POST/PUT/DELETE /api/shapes.
  */
 const shapes = [
   {
@@ -76,43 +63,20 @@ const shapes = [
   },
 ]
 
-/** Drones/aircraft/missiles roam over this land box. */
+/** Drones/aircraft roam over this land box. */
 const LAND_BOX = { west: 34.3, east: 35.6, south: 29.6, north: 33.2 }
 
-/** Airborne targets (drones + aircraft) wandering over land. (Disabled.) */
-const drones = []
+/** Airborne targets (drones + aircraft) wandering over land, moved every tick. */
+const drones = [
+  { id: 'drone-1', position: [34.85, 31.9], heading: 45, speedKts: 80 },
+  { id: 'drone-2', position: [35.15, 32.4], heading: 210, speedKts: 95 },
+  { id: 'drone-3', position: [34.6, 30.8], heading: 120, speedKts: 70 },
+]
 
-const aircraft = []
-
-/**
- * Missiles fly a straight trajectory from origin to target; the broadcast
- * `path` grows one point per tick. On arrival a new random flight starts.
- */
-const MISSILE_STEPS = 30
-// Disabled — the server currently serves only the two seed polygons.
-const missiles = []
-
-const randomIn = (min, max) => min + Math.random() * (max - min)
-
-function randomLandPoint() {
-  return [randomIn(LAND_BOX.west, LAND_BOX.east), randomIn(LAND_BOX.south, LAND_BOX.north)]
-}
-
-/** The wire shape: id + the flown part of the trajectory. */
-function missilePath(m) {
-  const points = []
-  for (let i = 0; i <= Math.min(m.progress, MISSILE_STEPS); i++) {
-    const t = i / MISSILE_STEPS
-    points.push([
-      m.origin[0] + (m.target[0] - m.origin[0]) * t,
-      m.origin[1] + (m.target[1] - m.origin[1]) * t,
-    ])
-  }
-  return { id: m.id, path: points }
-}
-
-// Zones disabled — the server currently serves only the two seed polygons.
-const zones = []
+const aircraft = [
+  { id: 'aircraft-1', position: [34.95, 31.3], heading: 300, speedKts: 420 },
+  { id: 'aircraft-2', position: [35.35, 32.9], heading: 160, speedKts: 380 },
+]
 
 // ---------------------------------------------------------------------------
 // Simulation: advance each mover along its heading, jitter it a little and
@@ -141,29 +105,13 @@ function moveInBox(entity, box) {
   entity.position = [lng, lat]
 }
 
-function tickVessels() {
-  for (const v of vessels) moveInBox(v, SEA_BOX)
-}
-
 function tickTargets() {
   for (const d of drones) moveInBox(d, LAND_BOX)
   for (const a of aircraft) moveInBox(a, LAND_BOX)
 }
 
-function tickMissiles() {
-  for (const m of missiles) {
-    m.progress += 1
-    if (m.progress > MISSILE_STEPS + 5) {
-      // Arrived (plus a short linger): relaunch somewhere new.
-      m.progress = 0
-      m.origin = randomLandPoint()
-      m.target = randomLandPoint()
-    }
-  }
-}
-
 // ---------------------------------------------------------------------------
-// REST
+// REST: client -> server shape CRUD
 // ---------------------------------------------------------------------------
 
 const server = createServer(async (req, res) => {
@@ -183,17 +131,6 @@ const server = createServer(async (req, res) => {
 
   const url = new URL(req.url, `http://${req.headers.host}`)
 
-  // --- Read-only collections -----------------------------------------------
-  const routes = {
-    '/api/vessels': vessels,
-    '/api/zones': zones,
-    '/api/shapes': shapes,
-  }
-  if (req.method === 'GET' && routes[url.pathname]) {
-    return json(200, routes[url.pathname])
-  }
-
-  // --- Shapes CRUD -----------------------------------------------------------
   if (url.pathname === '/api/shapes' && req.method === 'POST') {
     const body = await readJsonBody(req)
     if (!isValidShape(body)) return json(400, { error: 'Invalid shape' })
@@ -244,67 +181,37 @@ function isValidShape(body) {
 }
 
 // ---------------------------------------------------------------------------
-// WebSocket
+// WebSocket: server -> client broadcasts
 // ---------------------------------------------------------------------------
 
 const wss = new WebSocketServer({ server, path: '/ws' })
 
-const ALL_CHANNELS = ['vessels', 'targets', 'missiles']
-
-/** Per-client channel subscriptions (set by the incoming `subscribe` message). */
-const subscriptions = new WeakMap()
-
-function frames() {
-  return {
-    vessels: JSON.stringify({ type: 'vesselUpdate', vessels }),
-    targets: JSON.stringify({ type: 'targetUpdate', drones, aircraft }),
-    missiles: JSON.stringify({ type: 'missileUpdate', missiles: missiles.map(missilePath) }),
-  }
-}
-
-function sendFrames(socket, byChannel) {
-  const channels = subscriptions.get(socket) ?? ALL_CHANNELS
-  for (const channel of channels) {
-    if (byChannel[channel]) socket.send(byChannel[channel])
-  }
+function targetFrame() {
+  return JSON.stringify({ type: 'targetUpdate', drones, aircraft })
 }
 
 wss.on('connection', (socket) => {
   console.log(`[ws] client connected (${wss.clients.size} total)`)
-  // Immediate snapshot so a new client doesn't wait a full tick.
-  sendFrames(socket, frames())
-  socket.on('message', (data) => {
-    let msg
-    try {
-      msg = JSON.parse(String(data))
-    } catch {
-      return
-    }
-    if (msg?.type === 'subscribe' && Array.isArray(msg.channels)) {
-      const channels = msg.channels.filter((c) => ALL_CHANNELS.includes(c))
-      subscriptions.set(socket, channels)
-      console.log(`[ws] client subscribed to: ${channels.join(', ') || '(none)'}`)
-    }
-  })
+  // Shape snapshot + an immediate target frame so a new client doesn't wait a tick.
+  socket.send(JSON.stringify({ type: 'shapeSnapshot', shapes }))
+  socket.send(targetFrame())
   socket.on('close', () =>
     console.log(`[ws] client disconnected (${wss.clients.size} total)`),
   )
 })
 
 setInterval(() => {
-  tickVessels()
   tickTargets()
-  tickMissiles()
-  const byChannel = frames()
+  const frame = targetFrame()
   for (const client of wss.clients) {
-    if (client.readyState === client.OPEN) sendFrames(client, byChannel)
+    if (client.readyState === client.OPEN) client.send(frame)
   }
 }, TICK_MS)
 
 server.listen(PORT, () => {
   console.log(`Demo server listening on http://localhost:${PORT}`)
-  console.log(`  REST: GET /api/vessels | GET /api/zones | CRUD /api/shapes`)
+  console.log(`  REST: POST /api/shapes | PUT/DELETE /api/shapes/:id`)
   console.log(
-    `  WS:   ws://localhost:${PORT}/ws (vesselUpdate | targetUpdate | missileUpdate every ${TICK_MS}ms)`,
+    `  WS:   ws://localhost:${PORT}/ws (shapeSnapshot on connect | targetUpdate every ${TICK_MS}ms)`,
   )
 })
