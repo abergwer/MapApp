@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "verbatimModuleSyntax": false,
+    "erasableSyntaxOnly": false,
+    "typeRoots": ["../node_modules/@types"],
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "./**/*.ts",
+    "../src/stores/UIVisibilityStore.ts",
+    "../src/stores/MapStyleStore.ts",
+    "../src/stores/DrawingToolStore.ts",
+    "../src/stores/PolygonStore.ts",
+    "../src/stores/MissileStore.ts",
+    "../src/stores/AirCraftStore.ts",
+    "../src/stores/DroneStore.ts",
+    "../src/stores/shapes.ts",
+    "../src/map/mapConfig.ts"
+  ]
+}
