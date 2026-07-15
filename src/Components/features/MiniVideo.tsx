@@ -6,29 +6,29 @@ import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import { createWebrtcViewer } from '../../api/webrtcViewer';
+import * as styles from '../../styles/features/video.styles';
 import config from '../../../config.json';
-
-// --- Tunables -------------------------------------------------------------
-
-/** Fixed thumbnail dimensions, in CSS pixels. Matches MiniMap proportions. */
-const SIZE = { width: 200, height: 150 } as const;
 
 // --- Component ------------------------------------------------------------
 
 interface MiniVideoProps {
   /** Optional close handler. When provided, a small "×" button is shown. */
   onClose?: () => void;
+  /** Fill the parent height (floating window) instead of a fixed 4:3 tile. */
+  fill?: boolean;
   /** Override the signaling server URL (defaults to config.VideoSignalingURL). */
   signalingUrl?: string;
 }
 
 /**
- * Small WebRTC preview tile. All transport logic lives in
- * `api/webrtcViewer` — this component just attaches the produced stream
- * to a `<video>` element and renders status / error overlays.
+ * WebRTC video tile (fills the VIDEO FEED panel or the floating window).
+ * All transport logic lives in `api/webrtcViewer` — this component just
+ * attaches the produced stream to a `<video>` element and renders status /
+ * error overlays.
  */
 export default function MiniVideo({
   onClose,
+  fill = false,
   signalingUrl = config.VideoSignalingURL,
 }: MiniVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -52,40 +52,20 @@ export default function MiniVideo({
   }, [signalingUrl]);
 
   return (
-    <Paper
-      elevation={6}
-      sx={{
-        ...SIZE,
-        position: 'relative',
-        borderRadius: 1.5,
-        overflow: 'hidden',
-        border: 1,
-        borderColor: 'divider',
-        bgcolor: 'common.black',
-      }}
-    >
+    <Paper sx={styles.videoTile(fill)}>
       <Box
         component="video"
         ref={videoRef}
         autoPlay
         playsInline
         muted
-        sx={{ width: 1, height: 1, objectFit: 'cover', display: 'block' }}
+        sx={styles.videoElement}
       />
 
+      {status === 'live' && !error && <Box sx={styles.liveBadge}>Live</Box>}
+
       {(error || status === 'connecting') && (
-        <Box
-          sx={(theme) => ({
-            position: 'absolute',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            px: 1.5,
-            textAlign: 'center',
-            bgcolor: alpha(theme.palette.common.black, 0.55),
-          })}
-        >
+        <Box sx={styles.videoOverlay}>
           <Typography
             variant="caption"
             sx={{ color: error ? 'error.light' : 'common.white' }}

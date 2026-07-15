@@ -25,36 +25,6 @@ export interface Measurement {
   timestamp: number;
 }
 
-/**
- * Demo seed used during development — pretends a server pushed these
- * shapes on startup. Radii are kilometres (the store's canonical unit).
- * In a real app, swap for a websocket / fetch hook that calls
- * `recordShape` as messages arrive.
- */
-export const DEMO_SERVER_SHAPES: MapShape[] = [
-  { id: newShapeId(), kind: 'point', position: [34.7818, 32.0853] },
-  {
-    id: newShapeId(),
-    kind: 'polygon',
-    positions: [
-      [34.75, 32.05],
-      [34.81, 32.05],
-      [34.81, 32.1],
-      [34.75, 32.1],
-    ],
-  },
-  { id: newShapeId(), kind: 'circle', center: [34.85, 32.08], radius: 3 },
-  { id: newShapeId(), kind: 'ellipse', center: [34.7, 32.12], radiusX: 4, radiusY: 2 },
-  {
-    id: newShapeId(),
-    kind: 'sector',
-    center: [34.78, 32.15],
-    radius: 5,
-    startBearing: 30,
-    endBearing: 110,
-  },
-];
-
 export class DrawingToolStore {
   activeDrawTool: DrawTool | null = null;
   activeMeasureTool: MeasureTool | null = null;

@@ -1,11 +1,10 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { reaction } from 'mobx';
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
+import Divider from '@mui/material/Divider';
+import Paper from '@mui/material/Paper';
 import { observer } from 'mobx-react-lite';
 import { createMapEngine } from '../EngineFactory';
-import { mapEngineLabel } from '../mapConfig';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
@@ -14,13 +13,12 @@ import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
-import MiniMap from '../../Components/features/MiniMap';
-import MiniVideo from '../../Components/features/MiniVideo';
+import * as mapStyles from '../../styles/features/map.styles';
 import type { MapShape } from '../../stores/shapes';
 
 const defaultOptions = {
-  center: [32.0853, 34.7818] as [number, number],
-  zoom: 10,
+  center: [32.2, 34.95] as [number, number],
+  zoom: 8,
 };
 
 interface MapWrapperProps {
@@ -50,8 +48,7 @@ function MapWrapperImpl({
   onShapeDelete,
 }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, uiVisibilityStore, drawingToolStore, entityService } = useStores();
-  const { minimapVisible, videoVisible } = uiVisibilityStore;
+  const { mapEngineStore, drawingToolStore, entityService } = useStores();
 
   // Register outbound notification callbacks. `EntityService` fires these
   // *after* every successful create / update / delete so the host app can
@@ -175,66 +172,25 @@ function MapWrapperImpl({
 
   return (
     <MapContext.Provider value={{ containerRef }}>
-      <Stack spacing={1.5} sx={{ width: '100%', flex: 1, minHeight: 500 }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            Selected engine:
-          </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            {mapEngineLabel[mapEngineStore.selectedEngine]}
-          </Typography>
-        </Stack>
+      <Box sx={mapStyles.mapFrame}>
+        <Box ref={containerRef} sx={mapStyles.engineContainer} />
 
-        <Box
-          sx={{
-            position: 'relative',
-            flex: 1,
-            minHeight: 600,
-            borderRadius: 2,
-            overflow: 'hidden',
-            display: 'flex',
-          }}
-        >
-          <Box ref={containerRef} sx={{ flex: 1, minWidth: 0, minHeight: 0 }} />
-
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1100 }}
-          >
+        {/* Floating tool strip, top-center like the reference design. */}
+        <Box sx={mapStyles.toolStripWrap}>
+          <Paper sx={mapStyles.toolStrip}>
             <ToolBar />
+            <Divider orientation="vertical" flexItem sx={mapStyles.toolStripDivider} />
             <MeasuringTools />
+            <Divider orientation="vertical" flexItem sx={mapStyles.toolStripDivider} />
             <MapStyleBar />
-          </Stack>
-
-          <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
-            <CoordinatesBar />
-          </Box>
-
-          {/* Bottom-right, lifted above the engine scale bar (~20px tall). */}
-          {minimapVisible && (
-            <Box sx={{ position: 'absolute', bottom: 36, right: 12, zIndex: 1100 }}>
-              <MiniMap />
-            </Box>
-          )}
-
-          {/* Mini video sits directly above the minimap slot on the right. */}
-          {videoVisible && (
-            <Box
-              sx={{
-                position: 'absolute',
-                // 36 (minimap bottom) + 150 (minimap height) + 8 (gap) = 194
-                bottom: minimapVisible ? 194 : 36,
-                right: 12,
-                zIndex: 1100,
-              }}
-            >
-              <MiniVideo onClose={() => uiVisibilityStore.setVideoVisible(false)} />
-            </Box>
-          )}
+          </Paper>
         </Box>
-        {children}
-      </Stack>
+
+        <Box sx={mapStyles.coordsWrap}>
+          <CoordinatesBar />
+        </Box>
+      </Box>
+      {children}
     </MapContext.Provider>
   );
 }

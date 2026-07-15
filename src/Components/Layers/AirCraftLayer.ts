@@ -1,18 +1,31 @@
-import { IconLayer } from '@deck.gl/layers';
+import { IconLayer, TextLayer } from '@deck.gl/layers';
+import type { Layer } from '@deck.gl/core';
 import airCraftIcon from '../../assets/aircraft.png';
 import type { AirCraftTarget } from '../../stores/AirCraftStore';
+import { layerColors, targetLabelProps } from '../../styles/features/layers.styles';
 
-export function createAirCraftLayer(targets: AirCraftTarget[]) {
-  return new IconLayer<AirCraftTarget>({
-    id: 'aircraft-layer',
-    data: targets,
-    getPosition: (d) => d.position,
-    getIcon: () => ({
-      url: airCraftIcon,
-      width: 30,
-      height: 30,
+const label = (d: AirCraftTarget) =>
+  `${d.id}\nALT ${d.altitudeFt} ft\nSPD ${d.speedKts} kts`;
+
+export function createAirCraftLayer(targets: AirCraftTarget[]): Layer[] {
+  return [
+    new IconLayer<AirCraftTarget>({
+      id: 'aircraft-layer',
+      data: targets,
+      getPosition: (d) => d.position,
+      // `mask: true` lets deck.gl tint the silhouette with our token color
+      // so it stays visible on the dark basemap.
+      getIcon: () => ({ url: airCraftIcon, width: 30, height: 30, mask: true }),
+      getSize: 30,
+      getColor: layerColors.aircraft,
+      getAngle: (d) => -d.heading,
     }),
-    getSize: 30,
-    getColor: [255, 0, 0],
-  });
+    new TextLayer<AirCraftTarget>({
+      id: 'aircraft-labels',
+      data: targets,
+      getPosition: (d) => d.position,
+      getText: label,
+      ...targetLabelProps,
+    }),
+  ];
 }

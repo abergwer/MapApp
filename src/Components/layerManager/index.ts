@@ -16,19 +16,36 @@ import type { RootStore } from '../../stores/RootStore';
  * underlying store collections change.
  */
 export function buildLayers(stores: RootStore): Layer[] {
-  const { drawingToolStore } = stores;
-  return [
-    // User-drawn shapes. The map engine's native edit tools drive the same
-    // store via `entityService`; deck.gl only renders and picks here.
-    ...createDrawnShapeLayers(
-      drawingToolStore.completedShapes,
-      drawingToolStore.selectedId,
-    ),
-    createPolygonLayer(stores.polygonStore.polygons),
-    createMissilesLayer(stores.missileStore.missiles),
-    createDroneLayer(stores.droneStore.targets),
-    createAirCraftLayer(stores.airCraftStore.targets),
-    createRangeRingsLayer(stores.droneStore.targets),
-  ];
+  const { drawingToolStore, uiVisibilityStore: vis } = stores;
+  const layers: Layer[] = [];
+
+  // User-drawn shapes. The map engine's native edit tools drive the same
+  // store via `entityService`; deck.gl only renders and picks here.
+  if (vis.isLayerVisible('drawnShapes')) {
+    layers.push(
+      ...createDrawnShapeLayers(
+        drawingToolStore.completedShapes,
+        drawingToolStore.selectedId,
+      ),
+    );
+  }
+  if (vis.isLayerVisible('polygons')) {
+    layers.push(createPolygonLayer(stores.polygonStore.polygons));
+  }
+  if (vis.isLayerVisible('rangeRings')) {
+    layers.push(createRangeRingsLayer(stores.droneStore.targets));
+  }
+  if (vis.isLayerVisible('missiles')) {
+    layers.push(
+      ...createMissilesLayer(stores.missileStore.missiles, stores.missileStore.selectedId),
+    );
+  }
+  if (vis.isLayerVisible('drones')) {
+    layers.push(...createDroneLayer(stores.droneStore.targets));
+  }
+  if (vis.isLayerVisible('aircraft')) {
+    layers.push(...createAirCraftLayer(stores.airCraftStore.targets));
+  }
+  return layers;
 }
 

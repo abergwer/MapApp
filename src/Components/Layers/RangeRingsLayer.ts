@@ -1,5 +1,6 @@
 import { ScatterplotLayer } from '@deck.gl/layers';
 import type { DroneTarget } from '../../stores/DroneStore';
+import { layerColors } from '../../styles/features/layers.styles';
 
 interface RangeRing extends DroneTarget {
   radius: number;
@@ -19,8 +20,9 @@ export function createRangeRingsLayer(targets: DroneTarget[]) {
     getRadius: (d) => d.radius,
     stroked: true,
     filled: false,
-    getLineColor: [255, 0, 0, 180],
-    getLineWidth: 10,
-    lineWidthMinPixels: 5,
+    getLineColor: layerColors.rangeRing,
+    getLineWidth: 2,
+    lineWidthUnits: 'pixels',
+    lineWidthMinPixels: 1,
   });
 }

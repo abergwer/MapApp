@@ -5,6 +5,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useStores } from '../../stores/StoreContext';
+import { coordsChip } from '../../styles/features/map.styles';
 
 function CoordinatesBarImpl() {
   const { mapEngineStore } = useStores();
@@ -17,18 +18,7 @@ function CoordinatesBarImpl() {
   }, [engine]);
 
   return (
-    <Paper
-      sx={{
-        px: 1.75,
-        py: 0.75,
-        fontFamily: "'JetBrains Mono', ui-monospace, Consolas, monospace",
-        fontSize: '0.78rem',
-        letterSpacing: '0.01em',
-        pointerEvents: 'none',
-        userSelect: 'none',
-        width: 'fit-content',
-      }}
-    >
+    <Paper sx={coordsChip}>
       {coords ? (
         <Stack direction="row" spacing={2.5} sx={{ alignItems: 'center' }}>
           <span>
