@@ -2,6 +2,8 @@ import { useState } from 'react';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Collapse from '@mui/material/Collapse';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
@@ -80,19 +82,35 @@ function EntitiesPanelImpl() {
               </ButtonBase>
               <Collapse in={open}>
                 {shapes.map((s, i) => (
-                  <ButtonBase
+                  <Box
                     key={s.id}
                     sx={styles.entityRow(s.id === selectedId)}
                     onClick={() =>
                       drawingToolStore.setSelectedId(s.id === selectedId ? null : s.id)
                     }
+                    role="button"
                     aria-label={`Select ${kindLabel(kind)} ${i + 1}`}
                   >
                     <Typography sx={styles.entityLabel}>
                       {kindLabel(kind)} {i + 1}
                     </Typography>
-                    <Typography sx={styles.entityId}>{s.id.slice(0, 8)}</Typography>
-                  </ButtonBase>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                      <Typography sx={styles.entityId}>{s.id.slice(0, 8)}</Typography>
+                      <Tooltip title="Delete entity" arrow>
+                        <IconButton
+                          size="small"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            entityService.remove(s.id);
+                          }}
+                          aria-label={`Delete ${kindLabel(kind)} ${i + 1}`}
+                          sx={{ p: 0.25 }}
+                        >
+                          <DeleteOutlinedIcon sx={{ fontSize: 15 }} />
+                        </IconButton>
+                      </Tooltip>
+                    </Box>
+                  </Box>
                 ))}
               </Collapse>
             </Box>

@@ -7,87 +7,77 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { observer } from 'mobx-react-lite';
 import Panel from '../common/Panel';
 import { useStores } from '../../stores/StoreContext';
-import type { RailSide } from '../../stores/UIVisibilityStore';
 import * as layout from '../../styles/system-ui/layout.styles';
 
-/** A panel that can be injected into one of the side rails. */
+/** A panel that can be injected into the right WORKSPACE dock. */
 export interface PanelDef {
   id: string;
   title: string;
-  /** Shown in the collapsed rail's icon strip. */
-  icon: ReactNode;
   content: ReactNode;
   /** Optional element rendered on the right side of the panel header. */
   headerAction?: ReactNode;
-  /** When true the panel (and its strip icon) is not rendered. */
+  /** When true the panel is not rendered. */
   hidden?: boolean;
 }
 
 interface LayoutManagerProps {
   topBar: ReactNode;
   statusBar: ReactNode;
-  /** Left icon-rail navigator (see LeftNav). */
+  /** Left tabbed panel (see LeftPanel). */
   leftNav: ReactNode;
   rightPanels: PanelDef[];
   /** Map area content. */
   children: ReactNode;
 }
 
-const RailImpl = ({ side, panels }: { side: RailSide; panels: PanelDef[] }) => {
+/** Right WORKSPACE dock: header + 2-column panel grid; arrow-only collapse. */
+const WorkspaceDockImpl = ({ panels }: { panels: PanelDef[] }) => {
   const { uiVisibilityStore: ui } = useStores();
-  const collapsed = ui.railCollapsed[side];
+  const collapsed = ui.railCollapsed.right;
   const visible = panels.filter((p) => !p.hidden);
 
-  // Chevron points toward the map edge the rail collapses to.
-  const collapseIcon = side === 'left' ? <ChevronLeftIcon fontSize="small" /> : <ChevronRightIcon fontSize="small" />;
-  const expandIcon = side === 'left' ? <ChevronRightIcon fontSize="small" /> : <ChevronLeftIcon fontSize="small" />;
-
-  return (
-    <Box component="aside" sx={side === 'left' ? layout.leftRail : layout.rightRail}>
-      <Box sx={layout.railToggleRow(side)}>
-        <Tooltip title={collapsed ? 'Expand panels' : 'Collapse panels'} arrow>
+  if (collapsed) {
+    return (
+      <Box component="aside" sx={layout.collapsedRail('right')}>
+        <Tooltip title="Expand workspace" placement="left" arrow>
           <IconButton
             size="small"
-            sx={layout.railIcon(false)}
-            onClick={() => ui.toggleRail(side)}
-            aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${side} panels`}
+            sx={layout.navCollapseButton}
+            onClick={() => ui.toggleRail('right')}
+            aria-label="Expand workspace"
           >
-            {collapsed ? expandIcon : collapseIcon}
+            <ChevronLeftIcon fontSize="small" />
           </IconButton>
         </Tooltip>
       </Box>
+    );
+  }
 
-      {collapsed ? (
-        <Box sx={layout.railIconStrip}>
-          {visible.map((p) => (
-            <Tooltip key={p.id} title={p.title} placement={side === 'left' ? 'right' : 'left'} arrow>
-              <IconButton
-                size="small"
-                sx={layout.railIcon(false)}
-                onClick={() => ui.expandRail(side)}
-                aria-label={`Expand ${p.title} panel`}
-              >
-                {p.icon}
-              </IconButton>
-            </Tooltip>
-          ))}
-        </Box>
-      ) : (
-        visible.map((p) => (
+  return (
+    <Box component="aside" sx={layout.dockRoot}>
+      <Box sx={layout.dockHeader}>
+        Workspace
+        <Tooltip title="Collapse workspace" arrow>
+          <IconButton size="small" onClick={() => ui.toggleRail('right')} aria-label="Collapse workspace">
+            <ChevronRightIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      </Box>
+      <Box sx={layout.dockGrid}>
+        {visible.map((p) => (
           <Panel key={p.id} title={p.title} action={p.headerAction}>
             {p.content}
           </Panel>
-        ))
-      )}
+        ))}
+      </Box>
     </Box>
   );
 };
-const Rail = observer(RailImpl);
+const WorkspaceDock = observer(WorkspaceDockImpl);
 
 /**
- * App shell: renders the dashboard grid from a declarative panel config so
- * new panels can be injected without touching the layout. The left side is
- * an icon-rail navigator (LeftNav); the right rail collapses to icons.
+ * App shell: dashboard grid — top bar, tabbed left panel, map, right
+ * WORKSPACE dock (declarative panel config), status bar.
  */
 function LayoutManagerImpl({ topBar, statusBar, leftNav, rightPanels, children }: LayoutManagerProps) {
   const { uiVisibilityStore: ui } = useStores();
@@ -98,7 +88,7 @@ function LayoutManagerImpl({ topBar, statusBar, leftNav, rightPanels, children }
       <Box component="main" sx={layout.mapArea}>
         {children}
       </Box>
-      <Rail side="right" panels={rightPanels} />
+      <WorkspaceDock panels={rightPanels} />
       {statusBar}
     </Box>
   );

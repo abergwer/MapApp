@@ -211,6 +211,9 @@ export class MapLibreDrawingManager {
     this.cancelCurrentDraw?.();
     this.cancelCurrentDraw = startMaplibreRouteDraw(this.map, this.draw, (id, positions) => {
       this.draw.setFeatureProperty(id, KIND_PROP, 'route');
+      // The route flow is finished — clear the flag, otherwise the
+      // delete-key handler above stays disabled forever.
+      this.cancelCurrentDraw = undefined;
       onComplete(id, positions);
     });
   }

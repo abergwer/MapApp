@@ -45,6 +45,7 @@ export const entityRow = (selected: boolean): SxProps<Theme> => ({
   py: 0.5,
   mb: 0.5,
   borderRadius: 1,
+  cursor: 'pointer',
   bgcolor: `color-mix(in srgb, ${palette.panel} 55%, transparent)`,
   border: `1px solid ${palette.border}`,
   '&:hover': { borderColor: palette.borderBright },

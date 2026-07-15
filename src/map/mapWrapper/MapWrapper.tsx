@@ -1,14 +1,14 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { reaction } from 'mobx';
 import Box from '@mui/material/Box';
-import Divider from '@mui/material/Divider';
 import Paper from '@mui/material/Paper';
+import Slider from '@mui/material/Slider';
+import Typography from '@mui/material/Typography';
 import { observer } from 'mobx-react-lite';
 import { createMapEngine } from '../EngineFactory';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
-import CoordinatesBar from '../../Components/features/CoordinatesBar';
 import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
@@ -48,8 +48,7 @@ function MapWrapperImpl({
   onShapeDelete,
 }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, drawingToolStore, entityService, mapStyleStore, uiVisibilityStore } =
-    useStores();
+  const { mapEngineStore, drawingToolStore, entityService, mapStyleStore } = useStores();
   const { brightness } = mapStyleStore;
 
   // Apply the basemap brightness filter here (single place with access to
@@ -117,6 +116,9 @@ function MapWrapperImpl({
       // (MiniMap, LayerManager, future overlays) can react without opening
       // their own onViewChange subscription.
       unsubscribeViewChange = eng.onViewChange((vs) => mapEngineStore.setViewState(vs));
+
+      // Last-clicked coordinate feeds the status bar COORDINATE cell.
+      eng.onMapClick?.((lat, lng) => mapEngineStore.setLastClick({ lat, lng }));
 
       // Round-trip user edits/deletes back through the entity service —
       // the single writer that also fans out to any hook subscribers.
@@ -194,21 +196,37 @@ function MapWrapperImpl({
       <Box sx={mapStyles.mapFrame}>
         <Box ref={containerRef} sx={mapStyles.engineContainer} />
 
-        {/* Optional floating tool strip — toggled from MAP TOOLS → "Map toolbar". */}
-        {uiVisibilityStore.toolbarVisible && (
-          <Box sx={mapStyles.toolStripWrap}>
-            <Paper sx={mapStyles.toolStrip}>
+        {/* Always-visible toolbar clusters + brightness card (top-left). */}
+        <Box sx={mapStyles.toolStripWrap}>
+          <Box sx={mapStyles.toolStrip}>
+            <Paper sx={mapStyles.toolCluster}>
               <ToolBar />
-              <Divider orientation="vertical" flexItem sx={mapStyles.toolStripDivider} />
+            </Paper>
+            <Paper sx={mapStyles.toolCluster}>
               <MeasuringTools />
-              <Divider orientation="vertical" flexItem sx={mapStyles.toolStripDivider} />
+            </Paper>
+            <Paper sx={mapStyles.toolCluster}>
               <MapStyleBar />
             </Paper>
           </Box>
-        )}
 
-        <Box sx={mapStyles.coordsWrap}>
-          <CoordinatesBar />
+          <Paper sx={mapStyles.brightnessCard}>
+            <Box sx={mapStyles.brightnessHeader}>
+              <Typography sx={{ fontSize: 12, fontWeight: 600 }}>Brightness</Typography>
+              <Typography sx={{ fontSize: 11, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+                {brightness}%
+              </Typography>
+            </Box>
+            <Slider
+              size="small"
+              value={brightness}
+              min={0}
+              max={120}
+              step={1}
+              onChange={(_, v) => mapStyleStore.setBrightness(v as number)}
+              aria-label="Map brightness"
+            />
+          </Paper>
         </Box>
       </Box>
       {children}

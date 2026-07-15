@@ -62,9 +62,12 @@ export function startMaplibreRouteDraw(
 
   draw.changeMode('draw_line_string');
   // create fires once; we detach immediately so a follow-up draw doesn't
-  // double-trigger this handler.
+  // double-trigger this handler. The keydown listener is also removed here:
+  // once the route exists, delete handling belongs to the drawing manager's
+  // persistent handler (single owner — avoids double-trash).
   const onCreateOnce = (ev: any) => {
     map.off('draw.create', onCreateOnce);
+    document.removeEventListener('keydown', onKeyDown);
     onCreate(ev);
   };
   map.on('draw.create', onCreateOnce);

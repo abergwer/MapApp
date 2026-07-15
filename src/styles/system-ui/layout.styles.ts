@@ -6,19 +6,18 @@ import { palette, fonts, microLabel } from './tokens';
  * side rails, the map in the center and a status strip at the bottom.
  */
 
-/** Width of a rail when collapsed to an icon strip. */
-const RAIL_COLLAPSED_W = '48px';
-/** Left icon rail is always visible; the content column adds the rest. */
-const LEFT_ICON_RAIL_W = 52;
-const LEFT_CONTENT_W = 290;
+/** Width of a rail collapsed to just its arrow. */
+const RAIL_COLLAPSED_W = '36px';
+const LEFT_PANEL_W = '300px';
+const RIGHT_DOCK_W = '620px';
 
 export const appGrid = (leftCollapsed: boolean, rightCollapsed: boolean): SxProps<Theme> => ({
   height: '100svh',
   display: 'grid',
   gridTemplateRows: 'auto minmax(0, 1fr) auto',
-  gridTemplateColumns: `${
-    leftCollapsed ? `${LEFT_ICON_RAIL_W}px` : `${LEFT_ICON_RAIL_W + LEFT_CONTENT_W}px`
-  } minmax(0, 1fr) ${rightCollapsed ? RAIL_COLLAPSED_W : '320px'}`,
+  gridTemplateColumns: `${leftCollapsed ? RAIL_COLLAPSED_W : LEFT_PANEL_W} minmax(0, 1fr) ${
+    rightCollapsed ? RAIL_COLLAPSED_W : RIGHT_DOCK_W
+  }`,
   gridTemplateAreas: `
     "top    top top"
     "left   map right"
@@ -27,28 +26,6 @@ export const appGrid = (leftCollapsed: boolean, rightCollapsed: boolean): SxProp
   bgcolor: 'background.default',
   overflow: 'hidden',
 });
-
-export const leftRail: SxProps<Theme> = {
-  gridArea: 'left',
-  minHeight: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 1,
-  p: 1,
-  pr: 0,
-  overflowY: 'auto',
-};
-
-export const rightRail: SxProps<Theme> = {
-  gridArea: 'right',
-  minHeight: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 1,
-  p: 1,
-  pl: 0,
-  overflowY: 'auto',
-};
 
 export const mapArea: SxProps<Theme> = {
   gridArea: 'map',
@@ -66,90 +43,147 @@ export const railToggleRow = (side: 'left' | 'right'): SxProps<Theme> => ({
   flexShrink: 0,
 });
 
-/** Vertical icon strip shown when a rail is collapsed. */
-export const railIconStrip: SxProps<Theme> = {
+/** Collapsed rail: a thin column showing ONLY the expand arrow. */
+export const collapsedRail = (side: 'left' | 'right'): SxProps<Theme> => ({
+  gridArea: side,
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
-  gap: 0.5,
-};
+  pt: 1,
+  ...(side === 'left'
+    ? { borderRight: `1px solid ${palette.border}` }
+    : { borderLeft: `1px solid ${palette.border}` }),
+});
 
-// ── Left icon-rail navigator ────────────────────────────────────────
+// ── Left panel (tabbed) ──────────────────────────────────────────────
 
-export const leftNavRoot: SxProps<Theme> = {
+export const leftPanelRoot: SxProps<Theme> = {
   gridArea: 'left',
   minHeight: 0,
   display: 'flex',
+  flexDirection: 'column',
+  borderRight: `1px solid ${palette.border}`,
   overflow: 'hidden',
 };
 
-export const iconRail: SxProps<Theme> = {
-  width: 52,
-  flexShrink: 0,
+/** Header row: view title left, pill tabs right (reference design). */
+export const leftPanelHeader: SxProps<Theme> = {
   display: 'flex',
-  flexDirection: 'column',
   alignItems: 'center',
-  gap: 1,
-  py: 1.5,
-  borderRight: `1px solid ${palette.border}`,
-};
-
-/** Squared icon button with the blue border + glow when active (from the
- *  reference design). Also reused for the right rail's strip icons. */
-export const railIcon = (active: boolean): SxProps<Theme> => ({
-  width: 38,
-  height: 38,
-  borderRadius: 1.5,
-  border: '1px solid transparent',
-  color: 'text.secondary',
-  ...(active && {
-    color: palette.accentBright,
-    border: `1px solid ${palette.accent}`,
-    bgcolor: `color-mix(in srgb, ${palette.accent} 18%, transparent)`,
-    boxShadow: `0 0 10px color-mix(in srgb, ${palette.accent} 50%, transparent)`,
-  }),
-});
-
-export const navContent: SxProps<Theme> = {
-  flex: 1,
-  minWidth: 0,
-  minHeight: 0,
-  display: 'flex',
-  flexDirection: 'column',
-  overflowY: 'auto',
-  p: 1.5,
-  pt: 1,
-};
-
-export const navContentHeader: SxProps<Theme> = {
-  display: 'flex',
-  alignItems: 'flex-start',
   justifyContent: 'space-between',
   gap: 1,
-  mb: 1,
+  px: 1.5,
+  py: 1,
+  bgcolor: `color-mix(in srgb, ${palette.accent} 10%, ${palette.panelHeader})`,
+  borderBottom: `1px solid ${palette.border}`,
 };
+
+export const leftPanelBody: SxProps<Theme> = {
+  flex: 1,
+  minHeight: 0,
+  overflowY: 'auto',
+  p: 1.5,
+};
+
+/** Segmented pill tabs container. */
+export const pillTabs: SxProps<Theme> = {
+  display: 'flex',
+  gap: 0.25,
+  p: 0.25,
+  borderRadius: 1,
+  bgcolor: palette.bg,
+  border: `1px solid ${palette.border}`,
+};
+
+export const pillTab = (active: boolean): SxProps<Theme> => ({
+  px: 1,
+  py: 0.4,
+  borderRadius: 0.75,
+  ...microLabel,
+  fontSize: 9,
+  cursor: 'pointer',
+  color: active ? '#fff' : 'text.secondary',
+  bgcolor: active ? palette.accent : 'transparent',
+  '&:hover': { color: active ? '#fff' : 'text.primary' },
+});
 
 export const viewTitle: SxProps<Theme> = {
   ...microLabel,
-  fontSize: 14,
+  fontSize: 13,
   color: 'text.primary',
   lineHeight: 1.3,
 };
 
-export const viewSubtitle: SxProps<Theme> = {
-  fontSize: 12,
-  color: 'text.secondary',
-  lineHeight: 1.3,
-};
-
-/** Small squared collapse button («) at the top of the content column. */
+/** Small squared collapse/expand arrow button. */
 export const navCollapseButton: SxProps<Theme> = {
-  width: 30,
-  height: 30,
+  width: 28,
+  height: 28,
   borderRadius: 1,
   border: `1px solid ${palette.border}`,
   bgcolor: palette.panel,
   flexShrink: 0,
+};
+
+// ── Top bar clock chip ─────────────────────────────────────────────────
+
+export const clockChip: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 0.75,
+  px: 1.25,
+  py: 0.5,
+  borderRadius: 1,
+  border: `1px solid ${palette.border}`,
+  bgcolor: palette.panel,
+};
+
+export const clockTime: SxProps<Theme> = {
+  fontFamily: fonts.mono,
+  fontSize: 14,
+  fontWeight: 700,
+  color: 'text.primary',
+};
+
+export const clockUtc: SxProps<Theme> = {
+  fontFamily: fonts.mono,
+  fontSize: 10,
+  color: 'text.secondary',
+};
+
+// ── Right dock (WORKSPACE) ─────────────────────────────────────────
+
+export const dockRoot: SxProps<Theme> = {
+  gridArea: 'right',
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  borderLeft: `1px solid ${palette.border}`,
+  overflow: 'hidden',
+};
+
+export const dockHeader: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  pl: 1.5,
+  pr: 0.5,
+  py: 0.25,
+  borderBottom: `1px solid ${palette.border}`,
+  ...microLabel,
+  fontSize: 10,
+  color: 'text.secondary',
+};
+
+/** 2-column panel grid like the reference workspace. */
+export const dockGrid: SxProps<Theme> = {
+  flex: 1,
+  minHeight: 0,
+  display: 'grid',
+  gridTemplateColumns: '1fr 1fr',
+  gridAutoRows: 'minmax(0, 1fr)',
+  gap: 1,
+  p: 1,
+  overflowY: 'auto',
 };
 
 // ── Top bar ────────────────────────────────────────────────────────────

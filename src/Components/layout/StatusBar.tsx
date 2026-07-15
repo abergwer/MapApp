@@ -7,6 +7,8 @@ import { useStores } from '../../stores/StoreContext';
 import { palette } from '../../styles/system-ui/tokens';
 import * as layout from '../../styles/system-ui/layout.styles';
 
+const pad = (n: number) => String(n).padStart(2, '0');
+
 function Cell({ label, value, color }: { label: string; value: string; color?: string }) {
   return (
     <Box sx={layout.statusCell}>
@@ -16,34 +18,50 @@ function Cell({ label, value, color }: { label: string; value: string; color?: s
   );
 }
 
-/** Bottom status strip: system state, UTC clock and live map view state. */
+/** Bottom status strip: system state, clock, last-click coordinate. */
 function StatusBarImpl() {
   const { mapEngineStore, mapStyleStore } = useStores();
   const [now, setNow] = useState(() => new Date());
+  const [online, setOnline] = useState(() => navigator.onLine);
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
+    const goOnline = () => setOnline(true);
+    const goOffline = () => setOnline(false);
+    window.addEventListener('online', goOnline);
+    window.addEventListener('offline', goOffline);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('online', goOnline);
+      window.removeEventListener('offline', goOffline);
+    };
   }, []);
 
   const engineReady = Boolean(mapEngineStore.engine);
   const vs = mapEngineStore.viewState;
-  const center = vs
-    ? `${vs.latitude.toFixed(4)}° N, ${vs.longitude.toFixed(4)}° E`
-    : '—';
+  const click = mapEngineStore.lastClick;
+  // Last map click, falling back to the live view center.
+  const coordinate = click
+    ? `${click.lat.toFixed(5)}, ${click.lng.toFixed(5)}`
+    : vs
+      ? `${vs.latitude.toFixed(5)}, ${vs.longitude.toFixed(5)}`
+      : '—';
+
+  const local = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+  const utc = `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}`;
 
   return (
     <Box component="footer" sx={layout.statusBar}>
       <Cell
         label="Status"
-        value={engineReady ? 'All Systems Operational' : 'Initializing…'}
+        value={engineReady ? 'Ready' : 'Initializing…'}
         color={engineReady ? palette.ok : palette.warn}
       />
-      <Cell label="Time" value={`${now.toISOString().slice(11, 19)} UTC`} />
-      <Cell label="Center" value={center} />
-      <Cell label="Zoom" value={vs ? vs.zoom.toFixed(1) : '—'} />
+      <Cell label="Time" value={`${local} · ${utc} UTC`} />
+      <Cell label="Coordinate" value={coordinate} />
       <Cell label="Engine" value={mapEngineLabel[mapEngineStore.selectedEngine]} />
       <Cell label="Basemap" value={mapStyleStore.baseMap.toUpperCase()} />
+      <Cell label="System" value={online ? 'Online' : 'Offline'} color={online ? palette.ok : palette.danger} />
     </Box>
   );
 }

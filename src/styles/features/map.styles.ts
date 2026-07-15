@@ -1,7 +1,7 @@
 import type { SxProps, Theme } from '@mui/material/styles';
-import { palette, fonts } from '../system-ui/tokens';
+import { palette } from '../system-ui/tokens';
 
-/** Styles for the map feature: map frame, floating tool strip, coords chip. */
+/** Styles for the map feature: map frame, toolbar clusters, brightness card. */
 
 export const mapFrame: SxProps<Theme> = {
   position: 'relative',
@@ -27,57 +27,50 @@ export const engineContainer: SxProps<Theme> = {
 export const toolStripWrap: SxProps<Theme> = {
   position: 'absolute',
   top: 10,
-  left: '50%',
-  transform: 'translateX(-50%)',
+  left: 12,
   zIndex: 1100,
-  // Shrink-wrap to content: with `left: 50%` the box would otherwise cap at
-  // half the map width and wrap early.
-  width: 'max-content',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'flex-start',
+  gap: 1,
   maxWidth: 'calc(100% - 110px)',
 };
 
+/** Row of bordered tool clusters (reference design groups). */
 export const toolStrip: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
   flexWrap: 'wrap',
-  gap: 0.5,
-  px: 0.75,
-  py: 0.5,
+  gap: 0.75,
+};
+
+/** One bordered cluster of icon buttons inside the toolbar. */
+export const toolCluster: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 0.25,
+  px: 0.5,
+  py: 0.4,
+  borderRadius: 1.5,
   bgcolor: palette.overlay,
+  border: `1px solid ${palette.borderBright}`,
   backdropFilter: 'blur(4px)',
 };
 
-export const toolStripDivider: SxProps<Theme> = {
-  mx: 0.5,
-  my: 0.5,
-  alignSelf: 'stretch',
-};
-
-export const coordsWrap: SxProps<Theme> = {
-  position: 'absolute',
-  bottom: 12,
-  left: 12,
-  zIndex: 1100,
-};
-
-export const coordsChip: SxProps<Theme> = {
+/** Always-visible brightness card under the toolbar. */
+export const brightnessCard: SxProps<Theme> = {
+  width: 220,
   px: 1.5,
-  py: 0.75,
-  fontFamily: fonts.mono,
-  fontSize: '0.75rem',
-  letterSpacing: '0.02em',
+  py: 1,
+  borderRadius: 1.5,
   bgcolor: palette.overlay,
-  pointerEvents: 'none',
-  userSelect: 'none',
-  width: 'fit-content',
+  border: `1px solid ${palette.borderBright}`,
+  backdropFilter: 'blur(4px)',
 };
 
-/** Popover body for the brightness slider. */
-export const brightnessPopover: SxProps<Theme> = {
+export const brightnessHeader: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
-  gap: 1.5,
-  px: 2,
-  py: 1,
-  width: 220,
+  justifyContent: 'space-between',
+  mb: 0.25,
 };

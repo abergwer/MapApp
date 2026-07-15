@@ -13,8 +13,8 @@ export type RailSide = 'left' | 'right';
 
 export type VideoMode = 'docked' | 'floating';
 
-/** Views selectable in the left icon-rail navigator. */
-export type LeftViewId = 'entities' | 'mapTools' | 'layers' | 'missiles';
+/** Views selectable via the left panel tabs. */
+export type LeftViewId = 'entities' | 'layers' | 'missiles';
 
 export interface FloatRect {
   x: number;
@@ -27,15 +27,16 @@ export class UIVisibilityStore {
   minimapVisible = true;
   videoVisible = true;
 
-  /** Active view in the left icon-rail navigator. */
-  activeLeftView: LeftViewId = 'layers';
-
-  /** Floating tool strip over the map (optional — panel controls mirror it). */
-  toolbarVisible = false;
+  /** Active view in the left panel tabs. */
+  activeLeftView: LeftViewId = 'entities';
 
   /** Docked in the right rail, or floating over the map. */
   videoMode: VideoMode = 'docked';
   videoFloatRect: FloatRect = { x: 24, y: 56, width: 320, height: 260 };
+
+  /** 3D chase view: docked in the right rail, or floating over the map. */
+  view3dMode: VideoMode = 'docked';
+  view3dFloatRect: FloatRect = { x: 56, y: 88, width: 380, height: 320 };
 
   /** Rails collapse to a narrow icon strip so the map gets wider. */
   railCollapsed: Record<RailSide, boolean> = { left: false, right: false };
@@ -65,14 +66,10 @@ export class UIVisibilityStore {
     this.layerVisibility[id] = value;
   }
 
-  /** Select a left-nav view (and make sure the content column is open). */
+  /** Select a left-panel view (and make sure the panel is open). */
   setActiveLeftView(id: LeftViewId) {
     this.activeLeftView = id;
     this.railCollapsed.left = false;
-  }
-
-  setToolbarVisible(value: boolean) {
-    this.toolbarVisible = value;
   }
 
   setVideoMode(mode: VideoMode) {
@@ -81,6 +78,14 @@ export class UIVisibilityStore {
 
   setVideoFloatRect(rect: FloatRect) {
     this.videoFloatRect = rect;
+  }
+
+  setView3dMode(mode: VideoMode) {
+    this.view3dMode = mode;
+  }
+
+  setView3dFloatRect(rect: FloatRect) {
+    this.view3dFloatRect = rect;
   }
 
   toggleRail(side: RailSide) {

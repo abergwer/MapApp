@@ -1,9 +1,10 @@
 {
-  "MapLibreTilesURL": "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-  "LeafletTilesURL": "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-  "CesiumTilesURL": "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
-  "MinimalTilesURL": "https://a.basemaps.cartocdn.com/dark_nolabels/{z}/{x}/{y}.png",
+  "MapLibreTilesURL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "LeafletTilesURL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "CesiumTilesURL": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+  "MinimalTilesURL": "https://a.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}.png",
   "MapStyles": {
+    "light": "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
     "dark": "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
     "satellite": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
   },

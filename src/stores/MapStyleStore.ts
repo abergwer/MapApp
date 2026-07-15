@@ -1,11 +1,11 @@
 import { makeAutoObservable } from 'mobx';
 
-export type BaseMap = 'dark' | 'satellite';
+export type BaseMap = 'light' | 'dark' | 'satellite';
 
 export class MapStyleStore {
   /** Basemap brightness, 0–120%. */
   brightness = 100;
-  baseMap: BaseMap = 'dark';
+  baseMap: BaseMap = 'light';
 
   constructor() {
     makeAutoObservable(this);

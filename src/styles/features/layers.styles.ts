@@ -40,7 +40,25 @@ export const targetLabelProps = {
 };
 
 // ── LAYERS panel ───────────────────────────────────────────────────────
-
+/** "Search layers" input (reference design). */
+export const searchField: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 1,
+  px: 1.25,
+  py: 0.6,
+  mb: 1.25,
+  borderRadius: 1.5,
+  bgcolor: palette.bg,
+  border: `1px solid ${palette.border}`,
+  '& input': {
+    all: 'unset',
+    flex: 1,
+    fontSize: 13,
+    color: palette.textPrimary,
+    '&::placeholder': { color: palette.textDisabled },
+  },
+};
 export const groupTitle: SxProps<Theme> = {
   ...microLabel,
   fontSize: 9.5,

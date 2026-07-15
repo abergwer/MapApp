@@ -19,10 +19,14 @@ import droneIcon from '../assets/drone.png';
 // Playbox roughly covering Israel — targets are steered back inside it.
 const BOUNDS = { minLng: 34.3, maxLng: 35.6, minLat: 31.3, maxLat: 33.1 };
 
-/** Ticker cadence + how many simulated seconds pass per tick (so the
- *  movement is clearly visible at demo zoom levels). */
-const TICK_MS = 1000;
-const SIM_SECONDS_PER_TICK = 10;
+/**
+ * Ticker cadence. Movement is time-scaled, so a smaller TICK_MS only makes
+ * the motion smoother — not faster. TIME_COMPRESSION is how many simulated
+ * seconds pass per real second (1 = real-time speeds).
+ */
+const TICK_MS = 100;
+const TIME_COMPRESSION = 3;
+const SIM_SECONDS_PER_TICK = (TICK_MS / 1000) * TIME_COMPRESSION;
 
 // ── Seeds ──────────────────────────────────────────────────────────────
 
@@ -57,6 +61,9 @@ interface MissileTrack {
 
 const TRACK_STEPS = 60;
 const TRACK_WINDOW = 8;
+/** Trajectory steps advanced per simulated second (≈0.5 km/s — missile-ish). */
+const MISSILE_STEPS_PER_SIM_SECOND = 0.3;
+const MAX_STEP = TRACK_STEPS - TRACK_WINDOW;
 
 function trajectory(from: [number, number], to: [number, number]): [number, number][] {
   return Array.from({ length: TRACK_STEPS }, (_, i) => {
@@ -72,17 +79,30 @@ const MISSILE_TRACKS: MissileTrack[] = [
   { id: 'MSL-094', trajectory: trajectory([34.45, 32.6], [35.2, 32.9]) },
 ];
 
+/** Interpolated trajectory point at a fractional step (smooth motion). */
+function pointAt(track: MissileTrack, s: number): [number, number] {
+  const i = Math.min(Math.floor(s), TRACK_STEPS - 1);
+  const j = Math.min(i + 1, TRACK_STEPS - 1);
+  const f = s - i;
+  const [ax, ay] = track.trajectory[i];
+  const [bx, by] = track.trajectory[j];
+  return [ax + (bx - ax) * f, ay + (by - ay) * f];
+}
+
 /**
  * Build the visible track window + simulated telemetry for one missile.
- * Heading derives from the trajectory; pitch/roll are smooth oscillations
- * so the 3D view visibly moves; altitude descends along the flight.
+ * `step` is fractional so motion stays smooth at any tick rate. Heading
+ * derives from the trajectory; pitch/roll are smooth oscillations so the
+ * 3D view visibly moves; altitude descends along the flight.
  */
 function missileWindow(track: MissileTrack, step: number, index: number): Missile {
-  const path = track.trajectory.slice(step, step + TRACK_WINDOW);
+  const path = Array.from({ length: TRACK_WINDOW }, (_, k) =>
+    pointAt(track, step + k),
+  ) as [number, number][];
   const [ax, ay] = path[path.length - 2];
   const [bx, by] = path[path.length - 1];
   const heading = ((Math.atan2(bx - ax, by - ay) * 180) / Math.PI + 360) % 360;
-  const progress = step / (TRACK_STEPS - TRACK_WINDOW);
+  const progress = step / MAX_STEP;
   const phase = step / 2 + index * 2;
   return {
     id: track.id,
@@ -149,7 +169,9 @@ const toRad = (deg: number) => (deg * Math.PI) / 180;
 function moveTarget<T extends AirCraftTarget | DroneTarget>(target: T): T {
   const km = (target.speedKts * 1.852 * SIM_SECONDS_PER_TICK) / 3600;
   const deg = km / 111;
-  let heading = target.heading + (Math.random() - 0.5) * 6;
+  // Heading drift scaled by tick length so the wander rate is the same at
+  // any tick frequency.
+  let heading = target.heading + (Math.random() - 0.5) * 2 * SIM_SECONDS_PER_TICK;
   let lng = target.position[0] + deg * Math.sin(toRad(heading));
   let lat = target.position[1] + deg * Math.cos(toRad(heading));
   if (lng < BOUNDS.minLng || lng > BOUNDS.maxLng || lat < BOUNDS.minLat || lat > BOUNDS.maxLat) {
@@ -167,12 +189,10 @@ function moveTarget<T extends AirCraftTarget | DroneTarget>(target: T): T {
 export function startMockTicker(stores: RootStore): () => void {
   let step = 0;
   const interval = setInterval(() => {
-    step += 1;
+    step = (step + SIM_SECONDS_PER_TICK * MISSILE_STEPS_PER_SIM_SECOND) % MAX_STEP;
     stores.airCraftStore.setTargets(stores.airCraftStore.targets.map(moveTarget));
     stores.droneStore.setTargets(stores.droneStore.targets.map(moveTarget));
-    stores.missileStore.setAll(
-      MISSILE_TRACKS.map((t, i) => missileWindow(t, step % (TRACK_STEPS - TRACK_WINDOW), i)),
-    );
+    stores.missileStore.setAll(MISSILE_TRACKS.map((t, i) => missileWindow(t, step, i)));
   }, TICK_MS);
   return () => clearInterval(interval);
 }

@@ -22,6 +22,8 @@ export interface MapEngine {
   getViewState(): MapViewState;
   onViewChange(callback: (viewState: MapViewState) => void): () => void;
   onMapClick?(callback: (lat: number, lng: number) => void): void;
+  /** Pan the view so the given coordinate is centered (keeps zoom). */
+  setCenter?(lat: number, lng: number): void;
 
   // Draw flows. The engine assigns a unique `id` to each freshly drawn
   // shape and surfaces it as the first arg of the onComplete callback,

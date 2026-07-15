@@ -227,6 +227,10 @@ export class MapLibreEngine implements MapEngine {
     this.measure?.removeAll();
   }
 
+  setCenter(lat: number, lng: number): void {
+    this.map?.easeTo({ center: [lng, lat] });
+  }
+
   // ── Basemap ──────────────────────────────────────────────────────────
 
   /**

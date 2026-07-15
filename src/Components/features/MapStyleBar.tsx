@@ -1,101 +1,58 @@
-import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import IconButton from '@mui/material/IconButton';
-import Popover from '@mui/material/Popover';
-import Box from '@mui/material/Box';
-import Slider from '@mui/material/Slider';
 import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import MapIcon from '@mui/icons-material/Map';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import { useStores } from '../../stores/StoreContext';
+import type { BaseMap } from '../../stores/MapStyleStore';
 import { toolButton } from '../../styles/common-ui/panel.styles';
-import { brightnessPopover } from '../../styles/features/map.styles';
 import config from '../../../config.json';
 
+const BASEMAPS: { id: BaseMap; label: string; Icon: typeof WbSunnyIcon }[] = [
+  { id: 'light', label: 'Light basemap', Icon: WbSunnyIcon },
+  { id: 'dark', label: 'Dark basemap', Icon: DarkModeIcon },
+  { id: 'satellite', label: 'Satellite basemap', Icon: SatelliteAltIcon },
+];
+
 /**
- * Map style controls as an icon strip: brightness (popover slider),
- * dark/satellite basemap toggle and the minimap/video panel toggles.
- * State lives in MapStyleStore + UIVisibilityStore; the brightness filter
- * itself is applied by MapWrapper (single owner of the map container).
+ * Basemap + panel toggles for the map toolbar. State lives in
+ * MapStyleStore + UIVisibilityStore; the brightness filter is applied by
+ * MapWrapper (single owner of the map container).
  */
 function MapStyleBarImpl() {
   const { mapEngineStore, mapStyleStore, uiVisibilityStore } = useStores();
   const engine = mapEngineStore.engine;
-  const { brightness, baseMap } = mapStyleStore;
+  const { baseMap } = mapStyleStore;
   const { minimapVisible, videoVisible } = uiVisibilityStore;
-  const [brightnessAnchor, setBrightnessAnchor] = useState<HTMLElement | null>(null);
+  const supportsBaseMap = Boolean(engine?.setBaseMap);
 
-  const toggleSatellite = () => {
-    if (!engine?.setBaseMap) return;
-    const next = baseMap === 'satellite' ? 'dark' : 'satellite';
+  const handleBaseMap = (next: BaseMap) => {
+    if (!engine?.setBaseMap || baseMap === next) return;
     engine.setBaseMap(config.MapStyles[next]);
     mapStyleStore.setBaseMap(next);
   };
 
-  const supportsBaseMap = Boolean(engine?.setBaseMap);
-  const isSatellite = baseMap === 'satellite';
-
   return (
     <>
-      <Tooltip title={`Map brightness (${brightness}%)`} arrow>
-        <span>
-          <IconButton
-            size="small"
-            onClick={(e) => setBrightnessAnchor(e.currentTarget)}
-            sx={toolButton(Boolean(brightnessAnchor))}
-            aria-label="Map brightness"
-          >
-            <WbSunnyIcon fontSize="small" />
-          </IconButton>
-        </span>
-      </Tooltip>
-      <Popover
-        open={Boolean(brightnessAnchor)}
-        anchorEl={brightnessAnchor}
-        onClose={() => setBrightnessAnchor(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Box sx={brightnessPopover}>
-          <WbSunnyIcon fontSize="small" sx={{ opacity: 0.85 }} />
-          <Slider
-            size="small"
-            value={brightness}
-            min={0}
-            max={120}
-            step={1}
-            onChange={(_, v) => mapStyleStore.setBrightness(v as number)}
-            aria-label="Map brightness"
-          />
-          <Typography
-            variant="caption"
-            sx={{ minWidth: 36, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}
-          >
-            {brightness}%
-          </Typography>
-        </Box>
-      </Popover>
-
-      <Tooltip
-        title={supportsBaseMap ? 'Toggle satellite basemap' : 'Not supported by this engine'}
-        arrow
-      >
-        {/* span wrapper so Tooltip still fires when the button is disabled */}
-        <span>
-          <IconButton
-            size="small"
-            onClick={toggleSatellite}
-            disabled={!supportsBaseMap}
-            sx={toolButton(isSatellite)}
-            aria-label="Toggle satellite basemap"
-          >
-            <SatelliteAltIcon fontSize="small" />
-          </IconButton>
-        </span>
-      </Tooltip>
+      {BASEMAPS.map(({ id, label, Icon }) => (
+        <Tooltip key={id} title={supportsBaseMap ? label : 'Not supported by this engine'} arrow>
+          {/* span wrapper so Tooltip still fires when the button is disabled */}
+          <span>
+            <IconButton
+              size="small"
+              onClick={() => handleBaseMap(id)}
+              disabled={!supportsBaseMap}
+              sx={toolButton(baseMap === id)}
+              aria-label={label}
+            >
+              <Icon fontSize="small" />
+            </IconButton>
+          </span>
+        </Tooltip>
+      ))}
 
       <Tooltip title={minimapVisible ? 'Hide minimap panel' : 'Show minimap panel'} arrow>
         <IconButton
