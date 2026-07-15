@@ -1,8 +1,8 @@
 import type { Layer } from '@deck.gl/core';
 import { createPolygonLayer } from '../Layers/PolygonLayer';
 import { createMissilesLayer } from '../Layers/MissileLayer';
-import { createDroneLayer } from '../Layers/DroneLayer';
-import { createAirCraftLayer } from '../Layers/AirCraftLayer';
+import { createDroneLayers } from '../Layers/DroneLayer';
+import { createAirCraftLayers } from '../Layers/AirCraftLayer';
 import { createRangeRingsLayer } from '../Layers/RangeRingsLayer';
 import { createDrawnShapeLayers } from '../Layers/DrawnShapeLayers';
 import type { RootStore } from '../../stores/RootStore';
@@ -37,6 +37,12 @@ export const LAYER_GROUPS: readonly LayerGroup[] = [
     id: 'drones',
     label: 'Drones + Rings',
     layers: [
+      { id: 'drone-trails', label: 'Drone Trails' },
+      { id: 'drone-trails-core', label: 'Drone Trail Core' },
+      { id: 'drone-glow-bloom', label: 'Drone Glow' },
+      { id: 'drone-glow-glass', label: 'Drone Glass' },
+      { id: 'drone-glow-lamp', label: 'Drone Lamp' },
+      { id: 'drone-glow-spark', label: 'Drone Spark' },
       { id: 'drone-layer', label: 'Drones' },
       { id: 'range-rings', label: 'Range Rings' },
     ],
@@ -49,7 +55,15 @@ export const LAYER_GROUPS: readonly LayerGroup[] = [
   {
     id: 'aircraft',
     label: 'Aircraft',
-    layers: [{ id: 'aircraft-layer', label: 'Aircraft' }],
+    layers: [
+      { id: 'aircraft-trails', label: 'Aircraft Trails' },
+      { id: 'aircraft-trails-core', label: 'Aircraft Trail Core' },
+      { id: 'aircraft-glow-bloom', label: 'Aircraft Glow' },
+      { id: 'aircraft-glow-glass', label: 'Aircraft Glass' },
+      { id: 'aircraft-glow-lamp', label: 'Aircraft Lamp' },
+      { id: 'aircraft-glow-spark', label: 'Aircraft Spark' },
+      { id: 'aircraft-layer', label: 'Aircraft' },
+    ],
   },
 ];
 
@@ -62,17 +76,24 @@ export const LAYER_GROUPS: readonly LayerGroup[] = [
  * underlying store collections change.
  */
 export function buildLayers(stores: RootStore): Layer[] {
+  const selectedAircraft =
+    stores.trackedTargetStore.selected?.kind === 'aircraft'
+      ? stores.trackedTargetStore.selected.id
+      : null;
+  const selectedDrone =
+    stores.trackedTargetStore.selected?.kind === 'drone'
+      ? stores.trackedTargetStore.selected.id
+      : null;
+
   return [
-    // User-drawn shapes (render-only; the selected one is owned by the engine).
     ...createDrawnShapeLayers(
       stores.drawingToolStore.completedShapes,
       stores.drawingToolStore.selectedId,
     ),
     createPolygonLayer(stores.polygonStore.polygons),
     createMissilesLayer(stores.missileStore.missiles),
-    createDroneLayer(stores.droneStore.targets),
-    createAirCraftLayer(stores.airCraftStore.targets),
+    ...createDroneLayers(stores.droneStore.targets, selectedDrone),
+    ...createAirCraftLayers(stores.airCraftStore.targets, selectedAircraft),
     createRangeRingsLayer(stores.droneStore.targets),
   ];
 }
-

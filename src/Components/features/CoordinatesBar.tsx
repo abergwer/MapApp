@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
 import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
@@ -7,14 +7,18 @@ import Typography from '@mui/material/Typography';
 import { useStores } from '../../stores/StoreContext';
 
 function CoordinatesBarImpl() {
-  const { mapEngineStore } = useStores();
+  const { mapEngineStore, mapCursorStore } = useStores();
   const engine = mapEngineStore.engine;
-  const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     if (!engine?.onMapClick) return;
-    engine.onMapClick((lat, lng) => setCoords({ lat, lng }));
-  }, [engine]);
+    engine.onMapClick((lat, lng) => mapCursorStore.setCoordinate(lat, lng));
+  }, [engine, mapCursorStore]);
+
+  const coords =
+    mapCursorStore.lat != null && mapCursorStore.lng != null
+      ? { lat: mapCursorStore.lat, lng: mapCursorStore.lng }
+      : null;
 
   return (
     <Paper

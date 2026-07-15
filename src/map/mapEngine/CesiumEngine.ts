@@ -122,6 +122,15 @@ export class CesiumEngine implements MapEngine {
     this.viewer?.resize();
   }
 
+  setMapInteractionEnabled(enabled: boolean): void {
+    const controller = this.viewer?.scene?.screenSpaceCameraController;
+    if (!controller) return;
+    controller.enableTranslate = enabled;
+    controller.enableRotate = enabled;
+    controller.enableZoom = enabled;
+    controller.enableTilt = enabled;
+  }
+
   destroy(): void {
     this.clickHandler?.destroy();
     this.clickHandler = undefined;
@@ -158,5 +167,16 @@ export class CesiumEngine implements MapEngine {
 
   cancelDrawing(): void {
     throw new Error('Method not implemented.');
+  }
+
+  flyTo(lngLat: [number, number], options?: { zoom?: number; durationMs?: number }): void {
+    if (!this.viewer) return;
+    const [lng, lat] = lngLat;
+    const vs = this.getViewState();
+    const zoom = options?.zoom ?? vs.zoom;
+    this.viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(lng, lat, zoomToHeight(zoom)),
+      duration: (options?.durationMs ?? 700) / 1000,
+    });
   }
 }

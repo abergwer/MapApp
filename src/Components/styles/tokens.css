@@ -1,8 +1,11 @@
 /**
- * MapApp design tokens — single source of truth for the UI system.
- * Change values here to update fonts, colors, spacing, and radii app-wide.
+ * MapApp design tokens — visual source of truth for the UI system.
+ * Hub: `src/config/designSystem.config.ts` (`mode` → `data-app-theme` on <html>).
+ * Dark = ops look. Light = bright shell / menus / panels (`[data-app-theme='light']`).
+ * Edit colors/spacing here; components and MUI variants consume `var(--app-*)`.
  */
-:root {
+:root,
+[data-app-theme='dark'] {
   /* ── Typography ─────────────────────────────────────────────────────── */
   --app-font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
   --app-font-family-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
@@ -29,14 +32,32 @@
   --app-color-bg-surface: rgba(20, 24, 32, 0.95);
   --app-color-bg-surface-soft: rgba(20, 24, 32, 0.92);
   --app-color-bg-surface-muted: rgba(20, 24, 32, 0.88);
+  --app-color-bg-shell-header: rgba(12, 18, 28, 0.98);
+  --app-color-bg-shell-footer: rgba(12, 18, 28, 0.98);
+  --app-color-bg-nav-active: rgba(47, 140, 255, 0.16);
+  --app-color-bg-nav-hover: rgba(47, 140, 255, 0.08);
   --app-color-bg-card: rgba(18, 28, 42, 0.94);
   --app-color-bg-card-header: rgba(255, 255, 255, 0.02);
   --app-color-bg-card-header-hover: rgba(255, 255, 255, 0.03);
+  --app-color-bg-card-chrome: rgba(8, 14, 24, 0.72);
   --app-color-bg-map: #1f2937;
   --app-color-bg-control: rgba(8, 12, 18, 0.65);
   --app-color-bg-control-hover: rgba(8, 12, 18, 0.75);
   --app-color-bg-media: #111827;
   --app-color-bg-video: #000000;
+  --app-color-bg-chrome: rgba(12, 16, 24, 0.78);
+  --app-color-bg-chrome-solid: rgba(12, 16, 24, 0.92);
+  --app-color-bg-tool-tile: rgba(6, 14, 26, 0.9);
+  --app-color-bg-tool-tile-hover: rgba(77, 228, 255, 0.12);
+  --app-color-bg-map-type: rgba(10, 16, 26, 0.88);
+  --app-color-bg-entity-category: rgba(8, 18, 32, 0.82);
+  --app-color-bg-sidebar-inset: rgba(4, 10, 18, 0.55);
+  --app-color-bg-sidebar-panel: rgba(6, 14, 26, 0.45);
+  --app-color-bg-alerts: linear-gradient(
+    180deg,
+    rgba(40, 12, 22, 0.55) 0%,
+    rgba(12, 14, 24, 0.9) 100%
+  );
 
   /* ── Colors: text ───────────────────────────────────────────────────── */
   --app-color-text-primary: #f8fafc;
@@ -46,6 +67,13 @@
   --app-color-text-faint: rgba(255, 255, 255, 0.35);
   --app-color-text-control: rgba(226, 232, 240, 0.85);
   --app-color-text-meta: rgba(255, 255, 255, 0.65);
+  --app-color-text-on-chrome: #ffffff;
+  --app-color-text-on-accent: #041018;
+  --app-color-text-tool-tile: rgba(186, 230, 253, 0.75);
+  --app-color-text-tool-tile-hover: #e8f7ff;
+  --app-color-text-row: #dcefff;
+  --app-color-text-empty: rgba(148, 197, 220, 0.55);
+  --app-color-text-chevron: rgba(125, 249, 255, 0.7);
 
   /* ── Colors: brand / primary ────────────────────────────────────────── */
   --app-color-primary: #2f8cff;
@@ -70,16 +98,28 @@
   /* ── Colors: borders ────────────────────────────────────────────────── */
   --app-color-border-subtle: rgba(255, 255, 255, 0.06);
   --app-color-border-default: rgba(255, 255, 255, 0.08);
+  --app-color-border-operational: rgba(96, 130, 170, 0.22);
   --app-color-border-card: rgba(96, 130, 170, 0.28);
   --app-color-border-section: rgba(96, 130, 170, 0.14);
   --app-color-border-control: rgba(96, 130, 170, 0.22);
   --app-color-border-control-soft: rgba(255, 255, 255, 0.08);
+  --app-color-border-chrome: rgba(255, 255, 255, 0.14);
+  --app-color-border-tool-tile: rgba(77, 228, 255, 0.28);
+  --app-color-border-map-type: rgba(96, 130, 170, 0.16);
+  --app-color-border-entity-category: rgba(77, 228, 255, 0.22);
+  --app-color-border-row-hover: rgba(77, 228, 255, 0.12);
+  --app-color-border-alerts: rgba(255, 107, 138, 0.28);
 
   /* ── Colors: semantic ───────────────────────────────────────────────── */
+  --app-color-success: #34d399;
+  --app-color-warning: #fbbf24;
+  --app-color-warning-bg: rgba(180, 120, 20, 0.18);
+  --app-color-warning-border: rgba(251, 191, 36, 0.4);
   --app-color-danger: #f87171;
   --app-color-danger-light: #fca5a5;
   --app-color-danger-bg: rgba(127, 29, 29, 0.22);
   --app-color-danger-border: rgba(248, 113, 113, 0.42);
+  --app-color-danger-hover-bg: rgba(127, 29, 29, 0.34);
   --app-color-live: #34d399;
   --app-color-live-bg: rgba(16, 185, 129, 0.18);
   --app-color-live-border: rgba(52, 211, 153, 0.45);
@@ -88,6 +128,62 @@
   --app-color-overlay-scrim: rgba(0, 0, 0, 0.55);
   --app-color-overlay-line: rgba(255, 255, 255, 0.58);
   --app-color-overlay-corner: rgba(255, 255, 255, 0.62);
+
+  /* Soft entity icon accents (Entities panel) — muted, ops-friendly */
+  --app-color-entity-point: #7eb6ff;
+  --app-color-entity-line: #6bc9e0;
+  --app-color-entity-polygon: #7ec9a4;
+  --app-color-entity-circle: #e0c07a;
+  --app-color-entity-ellipse: #d4a574;
+  --app-color-entity-sector: #8fb4d4;
+  --app-color-entity-route: #6dbfb0;
+
+  /* Unified glowing accent for all entity icons */
+  --app-color-entity-glow: #4de4ff;
+  --app-color-entity-glow-soft: rgba(77, 228, 255, 0.65);
+  --app-color-entity-glow-lamp: 0 0 6px rgba(77, 228, 255, 0.85),
+    0 0 16px rgba(56, 189, 248, 0.45);
+
+  /* Left sidebar neon ops accents (Layers / Entities) */
+  --app-color-sidebar-bg: linear-gradient(
+    180deg,
+    rgba(10, 22, 38, 0.98) 0%,
+    rgba(8, 14, 24, 0.98) 55%,
+    rgba(12, 18, 30, 0.98) 100%
+  );
+  --app-color-sidebar-title: #e8f7ff;
+  --app-color-sidebar-title-glow: 0 0 10px rgba(77, 228, 255, 0.35);
+  --app-color-sidebar-accent: #4de4ff;
+  --app-color-sidebar-accent-soft: rgba(77, 228, 255, 0.22);
+  --app-color-sidebar-accent-border: rgba(77, 228, 255, 0.55);
+  --app-color-sidebar-lime: #5dffb0;
+  --app-color-sidebar-amber: #ffd36a;
+  --app-color-sidebar-rose: #ff6b8a;
+  --app-color-sidebar-violet: #c4b5fd;
+  --app-color-sidebar-row-hover: rgba(77, 228, 255, 0.1);
+  --app-color-sidebar-search-bg: rgba(6, 14, 26, 0.85);
+  --app-color-sidebar-search-border: rgba(77, 228, 255, 0.28);
+  --app-color-sidebar-search-focus: rgba(77, 228, 255, 0.65);
+  --app-shadow-sidebar-glow: inset 0 1px 0 rgba(77, 228, 255, 0.08),
+    0 0 24px rgba(47, 140, 255, 0.08);
+  --app-color-sidebar-edge: rgba(77, 228, 255, 0.2);
+  --app-color-sidebar-edge-glow: rgba(47, 140, 255, 0.08);
+
+  --app-color-tab-active-bg: linear-gradient(180deg, #7cf0ff 0%, #4de4ff 100%);
+  --app-color-tab-active-border: rgba(125, 249, 255, 0.8);
+  --app-color-tab-active-shadow: 0 0 0 1px rgba(77, 228, 255, 0.35),
+    0 0 14px rgba(77, 228, 255, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+
+  /* Map nav chrome */
+  --app-color-nav-btn-hover: rgba(94, 200, 255, 0.12);
+  --app-color-nav-btn-active: rgba(94, 200, 255, 0.18);
+  --app-color-nav-btn-active-text: #5ec8ff;
+  --app-shadow-chrome: 0 0 0 1px rgba(47, 140, 255, 0.12),
+    0 8px 24px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --app-shadow-chrome-hover: 0 0 0 1px rgba(94, 200, 255, 0.2),
+    0 8px 28px rgba(0, 0, 0, 0.5), 0 0 18px rgba(94, 200, 255, 0.18);
+  --app-shadow-chrome-stack: 0 0 0 1px rgba(47, 140, 255, 0.1),
+    0 8px 22px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.05);
 
   /* ── Spacing ────────────────────────────────────────────────────────── */
   --app-space-1: 2px;
@@ -101,15 +197,25 @@
   --app-tools-grid-gap: var(--app-space-7);
 
   /* ── Radius ─────────────────────────────────────────────────────────── */
-  --app-radius-sm: 4px;
-  --app-radius-md: 6px;
-  --app-radius-lg: 8px;
+  --app-radius-sm: 2px;
+  --app-radius-md: 4px;
+  --app-radius-lg: 5px;
   --app-radius-pill: 999px;
 
   /* ── Shadows ────────────────────────────────────────────────────────── */
   --app-shadow-card: 0 0 0 1px rgba(47, 140, 255, 0.1),
     0 2px 12px rgba(0, 0, 0, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.04);
   --app-shadow-brand-icon: 0 1px 4px rgba(0, 0, 0, 0.35);
+  --app-shadow-tool-tile: inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 0 14px rgba(77, 228, 255, 0.12);
+  --app-shadow-entity-category: inset 0 1px 0 rgba(77, 228, 255, 0.08),
+    0 0 14px rgba(77, 228, 255, 0.08);
+
+  --app-icon-filter-light: brightness(0) invert(0.82);
+  --app-icon-filter-active: brightness(0) invert(1);
+  --app-icon-filter-muted: brightness(0) invert(0.55);
+  --app-icon-glow-filter: drop-shadow(0 0 4px var(--app-color-entity-glow-soft))
+    drop-shadow(0 0 10px rgba(77, 228, 255, 0.35));
 
   /* ── Icon sizes ─────────────────────────────────────────────────────── */
   --app-icon-size-xs: 16px;
@@ -125,10 +231,211 @@
   --app-transition-normal: 0.18s ease;
 
   /* ── Panel layout helpers ─────────────────────────────────────────── */
-  --app-panel-gap: var(--app-space-5);
-  --app-panel-padding-y: var(--app-space-4);
+  --app-panel-gap: var(--app-space-3);
+  --app-panel-padding-y: var(--app-space-3);
   --app-panel-header-gap: var(--app-space-2);
-  --app-section-header-padding: 9px var(--app-space-5);
-  --app-section-body-padding: var(--app-space-5);
+  --app-panel-gap-compact: var(--app-space-3);
+  --app-section-header-padding: 6px var(--app-space-4);
+  --app-section-body-padding: var(--app-space-4);
   --app-media-aspect-ratio: 16 / 9;
+
+  /* ── Intel Feed avatars (MUI Avatar variants) ───────────────────────── */
+  --app-intel-aircraft-border: rgba(255, 120, 120, 0.75);
+  --app-intel-aircraft-bg: radial-gradient(
+    circle at 50% 45%,
+    rgba(255, 90, 90, 0.55) 0%,
+    rgba(185, 28, 28, 0.28) 55%,
+    rgba(127, 29, 29, 0.18) 100%
+  );
+  --app-intel-aircraft-shadow: 0 0 0 1px rgba(255, 80, 80, 0.35),
+    0 0 14px rgba(255, 60, 60, 0.65), 0 0 28px rgba(239, 68, 68, 0.4);
+  --app-intel-aircraft-icon-filter: brightness(1.45) contrast(1.25) saturate(1.35)
+    drop-shadow(0 0 4px rgba(255, 120, 120, 0.95))
+    drop-shadow(0 0 10px rgba(255, 60, 60, 0.85));
+
+  --app-intel-drone-border: rgba(125, 249, 255, 0.8);
+  --app-intel-drone-bg: radial-gradient(
+    circle at 50% 45%,
+    rgba(125, 249, 255, 0.55) 0%,
+    rgba(14, 165, 233, 0.28) 55%,
+    rgba(8, 80, 120, 0.2) 100%
+  );
+  --app-intel-drone-shadow: 0 0 0 1px rgba(77, 228, 255, 0.4),
+    0 0 14px rgba(77, 228, 255, 0.7), 0 0 28px rgba(56, 189, 248, 0.45);
+  --app-intel-drone-icon-filter: brightness(1.5) contrast(1.25) saturate(1.4)
+    drop-shadow(0 0 4px rgba(186, 250, 255, 1))
+    drop-shadow(0 0 10px rgba(77, 228, 255, 0.95));
+
+  --app-intel-avatar-size: 42px;
+  --app-intel-avatar-icon-size: 26px;
+  --app-intel-avatar-radius: 10px;
+
+  color-scheme: dark;
+}
+
+/* ── Light theme — clean bright ops chrome ─────────────────────────────── */
+[data-app-theme='light'] {
+  --app-color-bg-app: #dce3ee;
+  --app-color-bg-shell: #f7f9fc;
+  --app-color-bg-surface: #ffffff;
+  --app-color-bg-surface-soft: #ffffff;
+  --app-color-bg-surface-muted: #f3f6fa;
+  --app-color-bg-shell-header: #ffffff;
+  --app-color-bg-shell-footer: #ffffff;
+  --app-color-bg-nav-active: rgba(29, 78, 216, 0.1);
+  --app-color-bg-nav-hover: rgba(29, 78, 216, 0.06);
+  --app-color-bg-card: #ffffff;
+  --app-color-bg-card-header: #f3f6fa;
+  --app-color-bg-card-header-hover: #eef2f7;
+  --app-color-bg-card-chrome: #f3f6fa;
+  --app-color-bg-map: #cfd8e6;
+  --app-color-bg-control: #f3f6fa;
+  --app-color-bg-control-hover: #e8eef6;
+  --app-color-bg-media: #e8eef6;
+  --app-color-bg-video: #0f172a;
+  --app-color-bg-chrome: #ffffff;
+  --app-color-bg-chrome-solid: #ffffff;
+  --app-color-bg-tool-tile: #ffffff;
+  --app-color-bg-tool-tile-hover: rgba(29, 78, 216, 0.07);
+  --app-color-bg-map-type: #ffffff;
+  --app-color-bg-entity-category: #f7f9fc;
+  --app-color-bg-sidebar-inset: #e8eef6;
+  --app-color-bg-sidebar-panel: #ffffff;
+  --app-color-bg-alerts: linear-gradient(180deg, #fff5f7 0%, #ffffff 100%);
+
+  --app-color-text-primary: #152033;
+  --app-color-text-secondary: #243247;
+  --app-color-text-muted: #5b6b82;
+  --app-color-text-subtle: #7a8aa3;
+  --app-color-text-faint: #97a6bb;
+  --app-color-text-control: #243247;
+  --app-color-text-meta: #5b6b82;
+  --app-color-text-on-chrome: #152033;
+  --app-color-text-on-accent: #ffffff;
+  --app-color-text-tool-tile: #334155;
+  --app-color-text-tool-tile-hover: #1e3a8a;
+  --app-color-text-row: #243247;
+  --app-color-text-empty: #7a8aa3;
+  --app-color-text-chevron: #5b6b82;
+
+  --app-color-primary: #1d4ed8;
+  --app-color-primary-mui: #1d4ed8;
+  --app-color-primary-light: #3b82f6;
+  --app-color-primary-border: rgba(29, 78, 216, 0.7);
+  --app-color-primary-border-soft: rgba(29, 78, 216, 0.35);
+  --app-color-primary-border-faint: rgba(29, 78, 216, 0.18);
+  --app-color-primary-hover-bg: rgba(29, 78, 216, 0.07);
+  --app-color-primary-hover-bg-strong: rgba(29, 78, 216, 0.11);
+  --app-color-primary-rail-hover-bg: rgba(29, 78, 216, 0.06);
+  --app-color-primary-active-bg: linear-gradient(
+    180deg,
+    rgba(29, 78, 216, 0.16) 0%,
+    rgba(29, 78, 216, 0.08) 100%
+  );
+  --app-color-primary-glow: 0 0 0 1px rgba(29, 78, 216, 0.22),
+    0 2px 8px rgba(29, 78, 216, 0.12);
+  --app-color-rail-icon-glow: none;
+
+  --app-color-border-subtle: #e2e8f0;
+  --app-color-border-default: #d5dee9;
+  --app-color-border-operational: #c9d4e3;
+  --app-color-border-card: #d5dee9;
+  --app-color-border-section: #e2e8f0;
+  --app-color-border-control: #c9d4e3;
+  --app-color-border-control-soft: #e2e8f0;
+  --app-color-border-chrome: #c9d4e3;
+  --app-color-border-tool-tile: #c9d4e3;
+  --app-color-border-map-type: #d5dee9;
+  --app-color-border-entity-category: #d5dee9;
+  --app-color-border-row-hover: rgba(29, 78, 216, 0.14);
+  --app-color-border-alerts: rgba(225, 29, 72, 0.18);
+
+  --app-color-warning-bg: rgba(217, 119, 6, 0.1);
+  --app-color-warning-border: rgba(217, 119, 6, 0.32);
+  --app-color-danger: #dc2626;
+  --app-color-danger-light: #ef4444;
+  --app-color-danger-bg: rgba(220, 38, 38, 0.08);
+  --app-color-danger-border: rgba(220, 38, 38, 0.32);
+  --app-color-danger-hover-bg: rgba(220, 38, 38, 0.12);
+  --app-color-live: #047857;
+  --app-color-live-bg: rgba(4, 120, 87, 0.1);
+  --app-color-live-border: rgba(4, 120, 87, 0.32);
+  --app-color-live-glow: none;
+  --app-color-status-idle: #94a3b8;
+  --app-color-overlay-scrim: rgba(21, 32, 51, 0.28);
+  --app-color-overlay-line: rgba(21, 32, 51, 0.4);
+  --app-color-overlay-corner: rgba(21, 32, 51, 0.45);
+
+  --app-color-entity-glow: #1d4ed8;
+  --app-color-entity-glow-soft: rgba(29, 78, 216, 0.35);
+  --app-color-entity-glow-lamp: 0 0 0 1px rgba(29, 78, 216, 0.2),
+    0 2px 8px rgba(29, 78, 216, 0.12);
+
+  --app-color-sidebar-bg: #f7f9fc;
+  --app-color-sidebar-title: #152033;
+  --app-color-sidebar-title-glow: none;
+  --app-color-sidebar-accent: #1d4ed8;
+  --app-color-sidebar-accent-soft: rgba(29, 78, 216, 0.1);
+  --app-color-sidebar-accent-border: rgba(29, 78, 216, 0.35);
+  --app-color-sidebar-lime: #047857;
+  --app-color-sidebar-amber: #b45309;
+  --app-color-sidebar-rose: #be123c;
+  --app-color-sidebar-violet: #6d28d9;
+  --app-color-sidebar-row-hover: rgba(29, 78, 216, 0.06);
+  --app-color-sidebar-search-bg: #ffffff;
+  --app-color-sidebar-search-border: #c9d4e3;
+  --app-color-sidebar-search-focus: #1d4ed8;
+  --app-shadow-sidebar-glow: none;
+  --app-color-sidebar-edge: #c9d4e3;
+  --app-color-sidebar-edge-glow: transparent;
+
+  --app-color-tab-active-bg: #1d4ed8;
+  --app-color-tab-active-border: #1d4ed8;
+  --app-color-tab-active-shadow: 0 1px 3px rgba(29, 78, 216, 0.28);
+
+  --app-color-nav-btn-hover: rgba(29, 78, 216, 0.08);
+  --app-color-nav-btn-active: rgba(29, 78, 216, 0.12);
+  --app-color-nav-btn-active-text: #1d4ed8;
+  --app-shadow-chrome: 0 1px 2px rgba(21, 32, 51, 0.06),
+    0 4px 14px rgba(21, 32, 51, 0.08);
+  --app-shadow-chrome-hover: 0 1px 2px rgba(29, 78, 216, 0.1),
+    0 6px 16px rgba(29, 78, 216, 0.12);
+  --app-shadow-chrome-stack: 0 1px 2px rgba(21, 32, 51, 0.06),
+    0 4px 12px rgba(21, 32, 51, 0.08);
+
+  --app-shadow-card: 0 1px 2px rgba(21, 32, 51, 0.05),
+    0 2px 8px rgba(21, 32, 51, 0.06);
+  --app-shadow-brand-icon: 0 1px 2px rgba(21, 32, 51, 0.1);
+  --app-shadow-tool-tile: 0 1px 2px rgba(21, 32, 51, 0.04);
+  --app-shadow-entity-category: 0 1px 2px rgba(21, 32, 51, 0.04);
+
+  --app-icon-filter-light: brightness(0) invert(0.28);
+  --app-icon-filter-active: brightness(0) saturate(100%) invert(24%) sepia(90%)
+    saturate(2400%) hue-rotate(214deg) brightness(0.95);
+  --app-icon-filter-muted: brightness(0) invert(0.5);
+  --app-icon-glow-filter: none;
+
+  --app-intel-aircraft-border: rgba(220, 38, 38, 0.55);
+  --app-intel-aircraft-bg: radial-gradient(
+    circle at 50% 45%,
+    rgba(254, 202, 202, 0.95) 0%,
+    rgba(254, 226, 226, 0.85) 55%,
+    rgba(254, 242, 242, 0.9) 100%
+  );
+  --app-intel-aircraft-shadow: 0 0 0 1px rgba(220, 38, 38, 0.2),
+    0 2px 8px rgba(220, 38, 38, 0.18);
+  --app-intel-aircraft-icon-filter: brightness(0.95) saturate(1.2);
+
+  --app-intel-drone-border: rgba(2, 132, 199, 0.55);
+  --app-intel-drone-bg: radial-gradient(
+    circle at 50% 45%,
+    rgba(186, 230, 253, 0.95) 0%,
+    rgba(224, 242, 254, 0.9) 55%,
+    rgba(240, 249, 255, 0.95) 100%
+  );
+  --app-intel-drone-shadow: 0 0 0 1px rgba(2, 132, 199, 0.2),
+    0 2px 8px rgba(2, 132, 199, 0.16);
+  --app-intel-drone-icon-filter: brightness(0.95) saturate(1.15);
+
+  color-scheme: light;
 }

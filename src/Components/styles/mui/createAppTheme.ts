@@ -1,17 +1,19 @@
 import { createTheme } from '@mui/material/styles';
-import { designTokens } from '../designTokens';
+import type { AppThemeMode } from '../../../config/appTheme.config';
+import { getDesignTokens } from '../designTokens';
 
 /**
- * Central MUI theme — all component look & feel is defined here.
- * Components use variants only (no sx). Visual tokens: features/styles/tokens.css
- * Palette literals: designTokens.ts (MUI cannot parse CSS variables in palette).
+ * Central MUI theme — component variants live here.
+ * Hub: `src/config/designSystem.config.ts`
+ * Visual tokens: `tokens.css` via `var(--app-*)`
+ * Palette literals: `designTokens.ts` (MUI cannot parse CSS vars in palette)
  */
-export function createAppTheme() {
-  const { colors, shape } = designTokens;
+export function createAppTheme(mode: AppThemeMode = 'dark') {
+  const { colors, shape } = getDesignTokens(mode);
 
   return createTheme({
     palette: {
-      mode: 'dark',
+      mode,
       primary: { main: colors.primaryMui },
       error: { main: colors.danger },
       success: { main: colors.live },
@@ -43,7 +45,8 @@ export function createAppTheme() {
         fontWeight: 'var(--app-font-weight-bold)',
         letterSpacing: 'var(--app-letter-spacing-section-title)',
         textTransform: 'uppercase',
-        color: 'var(--app-color-text-muted)',
+        color: 'var(--app-color-sidebar-accent, var(--app-color-text-muted))',
+        textShadow: 'var(--app-color-sidebar-title-glow)',
       },
       toolTileLabel: {
         fontSize: 'var(--app-font-size-xs)',
@@ -102,10 +105,10 @@ export function createAppTheme() {
           {
             props: { variant: 'entityCategory' },
             style: {
-              backgroundColor: 'rgba(10, 16, 26, 0.72)',
-              border: '1px solid rgba(96, 130, 170, 0.18)',
+              backgroundColor: 'var(--app-color-bg-entity-category)',
+              border: '1px solid var(--app-color-border-entity-category)',
               borderRadius: 'calc(var(--app-radius-lg) - 1px)',
-              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.03)',
+              boxShadow: 'var(--app-shadow-entity-category)',
               overflow: 'hidden',
             },
           },
@@ -147,28 +150,31 @@ export function createAppTheme() {
               gap: 'var(--app-space-2)',
               minHeight: 58,
               padding: 'var(--app-space-4) var(--app-space-2)',
-              border: '2px solid rgba(96, 130, 170, 0.16)',
+              border: '2px solid var(--app-color-border-tool-tile)',
               borderRadius: 'var(--app-radius-lg)',
-              backgroundColor: 'rgba(10, 16, 26, 0.88)',
-              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.03)',
-              color: 'var(--app-color-text-muted)',
-              transition: 'background var(--app-transition-fast), border-color var(--app-transition-fast), color var(--app-transition-fast), box-shadow var(--app-transition-fast)',
+              backgroundColor: 'var(--app-color-bg-tool-tile)',
+              boxShadow: 'var(--app-shadow-tool-tile)',
+              color: 'var(--app-color-text-tool-tile)',
+              transition:
+                'background var(--app-transition-fast), border-color var(--app-transition-fast), color var(--app-transition-fast), box-shadow var(--app-transition-fast)',
               '&[aria-pressed="true"]': {
                 position: 'relative',
                 zIndex: 2,
                 background: 'var(--app-color-primary-active-bg)',
-                borderColor: 'var(--app-color-primary-border)',
-                boxShadow: 'var(--app-color-primary-glow)',
-                color: '#ffffff',
+                borderColor: 'var(--app-color-entity-glow)',
+                boxShadow: 'var(--app-color-entity-glow-lamp)',
+                color: 'var(--app-color-text-primary)',
+                textShadow: 'var(--app-color-sidebar-title-glow)',
               },
               '&:hover': {
                 position: 'relative',
                 zIndex: 3,
               },
               '&:hover:not([aria-pressed="true"])': {
-                backgroundColor: 'var(--app-color-primary-hover-bg)',
-                borderColor: 'var(--app-color-primary-border-soft)',
-                color: 'var(--app-color-text-primary)',
+                backgroundColor: 'var(--app-color-bg-tool-tile-hover)',
+                borderColor: 'var(--app-color-sidebar-accent-border)',
+                boxShadow: 'var(--app-color-primary-glow)',
+                color: 'var(--app-color-text-tool-tile-hover)',
               },
               '&:disabled': { opacity: 0.35 },
             },
@@ -190,8 +196,8 @@ export function createAppTheme() {
               backgroundColor: 'var(--app-color-danger-bg)',
               color: 'var(--app-color-danger)',
               '&:hover': {
-                backgroundColor: 'rgba(127, 29, 29, 0.34)',
-                borderColor: 'rgba(248, 113, 113, 0.62)',
+                backgroundColor: 'var(--app-color-danger-hover-bg)',
+                borderColor: 'var(--app-color-danger-border)',
               },
               '&:disabled': { opacity: 0.35 },
             },
@@ -237,10 +243,10 @@ export function createAppTheme() {
               gap: 'var(--app-space-2)',
               padding: 'var(--app-space-5)',
               textAlign: 'left',
-              backgroundColor: 'rgba(10, 16, 26, 0.88)',
-              border: '2px solid rgba(96, 130, 170, 0.16)',
+              backgroundColor: 'var(--app-color-bg-map-type)',
+              border: '2px solid var(--app-color-border-map-type)',
               borderRadius: 'var(--app-radius-lg)',
-              boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.03)',
+              boxShadow: 'var(--app-shadow-tool-tile)',
               '&[aria-pressed="true"]': {
                 position: 'relative',
                 zIndex: 2,
@@ -273,7 +279,143 @@ export function createAppTheme() {
               letterSpacing: 'var(--app-letter-spacing-live)',
             },
           },
+          {
+            props: { variant: 'countBadge' },
+            style: {
+              height: 28,
+              minWidth: 28,
+              borderRadius: 'var(--app-radius-pill)',
+              border: '1px solid var(--app-color-primary-border-faint)',
+              backgroundColor: 'var(--app-color-bg-nav-active)',
+              color: 'var(--app-color-primary)',
+              fontFamily: 'var(--app-font-family-mono)',
+              fontSize: 'var(--app-font-size-xs)',
+              fontWeight: 'var(--app-font-weight-bold)',
+              fontVariantNumeric: 'tabular-nums',
+            },
+          },
         ],
+      },
+      MuiList: {
+        styleOverrides: {
+          root: {
+            padding: 'var(--app-space-3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--app-space-2)',
+          },
+        },
+      },
+      MuiListItemButton: {
+        variants: [
+          {
+            props: { intelTarget: true },
+            style: {
+              display: 'grid',
+              gridTemplateColumns: '42px minmax(0, 1fr) auto',
+              alignItems: 'center',
+              gap: 'var(--app-space-4)',
+              minHeight: 52,
+              padding: 'var(--app-space-3) var(--app-space-4)',
+              border: '1px solid var(--app-color-border-subtle)',
+              borderRadius: 'var(--app-radius-md)',
+              backgroundColor: 'var(--app-color-bg-surface-muted)',
+              transition:
+                'background var(--app-transition-fast), border-color var(--app-transition-fast), box-shadow var(--app-transition-fast)',
+              '&:hover': {
+                backgroundColor: 'var(--app-color-bg-nav-hover)',
+                borderColor:
+                  'var(--app-color-border-row-hover, var(--app-color-primary-border-faint))',
+              },
+              '&.Mui-selected': {
+                backgroundColor: 'var(--app-color-bg-nav-active)',
+                borderColor: 'var(--app-color-primary-border-soft)',
+                boxShadow: 'var(--app-color-primary-glow)',
+                '&:hover': {
+                  backgroundColor: 'var(--app-color-bg-nav-active)',
+                },
+              },
+            },
+          },
+        ],
+      },
+      MuiAvatar: {
+        variants: [
+          {
+            props: { variant: 'intelAircraft' },
+            style: {
+              width: 'var(--app-intel-avatar-size)',
+              height: 'var(--app-intel-avatar-size)',
+              borderRadius: 'var(--app-intel-avatar-radius)',
+              border: '1px solid var(--app-intel-aircraft-border)',
+              background: 'var(--app-intel-aircraft-bg)',
+              boxShadow: 'var(--app-intel-aircraft-shadow)',
+              '& img': {
+                width: 'var(--app-intel-avatar-icon-size)',
+                height: 'var(--app-intel-avatar-icon-size)',
+                objectFit: 'contain',
+                filter: 'var(--app-intel-aircraft-icon-filter)',
+              },
+            },
+          },
+          {
+            props: { variant: 'intelDrone' },
+            style: {
+              width: 'var(--app-intel-avatar-size)',
+              height: 'var(--app-intel-avatar-size)',
+              borderRadius: 'var(--app-intel-avatar-radius)',
+              border: '1px solid var(--app-intel-drone-border)',
+              background: 'var(--app-intel-drone-bg)',
+              boxShadow: 'var(--app-intel-drone-shadow)',
+              '& img': {
+                width: 'var(--app-intel-avatar-icon-size)',
+                height: 'var(--app-intel-avatar-icon-size)',
+                objectFit: 'contain',
+                filter: 'var(--app-intel-drone-icon-filter)',
+              },
+            },
+          },
+        ],
+      },
+      MuiToggleButtonGroup: {
+        styleOverrides: {
+          root: {
+            gap: 2,
+            padding: 'var(--app-space-3) var(--app-space-4)',
+            borderBottom: '1px solid var(--app-color-border-subtle)',
+            flexShrink: 0,
+          },
+          grouped: {
+            border: '1px solid transparent !important',
+            borderRadius: 'var(--app-radius-sm) !important',
+            marginLeft: '0 !important',
+          },
+        },
+      },
+      MuiToggleButton: {
+        styleOverrides: {
+          root: {
+            textTransform: 'none',
+            color: 'var(--app-color-text-muted)',
+            border: '1px solid var(--app-color-border-default)',
+            height: 24,
+            padding: '0 var(--app-space-3)',
+            fontSize: 'var(--app-font-size-2xs)',
+            fontWeight: 'var(--app-font-weight-semibold)',
+            '&.Mui-selected': {
+              backgroundColor: 'var(--app-color-bg-nav-active)',
+              borderColor: 'var(--app-color-primary-border-faint)',
+              color: 'var(--app-color-text-primary)',
+              '&:hover': {
+                backgroundColor: 'var(--app-color-bg-nav-active)',
+              },
+            },
+            '&:hover': {
+              backgroundColor: 'var(--app-color-bg-nav-hover)',
+              color: 'var(--app-color-text-secondary)',
+            },
+          },
+        },
       },
       MuiSlider: {
         styleOverrides: {
@@ -307,9 +449,9 @@ export function createAppTheme() {
           },
           track: {
             borderRadius: 11,
-            backgroundColor: 'rgba(96, 130, 170, 0.28)',
+            backgroundColor: 'var(--app-color-border-control)',
             opacity: 1,
-            border: '1px solid rgba(96, 130, 170, 0.22)',
+            border: '1px solid var(--app-color-border-control)',
           },
         },
       },
@@ -319,15 +461,6 @@ export function createAppTheme() {
           root: {
             backgroundImage: 'none',
             backgroundColor: 'var(--app-color-bg-surface)',
-            border: '1px solid var(--app-color-border-default)',
-          },
-        },
-      },
-      MuiToggleButton: {
-        styleOverrides: {
-          root: {
-            textTransform: 'none',
-            color: 'var(--app-color-text-secondary)',
             border: '1px solid var(--app-color-border-default)',
           },
         },

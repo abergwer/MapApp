@@ -7,7 +7,7 @@ import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { entitiesPanelConfig } from '../config/entitiesPanel.config';
-import type { DrawTool, MapShape } from '../../../../stores/DrawingToolStore';
+import type { DrawTool } from '../../../../stores/DrawingToolStore';
 import { useStores } from '../../../../stores/StoreContext';
 import CollapsiblePanelSection from '../../shared/components/CollapsiblePanelSection';
 import PanelChrome from '../../shared/components/PanelChrome';
@@ -19,21 +19,8 @@ import {
   isDrawToolSupported,
   selectDrawTool,
 } from '../actions/drawToolActions';
+import { getEntityKindMeta, groupShapesByKind } from '../model/entityCatalog';
 import layout from '../../../styles/layouts/panelLayout.module.css';
-
-function getCategoryLabel(kind: DrawTool, index: number): string {
-  return `${kind} #${index + 1}`;
-}
-
-function groupShapesByKind(shapes: MapShape[]): Map<DrawTool, MapShape[]> {
-  const map = new Map<DrawTool, MapShape[]>();
-  for (const shape of shapes) {
-    const list = map.get(shape.kind) ?? [];
-    list.push(shape);
-    map.set(shape.kind, list);
-  }
-  return map;
-}
 
 function ExistingEntitiesSection() {
   const { drawingToolStore } = useStores();
@@ -76,7 +63,10 @@ function ExistingEntitiesSection() {
                   aria-expanded={isOpen}
                   fullWidth
                 >
-                  <ConfigIcon iconPath={category.iconPath} tone="light" />
+                  <ConfigIcon
+                    iconPath={category.iconPath}
+                    tint={entitiesPanelConfig.iconTint}
+                  />
                   <Typography variant="entityCategoryName" component="span">
                     {category.label}
                   </Typography>
@@ -104,7 +94,7 @@ function ExistingEntitiesSection() {
                           }
                           onClick={() => drawingToolStore.setSelectedId(shape.id)}
                         >
-                          {getCategoryLabel(category.kind, index)}
+                          {getEntityKindMeta(category.kind).label} #{index + 1}
                         </Typography>
                       );
                     })}
@@ -140,6 +130,7 @@ function CreateEntitySection() {
             key={tool.id}
             label={tool.label}
             iconPath={tool.iconPath}
+            iconTint={entitiesPanelConfig.iconTint}
             active={activeTool === tool.id}
             disabled={!tool.enabled || !isDrawToolSupported(engine, tool.id) || !engine}
             onClick={() => selectDrawTool(engine, drawingToolStore, entityService, tool.id)}
@@ -159,13 +150,25 @@ function CreateEntitySection() {
 
 const CreateEntitySectionObserved = observer(CreateEntitySection);
 
-function EntitiesPanelImpl() {
+export interface EntitiesPanelProps {
+  /** When true, skip PanelChrome (host sidebar already provides the title). */
+  embedded?: boolean;
+}
+
+function EntitiesPanelImpl({ embedded = false }: EntitiesPanelProps) {
   const { header } = entitiesPanelConfig;
+  const body = (
+    <>
+      <ExistingEntitiesSectionObserved />
+      <CreateEntitySectionObserved />
+    </>
+  );
+
+  if (embedded) return body;
 
   return (
     <PanelChrome title={header.title} subtitle={header.subtitle}>
-      <ExistingEntitiesSectionObserved />
-      <CreateEntitySectionObserved />
+      {body}
     </PanelChrome>
   );
 }

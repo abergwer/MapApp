@@ -56,5 +56,20 @@ declare module '@mui/material/Button' {
 declare module '@mui/material/Chip' {
   interface ChipPropsVariantOverrides {
     live: true;
+    countBadge: true;
+  }
+}
+
+declare module '@mui/material/ListItemButton' {
+  interface ListItemButtonOwnProps {
+    /** Theme variant: Intel Feed target row. */
+    intelTarget?: boolean;
+  }
+}
+
+declare module '@mui/material/Avatar' {
+  interface AvatarPropsVariantOverrides {
+    intelAircraft: true;
+    intelDrone: true;
   }
 }

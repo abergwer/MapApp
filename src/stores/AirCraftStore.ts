@@ -1,23 +1,45 @@
 import { makeAutoObservable } from 'mobx';
 import airCraftIcon from '../assets/aircraft.png';
+import { targetMotionConfig } from '../config/targetMotion.config';
+import type { TargetTelemetry } from './types/trackedTarget';
 
-export interface AirCraftTarget {
+export interface AirCraftTarget extends TargetTelemetry {
   id: string;
-  position: [number, number];
   icon: string;
 }
 
+const { defaults } = targetMotionConfig;
+
+function seed(
+  id: string,
+  position: [number, number],
+  headingDeg: number,
+  extras: Partial<Pick<AirCraftTarget, 'altitudeM' | 'speedMps' | 'pitchDeg'>> = {},
+): AirCraftTarget {
+  return {
+    id,
+    position,
+    icon: airCraftIcon,
+    altitudeM: extras.altitudeM ?? defaults.aircraftAltitudeM,
+    headingDeg,
+    speedMps: extras.speedMps ?? defaults.aircraftSpeedMps,
+    pitchDeg: extras.pitchDeg ?? defaults.pitchDeg,
+    rollDeg: 0,
+    trail: [position],
+  };
+}
+
 const seedTargets: AirCraftTarget[] = [
-  { id: 't1', position: [34.4206, 31.8167], icon: airCraftIcon }, // Ashkelon coast
-  { id: 't2', position: [35.0100, 32.7500], icon: airCraftIcon }, // Carmel
-  { id: 't3', position: [34.9000, 31.2500], icon: airCraftIcon }, // Negev north
-  { id: 't4', position: [35.5800, 33.0500], icon: airCraftIcon }, // Upper Galilee
-  { id: 't5', position: [34.3000, 31.5000], icon: airCraftIcon }, // Gaza border
-  { id: 't6', position: [35.4700, 32.9000], icon: airCraftIcon }, // Sea of Galilee
-  { id: 't7', position: [34.9700, 29.5600], icon: airCraftIcon }, // Eilat mountains
-  { id: 't8', position: [35.3000, 32.5000], icon: airCraftIcon }, // West Bank hills
-  { id: 't9', position: [34.6000, 32.0500], icon: airCraftIcon }, // Central coastal plain
-  { id: 't10', position: [35.1500, 31.9000], icon: airCraftIcon }, // Jerusalem outskirts
+  seed('t1', [34.4206, 31.8167], 35),
+  seed('t2', [35.01, 32.75], 120, { altitudeM: 2800, speedMps: 110, pitchDeg: 2 }),
+  seed('t3', [34.9, 31.25], 210, { altitudeM: 3500, speedMps: 88, pitchDeg: 1 }),
+  seed('t4', [35.58, 33.05], 280, { altitudeM: 2400, speedMps: 100, pitchDeg: 0.5 }),
+  seed('t5', [34.3, 31.5], 45, { altitudeM: 3000, speedMps: 92, pitchDeg: 1.2 }),
+  seed('t6', [35.47, 32.9], 160, { altitudeM: 2600, speedMps: 105, pitchDeg: 1.8 }),
+  seed('t7', [34.97, 29.56], 10, { altitudeM: 4000, speedMps: 120, pitchDeg: 2.5 }),
+  seed('t8', [35.3, 32.5], 300, { altitudeM: 2200, speedMps: 85, pitchDeg: 0.8 }),
+  seed('t9', [34.6, 32.05], 75, { altitudeM: 3100, speedMps: 98, pitchDeg: 1.4 }),
+  seed('t10', [35.15, 31.9], 250, { altitudeM: 2700, speedMps: 90, pitchDeg: 1 }),
 ];
 
 export class AirCraftStore {
@@ -42,5 +64,9 @@ export class AirCraftStore {
 
   remove(id: string) {
     this.targets = this.targets.filter((t) => t.id !== id);
+  }
+
+  get(id: string): AirCraftTarget | undefined {
+    return this.targets.find((t) => t.id === id);
   }
 }

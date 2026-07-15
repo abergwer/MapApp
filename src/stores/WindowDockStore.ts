@@ -1,7 +1,9 @@
 import { makeAutoObservable } from 'mobx';
+import { workspaceDefaults } from '../config/workspaceDefaults';
 
-export type DockWindowId = 'video' | 'minimap';
+export type DockWindowId = 'video' | 'minimap' | 'view3d' | 'intel';
 export type WindowPlacement = 'docked' | 'floating';
+export type RightWorkspaceLayout = 'hidden' | 'single' | 'double' | 'maximized';
 
 export interface FloatRect {
   x: number;
@@ -11,16 +13,15 @@ export interface FloatRect {
 }
 
 export interface DockWindowState {
-  /** Shown in the dock stack or as a floating window. */
   open: boolean;
-  /** Collapsible body (like Entities sections). */
+  /** Used by floating chrome collapse only — not Right Workspace cards. */
   expanded: boolean;
   placement: WindowPlacement;
-  /** Only used while floating; cleared on redock. */
   floatRect: FloatRect | null;
 }
 
-const DEFAULT_FLOAT = { width: 320, height: 220 } as const;
+const DEFAULT_DOCK_ORDER: DockWindowId[] = [...workspaceDefaults.dockOrder];
+const DEFAULT_FLOAT = workspaceDefaults.float;
 
 function defaultWindow(open: boolean): DockWindowState {
   return {
@@ -31,17 +32,29 @@ function defaultWindow(open: boolean): DockWindowState {
   };
 }
 
+function buildDefaultWindows(): Record<DockWindowId, DockWindowState> {
+  const open = workspaceDefaults.openByDefault;
+  return {
+    view3d: defaultWindow(open),
+    video: defaultWindow(open),
+    minimap: defaultWindow(open),
+    intel: defaultWindow(open),
+  };
+}
+
 /**
- * Right-side window dock: multiple windows can be open at once (stacked),
- * each collapsible. Video (and future windows) can undock to float over the map.
+ * Right-side window dock: open/close, dock/float, grid order, maximize.
+ * Initial open/dock state comes from config/workspaceDefaults.
  */
 export class WindowDockStore {
-  windows: Record<DockWindowId, DockWindowState> = {
-    video: defaultWindow(true),
-    minimap: defaultWindow(true),
-  };
+  windows: Record<DockWindowId, DockWindowState> = buildDefaultWindows();
 
-  /** Front-most floating window last. */
+  /** Explicit dock grid order (source of truth for RightDockPanel). */
+  dockOrder: DockWindowId[] = [...DEFAULT_DOCK_ORDER];
+
+  /** When set, that docked window fills the entire right workspace grid. */
+  maximizedId: DockWindowId | null = null;
+
   floatOrder: DockWindowId[] = [];
 
   constructor() {
@@ -64,14 +77,36 @@ export class WindowDockStore {
     return this.windows[id].open && this.windows[id].placement === 'docked';
   }
 
+  isMaximized(id: DockWindowId): boolean {
+    return this.maximizedId === id && this.isDocked(id);
+  }
+
   get(id: DockWindowId): DockWindowState {
     return this.windows[id];
+  }
+
+  get dockedIds(): DockWindowId[] {
+    return this.dockOrder.filter((id) => this.isDocked(id));
+  }
+
+  get dockedCount(): number {
+    return this.dockedIds.length;
+  }
+
+  /** Layout mode for AppShell right column width / grid columns. */
+  get rightWorkspaceLayout(): RightWorkspaceLayout {
+    if (this.maximizedId && this.isDocked(this.maximizedId)) return 'maximized';
+    const n = this.dockedCount;
+    if (n === 0) return 'hidden';
+    if (n <= 2) return 'single';
+    return 'double';
   }
 
   setOpen(id: DockWindowId, open: boolean) {
     this.windows[id].open = open;
     if (!open) {
       this.floatOrder = this.floatOrder.filter((w) => w !== id);
+      if (this.maximizedId === id) this.maximizedId = null;
     } else if (this.windows[id].placement === 'floating') {
       this.bringToFront(id);
     }
@@ -85,6 +120,41 @@ export class WindowDockStore {
     this.windows[id].expanded = expanded;
   }
 
+  maximize(id: DockWindowId) {
+    if (!this.isDocked(id)) return;
+    this.maximizedId = id;
+  }
+
+  restore() {
+    this.maximizedId = null;
+  }
+
+  toggleMaximize(id: DockWindowId) {
+    if (this.maximizedId === id) {
+      this.restore();
+    } else {
+      this.maximize(id);
+    }
+  }
+
+  /** Swap two docked windows in dockOrder. */
+  swapDockOrder(a: DockWindowId, b: DockWindowId) {
+    if (a === b) return;
+    const i = this.dockOrder.indexOf(a);
+    const j = this.dockOrder.indexOf(b);
+    if (i < 0 || j < 0) return;
+    const next = [...this.dockOrder];
+    next[i] = b;
+    next[j] = a;
+    this.dockOrder = next;
+  }
+
+  setDockOrder(order: DockWindowId[]) {
+    const unique = order.filter((id, index) => order.indexOf(id) === index);
+    const missing = DEFAULT_DOCK_ORDER.filter((id) => !unique.includes(id));
+    this.dockOrder = [...unique, ...missing];
+  }
+
   undock(id: DockWindowId, rect?: Partial<FloatRect>) {
     const win = this.windows[id];
     win.open = true;
@@ -96,10 +166,10 @@ export class WindowDockStore {
       width: rect?.width ?? DEFAULT_FLOAT.width,
       height: rect?.height ?? DEFAULT_FLOAT.height,
     };
+    if (this.maximizedId === id) this.maximizedId = null;
     this.bringToFront(id);
   }
 
-  /** Return to dock — original dock size (no floatRect). */
   dock(id: DockWindowId) {
     const win = this.windows[id];
     win.placement = 'docked';

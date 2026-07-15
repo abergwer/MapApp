@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, type CSSProperties } from 'react';
 import { observer } from 'mobx-react-lite';
 import Stack from '@mui/material/Stack';
 import { useStores } from '../../../../stores/StoreContext';
@@ -10,6 +10,8 @@ import {
 import FloatingWindow from '../../shared/components/FloatingWindow';
 import MiniMap from './MiniMap';
 import MiniVideo from './MiniVideo';
+import IntelFeedPanel from './IntelFeedPanel';
+import View3DPanel from './View3DPanel';
 import overlays from '../../../styles/live-view/overlays.module.css';
 import dockStyles from '../../../styles/shared/DockWindow.module.css';
 import { appLayoutConfig } from '../../app-shell/config/appLayout.config';
@@ -22,6 +24,15 @@ interface FloatingWindowsHostProps {
 function FloatingWindowContent({ id }: { id: DockWindowId }) {
   const cfg = getDockWindowConfig(id);
   if (!cfg) return null;
+
+  if (id === 'view3d') {
+    return (
+      <div className={dockStyles.mediaFill}>
+        <View3DPanel />
+      </div>
+    );
+  }
+  if (id === 'intel') return <IntelFeedPanel />;
 
   return (
     <div className={dockStyles.mediaFill}>
@@ -73,8 +84,17 @@ function FloatingWindowsHostImpl({
 
   if (floatingIds.length === 0) return null;
 
+  const { overlays: ov, card } = rightDockConfig;
+  const chromeStyle = {
+    '--dock-crosshair-size': `${ov.crosshairSize}px`,
+    '--dock-corner-inset': `${ov.cornerInset}px`,
+    '--dock-bracket-size': `${ov.bracketSize}px`,
+    '--dock-card-header-h': `${card.headerHeight}px`,
+    '--dock-action-size': `${card.actionSize}px`,
+  } as CSSProperties;
+
   return (
-    <>
+    <div style={chromeStyle}>
       {floatingIds.map((id) => {
         const win = windowDockStore.get(id);
         const cfg = getDockWindowConfig(id);
@@ -110,9 +130,9 @@ function FloatingWindowsHostImpl({
           </FloatingWindow>
         );
       })}
-    </>
+    </div>
   );
 }
 
-const FloatingWindowsHost = observer(FloatingWindowsHostImpl);
+export const FloatingWindowsHost = observer(FloatingWindowsHostImpl);
 export default FloatingWindowsHost;

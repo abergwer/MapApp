@@ -1,0 +1,13 @@
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    rgba(6, 14, 28, 0.28) 0%,
+    rgba(4, 12, 24, 0.18) 45%,
+    rgba(8, 18, 32, 0.32) 100%
+  );
+  mix-blend-mode: multiply;
+}

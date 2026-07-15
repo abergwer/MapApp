@@ -19,14 +19,19 @@ export interface EntityPanelActionConfig {
   iconPath: string;
 }
 
+/** Single glowing accent for every entity icon. */
+export const ENTITY_ICON_GLOW = 'var(--app-color-entity-glow)';
+
 export const entitiesPanelConfig = {
   header: {
     title: 'ENTITIES',
     subtitle: 'Manage map entities',
   },
   layout: {
-    createToolsGridColumns: 4,
+    createToolsGridColumns: 3,
   },
+  /** Shared soft glow tint for all create/list icons. */
+  iconTint: ENTITY_ICON_GLOW,
   existingSection: {
     title: 'Existing Entities',
     emptyMessage: 'No entities yet',

@@ -17,14 +17,18 @@
 }
 
 .toneOn {
-  background: var(--app-color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-color-primary) 22%, transparent);
+  background: var(--app-color-sidebar-accent, var(--app-color-primary));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--app-color-sidebar-accent, var(--app-color-primary)) 28%, transparent),
+    0 0 10px color-mix(in srgb, var(--app-color-sidebar-accent, var(--app-color-primary)) 70%, transparent);
 }
 
 .tonePartial {
   background: transparent;
-  border: 2px solid var(--app-color-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-color-primary) 16%, transparent);
+  border: 2px solid var(--app-color-sidebar-accent, var(--app-color-primary));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--app-color-sidebar-accent, var(--app-color-primary)) 18%, transparent),
+    0 0 8px color-mix(in srgb, var(--app-color-sidebar-accent, var(--app-color-primary)) 45%, transparent);
 }
 
 .toneOff {
@@ -41,4 +45,19 @@
 .toneLive {
   background: var(--app-color-live);
   box-shadow: var(--app-color-live-glow);
+}
+
+.toneWarning {
+  background: var(--app-color-warning);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-color-warning) 22%, transparent);
+}
+
+.toneNeutral {
+  background: transparent;
+  border: 1.5px solid var(--app-color-text-faint);
+  opacity: 0.45;
+}
+
+.clickable {
+  cursor: pointer;
 }

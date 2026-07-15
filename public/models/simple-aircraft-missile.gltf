@@ -1,0 +1,158 @@
+{
+  "asset": {
+    "version": "2.0",
+    "generator": "integrable simple aircraft missile"
+  },
+  "scene": 0,
+  "scenes": [
+    {
+      "nodes": [
+        0
+      ]
+    }
+  ],
+  "nodes": [
+    {
+      "mesh": 0
+    }
+  ],
+  "meshes": [
+    {
+      "primitives": [
+        {
+          "attributes": {
+            "POSITION": 0
+          },
+          "indices": 1,
+          "material": 0
+        },
+        {
+          "attributes": {
+            "POSITION": 0
+          },
+          "indices": 2,
+          "material": 1
+        },
+        {
+          "attributes": {
+            "POSITION": 0
+          },
+          "indices": 3,
+          "material": 2
+        }
+      ]
+    }
+  ],
+  "materials": [
+    {
+      "name": "silver body",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.72,
+          0.82,
+          0.9,
+          1
+        ],
+        "metallicFactor": 0.25,
+        "roughnessFactor": 0.38
+      },
+      "doubleSided": true
+    },
+    {
+      "name": "red nose",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          1.0,
+          0.08,
+          0.04,
+          1
+        ],
+        "metallicFactor": 0.1,
+        "roughnessFactor": 0.45
+      },
+      "doubleSided": true
+    },
+    {
+      "name": "dark fins",
+      "pbrMetallicRoughness": {
+        "baseColorFactor": [
+          0.06,
+          0.12,
+          0.2,
+          1
+        ],
+        "metallicFactor": 0.2,
+        "roughnessFactor": 0.48
+      },
+      "doubleSided": true
+    }
+  ],
+  "buffers": [
+    {
+      "uri": "data:application/octet-stream;base64,MzMzQClcj74pXI++MzMzQClcjz4pXI++zcxMwI/CdT6PwnW+MzMzQClcj74pXI++zcxMwI/CdT6PwnW+zcxMwI/Cdb6PwnW+MzMzQClcjz4pXI++MzMzQClcjz4pXI8+zcxMwI/CdT6PwnU+MzMzQClcjz4pXI++zcxMwI/CdT6PwnU+zcxMwI/CdT6PwnW+MzMzQClcjz4pXI8+MzMzQClcj74pXI8+zcxMwI/Cdb6PwnU+MzMzQClcjz4pXI8+zcxMwI/Cdb6PwnU+zcxMwI/CdT6PwnU+MzMzQClcj74pXI8+MzMzQClcj74pXI++zcxMwI/Cdb6PwnW+MzMzQClcj74pXI8+zcxMwI/Cdb6PwnW+zcxMwI/Cdb6PwnU+zcxMwI/Cdb6PwnW+zcxMwI/CdT6PwnU+zcxMwI/CdT6PwnW+zcxMwI/Cdb6PwnW+zcxMwI/Cdb6PwnU+zcxMwI/CdT6PwnU+mpmZQAAAAAAAAAAAMzMzQClcjz4pXI++MzMzQClcj74pXI++mpmZQAAAAAAAAAAAMzMzQClcjz4pXI8+MzMzQClcjz4pXI++mpmZQAAAAAAAAAAAMzMzQClcj74pXI8+MzMzQClcjz4pXI8+mpmZQAAAAAAAAAAAMzMzQClcj74pXI++MzMzQClcj74pXI8+AACAPylcjz4AAAAAZmZmv5qZGUAAAAAAAACgvylcjz4K16M9AACAPylcj74AAAAAZmZmv5qZGcAAAAAAAACgvylcj74K16M9zcwMwI/CdT4AAAAAMzNzwGZmhj8AAAAAAABAwI/CdT6PwvU9zcwMwI/Cdb4AAAAAMzNzwGZmhr8AAAAAAABAwI/Cdb6PwvU9zcwMwAAAAACPwnU+MzNzwAAAAAAzM5M/AABAwM3MzD2PwnU+AAABAAIAAwAEAAUABgAHAAgACQAKAAsADAANAA4ADwAQABEAEgATABQAFQAWABcAGAAZABoAGwAcAB0AHgAfACAAIQAiACMAJAAlACYAJwAoACkAKgArACwALQAuAC8AMAAxADIAMwA0ADUANgA3ADgAAAA=",
+      "byteLength": 800
+    }
+  ],
+  "bufferViews": [
+    {
+      "buffer": 0,
+      "byteOffset": 0,
+      "byteLength": 684,
+      "target": 34962
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 684,
+      "byteLength": 60,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 744,
+      "byteLength": 24,
+      "target": 34963
+    },
+    {
+      "buffer": 0,
+      "byteOffset": 768,
+      "byteLength": 30,
+      "target": 34963
+    }
+  ],
+  "accessors": [
+    {
+      "bufferView": 0,
+      "componentType": 5126,
+      "count": 57,
+      "type": "VEC3",
+      "min": [
+        -3.8,
+        -2.4,
+        -0.28
+      ],
+      "max": [
+        4.8,
+        2.4,
+        1.15
+      ]
+    },
+    {
+      "bufferView": 1,
+      "componentType": 5123,
+      "count": 30,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 2,
+      "componentType": 5123,
+      "count": 12,
+      "type": "SCALAR"
+    },
+    {
+      "bufferView": 3,
+      "componentType": 5123,
+      "count": 15,
+      "type": "SCALAR"
+    }
+  ]
+}

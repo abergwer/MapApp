@@ -112,7 +112,7 @@ function ViewControlsSection() {
     const { brightness } = mapStyleStore;
     const brightnessCfg = viewControlsSection.brightness;
 
-    useBasemapBrightness(containerRef, brightness);
+    useBasemapBrightness(containerRef, brightness, mapStyleStore.baseMap);
 
     return (
         <CollapsiblePanelSection

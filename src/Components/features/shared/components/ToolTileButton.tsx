@@ -9,6 +9,8 @@ export interface ToolTileButtonProps {
   active?: boolean;
   disabled?: boolean;
   danger?: boolean;
+  /** Soft accent for the icon (Entities / tools). Ignored when active (uses bright tone). */
+  iconTint?: string;
   onClick: () => void;
 }
 
@@ -19,6 +21,7 @@ export default function ToolTileButton({
   active = false,
   disabled = false,
   danger = false,
+  iconTint,
   onClick,
 }: ToolTileButtonProps) {
   if (danger) {
@@ -43,6 +46,7 @@ export default function ToolTileButton({
       <ConfigIcon
         iconPath={iconPath}
         tone={active ? 'active' : 'light'}
+        tint={active ? undefined : iconTint}
         className={iconStyles.iconToolTile}
       />
       <Typography variant="toolTileLabel" component="span">

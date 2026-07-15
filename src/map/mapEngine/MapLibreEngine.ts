@@ -22,6 +22,7 @@ export class MapLibreEngine implements MapEngine {
   private measure?: MapLibreMeasureManager;
   private viewChangeCallbacks = new Set<(vs: MapViewState) => void>();
   private clickCallback?: (lat: number, lng: number) => void;
+  private homeView?: { center: [number, number]; zoom: number };
 
   // ── Lifecycle ────────────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ export class MapLibreEngine implements MapEngine {
         sources: {
           'raster-tiles': {
             type: 'raster',
-            tiles: [config.MapLibreTilesURL],
+            tiles: [config.MapStyles.satellite],
             tileSize: 256,
             // Bound the pyramid so MapLibre won't request tiles outside
             // the provider's range — prevents 404 gaps when zoomed in far.
@@ -64,8 +65,12 @@ export class MapLibreEngine implements MapEngine {
       zoom: options.zoom,
     });
     this.map = map;
+    this.homeView = {
+      center: [options.center[1], options.center[0]],
+      zoom: options.zoom,
+    };
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    // Custom MapNavControls in the React shell replaces the stock control.
     map.addControl(
       new maplibregl.ScaleControl({ maxWidth: 80, unit: 'metric' }),
       'bottom-right',
@@ -218,20 +223,101 @@ export class MapLibreEngine implements MapEngine {
   setBaseMap(url: string): void {
     const map = this.map;
     if (!map) return;
-    if (map.getLayer('raster-layer')) map.removeLayer('raster-layer');
-    if (map.getSource('raster-tiles')) map.removeSource('raster-tiles');
-    map.addSource('raster-tiles', {
-      type: 'raster',
-      tiles: [url],
-      tileSize: 256,
-      minzoom: 0,
-      maxzoom: 15,
-      attribution: '© OpenStreetMap contributors',
+
+    const apply = () => {
+      if (!this.map) return;
+      if (this.map.getLayer('raster-layer')) this.map.removeLayer('raster-layer');
+      if (this.map.getSource('raster-tiles')) this.map.removeSource('raster-tiles');
+      this.map.addSource('raster-tiles', {
+        type: 'raster',
+        tiles: [url],
+        tileSize: 256,
+        minzoom: 0,
+        maxzoom: 15,
+        attribution: '© OpenStreetMap contributors',
+      });
+      const firstLayerId = this.map.getStyle().layers?.[0]?.id;
+      this.map.addLayer(
+        { id: 'raster-layer', type: 'raster', source: 'raster-tiles' },
+        firstLayerId === 'background' ? this.map.getStyle().layers?.[1]?.id : firstLayerId,
+      );
+    };
+
+    if (map.isStyleLoaded()) {
+      apply();
+    } else {
+      map.once('load', apply);
+    }
+  }
+
+  setMapInteractionEnabled(enabled: boolean): void {
+    const map = this.map;
+    if (!map) return;
+    if (enabled) {
+      map.dragPan.enable();
+      map.scrollZoom.enable();
+      map.boxZoom.enable();
+      map.dragRotate.enable();
+      map.keyboard.enable();
+      map.doubleClickZoom.enable();
+      map.touchZoomRotate.enable();
+    } else {
+      map.dragPan.disable();
+      map.scrollZoom.disable();
+      map.boxZoom.disable();
+      map.dragRotate.disable();
+      map.keyboard.disable();
+      map.doubleClickZoom.disable();
+      map.touchZoomRotate.disable();
+    }
+  }
+
+  zoomBy(delta: number): void {
+    const map = this.map;
+    if (!map) return;
+    map.easeTo({ zoom: map.getZoom() + delta, duration: 220 });
+  }
+
+  resetNorth(durationMs = 420): void {
+    this.map?.easeTo({ bearing: 0, duration: durationMs });
+  }
+
+  togglePitch3d(tiltedPitch = 60): void {
+    const map = this.map;
+    if (!map) return;
+    const next = map.getPitch() > 12 ? 0 : tiltedPitch;
+    map.easeTo({ pitch: next, duration: 480 });
+  }
+
+  isPitch3d(): boolean {
+    return (this.map?.getPitch() ?? 0) > 12;
+  }
+
+  resetHomeView(durationMs = 520): void {
+    const map = this.map;
+    const home = this.homeView;
+    if (!map || !home) return;
+    map.easeTo({
+      center: home.center,
+      zoom: home.zoom,
+      bearing: 0,
+      pitch: 0,
+      duration: durationMs,
     });
-    const firstLayerId = map.getStyle().layers?.[0]?.id;
-    map.addLayer(
-      { id: 'raster-layer', type: 'raster', source: 'raster-tiles' },
-      firstLayerId === 'background' ? map.getStyle().layers?.[1]?.id : firstLayerId,
-    );
+  }
+
+  resetOrientation(durationMs = 420): void {
+    this.map?.easeTo({ bearing: 0, pitch: 0, duration: durationMs });
+  }
+
+  flyTo(lngLat: [number, number], options?: { zoom?: number; durationMs?: number }): void {
+    const map = this.map;
+    if (!map) return;
+    const [lng, lat] = lngLat;
+    map.easeTo({
+      center: [lng, lat],
+      zoom: options?.zoom ?? map.getZoom(),
+      duration: options?.durationMs ?? 700,
+    });
   }
 }

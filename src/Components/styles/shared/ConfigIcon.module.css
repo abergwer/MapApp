@@ -13,12 +13,12 @@
 
 .iconToneLight {
   composes: icon;
-  filter: brightness(0) invert(0.82);
+  filter: var(--app-icon-filter-light);
 }
 
 .iconToneActive {
   composes: icon;
-  filter: brightness(0) invert(1);
+  filter: var(--app-icon-filter-active);
 }
 
 .iconToneDanger {
@@ -29,5 +29,19 @@
 
 .iconToneMuted {
   composes: icon;
-  filter: brightness(0) invert(0.55);
+  filter: var(--app-icon-filter-muted);
+}
+
+/** Masked tint — set --config-icon-tint + mask URL via inline style. */
+.iconTint {
+  composes: icon;
+  display: inline-block;
+  background-color: var(--config-icon-tint, var(--app-color-entity-glow));
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  filter: var(--app-icon-glow-filter);
 }

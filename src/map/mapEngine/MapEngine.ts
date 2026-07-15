@@ -145,4 +145,34 @@ export interface MapEngine {
    * support it can omit the method and the UI hides the affordance.
    */
   setBaseMap?(url: string): void;
+
+  /**
+   * Enable/disable map pan drag. Used while interacting with overlay controls
+   * (e.g. brightness slider) so the map does not pan under the pointer.
+   */
+  setMapInteractionEnabled?(enabled: boolean): void;
+
+  /** Zoom by delta map levels (positive = in). Optional. */
+  zoomBy?(delta: number): void;
+
+  /** Animate bearing back to north (0°). Optional. */
+  resetNorth?(durationMs?: number): void;
+
+  /** Toggle between flat (pitch 0) and tilted 3D view. Optional. */
+  togglePitch3d?(tiltedPitch?: number): void;
+
+  /** True when current pitch is treated as 3D. Optional. */
+  isPitch3d?(): boolean;
+
+  /** Ease back to the view captured at initialize(). Optional. */
+  resetHomeView?(durationMs?: number): void;
+
+  /** Flatten pitch + reset bearing. Optional. */
+  resetOrientation?(durationMs?: number): void;
+
+  /**
+   * Animate the camera to a geographic point [lng, lat].
+   * Optional `zoom` keeps current zoom when omitted.
+   */
+  flyTo?(lngLat: [number, number], options?: { zoom?: number; durationMs?: number }): void;
 }

@@ -1,9 +1,23 @@
 import { useEffect, type RefObject } from 'react';
+import type { BaseMap } from '../../../../stores/MapStyleStore';
 
-/** Dim the basemap canvas — same behaviour as the legacy MapStyleBar. */
+function buildFilter(brightness: number, baseMap: BaseMap): string {
+  const b = brightness / 100;
+  if (baseMap === 'satellite') {
+    // Darker ops look: lower brightness/saturation, slight contrast boost.
+    return `brightness(${b}) saturate(0.62) contrast(1.18)`;
+  }
+  return `brightness(${b})`;
+}
+
+/**
+ * Dim the basemap canvas only (Leaflet / MapLibre / Cesium).
+ * Does not touch Deck.gl overlays, markers, or floating windows.
+ */
 export function useBasemapBrightness(
   containerRef: RefObject<HTMLDivElement | null>,
   brightness: number,
+  baseMap: BaseMap = 'satellite',
 ): void {
   useEffect(() => {
     const container = containerRef.current;
@@ -13,10 +27,10 @@ export function useBasemapBrightness(
       '.leaflet-tile-pane, .maplibregl-canvas, .cesium-widget canvas',
     );
 
-    if (basemap) basemap.style.filter = `brightness(${brightness / 100})`;
+    if (basemap) basemap.style.filter = buildFilter(brightness, baseMap);
 
     return () => {
       if (basemap) basemap.style.filter = '';
     };
-  }, [containerRef, brightness]);
+  }, [containerRef, brightness, baseMap]);
 }

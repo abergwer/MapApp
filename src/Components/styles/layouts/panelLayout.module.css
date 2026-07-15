@@ -55,7 +55,8 @@
 }
 
 .entityItemButtonSelected {
-  color: var(--app-color-primary-light);
+  color: var(--app-color-entity-glow);
+  text-shadow: 0 0 8px var(--app-color-entity-glow-soft);
 }
 
 .brightnessRow {

@@ -21,6 +21,7 @@ export class LeafletEngine implements MapEngine {
   private baseLayer?: L.TileLayer;
   private viewChangeCallbacks = new Set<(vs: MapViewState) => void>();
   private clickCallback?: (lat: number, lng: number) => void;
+  private homeView?: { center: L.LatLngExpression; zoom: number };
 
   // ── Lifecycle ────────────────────────────────────────────────────────
 
@@ -41,9 +42,10 @@ export class LeafletEngine implements MapEngine {
       maxBoundsViscosity: 1.0,
     });
     this.map = map;
+    this.homeView = { center: options.center, zoom: options.zoom };
 
     L.control.scale({ position: 'bottomright' }).addTo(map);
-    L.control.zoom({ position: 'topright' as L.ControlPosition }).addTo(map);
+    // Custom MapNavControls in the React shell replaces stock zoom.
 
     this.baseLayer = L.tileLayer(config.LeafletTilesURL, {
       attribution: '&copy; OpenStreetMap contributors',
@@ -198,6 +200,41 @@ export class LeafletEngine implements MapEngine {
       noWrap: true,
       bounds: L.latLngBounds([-90, -180], [90, 180]),
     }).addTo(map);
+  }
+
+  setMapInteractionEnabled(enabled: boolean): void {
+    const map = this.map;
+    if (!map) return;
+    if (enabled) {
+      map.dragging.enable();
+    } else {
+      map.dragging.disable();
+    }
+  }
+
+  zoomBy(delta: number): void {
+    const map = this.map;
+    if (!map) return;
+    // getViewState reports deck zoom (leaflet - 1); setZoom uses leaflet zoom.
+    map.setZoom(map.getZoom() + delta);
+  }
+
+  resetHomeView(): void {
+    const map = this.map;
+    const home = this.homeView;
+    if (!map || !home) return;
+    map.setView(home.center, home.zoom);
+  }
+
+  flyTo(lngLat: [number, number], options?: { zoom?: number; durationMs?: number }): void {
+    const map = this.map;
+    if (!map) return;
+    const [lng, lat] = lngLat;
+    const zoom = options?.zoom ?? map.getZoom();
+    map.setView([lat, lng], zoom, {
+      animate: true,
+      duration: (options?.durationMs ?? 700) / 1000,
+    });
   }
 
   // ── Internals ────────────────────────────────────────────────────────

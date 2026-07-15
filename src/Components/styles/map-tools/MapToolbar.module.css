@@ -1,0 +1,96 @@
+.toolbarWrap {
+  position: absolute;
+  top: var(--layout-map-toolbar-top, 12px);
+  left: var(--layout-map-toolbar-left, 12px);
+  z-index: var(--layout-z-map-toolbar, 1300);
+  pointer-events: none;
+}
+
+.toolbar {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--map-toolbar-gap, 2px);
+  padding: var(--map-toolbar-padding, 4px);
+  border: 1px solid var(--app-color-border-operational);
+  border-radius: var(--app-radius-md);
+  background: var(--app-color-bg-shell-header);
+  box-shadow: var(--app-shadow-card);
+  pointer-events: auto;
+}
+
+.group {
+  display: flex;
+  align-items: center;
+  gap: var(--map-toolbar-gap, 2px);
+}
+
+.separator {
+  width: 1px;
+  height: var(--map-toolbar-sep-h, 22px);
+  margin: 0 var(--map-toolbar-sep-m, 3px);
+  background: var(--app-color-border-operational);
+  flex-shrink: 0;
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--map-toolbar-btn, 34px);
+  height: var(--map-toolbar-btn, 34px);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--app-radius-sm);
+  background: transparent;
+  cursor: pointer;
+  color: var(--app-color-text-control);
+  transition:
+    background var(--app-transition-fast),
+    border-color var(--app-transition-fast);
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--app-color-bg-nav-hover);
+}
+
+.btnActive,
+.btnActive:hover:not(:disabled) {
+  background: var(--app-color-bg-nav-active);
+  border-color: var(--app-color-primary-border);
+  box-shadow: 0 0 0 1px rgba(47, 140, 255, 0.25);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.icon {
+  width: var(--map-toolbar-icon, 18px);
+  height: var(--map-toolbar-icon, 18px);
+}
+
+.brightnessPopover {
+  position: absolute;
+  top: calc(100% + var(--map-toolbar-popover-oy, 6px));
+  left: 0;
+  width: var(--map-toolbar-popover-w, 180px);
+  padding: var(--app-space-4);
+  border: 1px solid var(--app-color-border-operational);
+  border-radius: var(--app-radius-md);
+  background: var(--app-color-bg-shell-header);
+  box-shadow: var(--app-shadow-card);
+  z-index: 1;
+  pointer-events: auto;
+  touch-action: none;
+  user-select: none;
+}
+
+.brightnessLabel {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--app-space-2);
+  font-size: var(--app-font-size-2xs);
+  color: var(--app-color-text-muted);
+}

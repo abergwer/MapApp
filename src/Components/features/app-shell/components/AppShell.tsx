@@ -1,26 +1,27 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { observer } from 'mobx-react-lite';
 import Tooltip from '@mui/material/Tooltip';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { appLayoutConfig } from '../config/appLayout.config';
-import {
-  defaultSelectedRailItem,
-  leftRailItems,
-  type LeftRailItemId,
-} from '../config/leftRail.config';
-import ConfigIcon from '../../shared/components/ConfigIcon';
+import { rightDockConfig } from '../../live-view/config/rightDock.config';
+import TopNavBar from './TopNavBar';
+import OperationalStatusBar from './OperationalStatusBar';
+import { useStores } from '../../../../stores/StoreContext';
+import type { RightWorkspaceLayout } from '../../../../stores/WindowDockStore';
 import styles from '../../../styles/app-shell/AppShell.module.css';
 
-export type { LeftRailItemId };
+export type LeftRailItemId = 'entities' | 'mapTools' | 'layers';
 
 export interface AppShellProps {
   topBarActions: ReactNode;
   appTitle?: string;
+  appSubtitle?: string;
   engineLabel?: string;
-  leftPanelSlots: Partial<Record<LeftRailItemId, ReactNode>>;
+  leftSidebar?: ReactNode;
+  leftPanelSlots?: Partial<Record<LeftRailItemId, ReactNode>>;
   mapWorkspace: ReactNode;
   rightPanel: ReactNode;
-  /** Optional floating windows rendered inside the map workspace (above the map). */
   mapFloatingWindows?: ReactNode;
   bottomBar?: ReactNode;
   mapWorkspaceRef?: React.Ref<HTMLDivElement>;
@@ -32,21 +33,23 @@ function px(value: number) {
   return `${value}px`;
 }
 
-const COLLAPSED_RAIL_EXPAND_WIDTH = 32;
-
-function resolveInitialRailItem(
-  slots: Partial<Record<LeftRailItemId, ReactNode>>,
-): LeftRailItemId | null {
-  if (slots[defaultSelectedRailItem]) return defaultSelectedRailItem;
-  const first = leftRailItems.find((item) => item.enabled && slots[item.id]);
-  return first?.id ?? null;
+function resolveRightWidth(
+  layout: RightWorkspaceLayout,
+  manuallyCollapsed: boolean,
+): string {
+  const cfg = appLayoutConfig.rightPanel;
+  if (!cfg.enabled) return '0px';
+  if (layout === 'hidden') return '0px';
+  if (manuallyCollapsed) return px(cfg.collapsedWidth);
+  if (layout === 'single') return cfg.widthSingle;
+  return cfg.widthDouble;
 }
 
-export default function AppShell({
+function AppShellImpl({
   topBarActions,
-  appTitle = 'Map Engine Orchestrator',
-  engineLabel,
-  leftPanelSlots,
+  appTitle = appLayoutConfig.branding.appTitle,
+  appSubtitle = appLayoutConfig.branding.appSubtitle,
+  leftSidebar,
   mapWorkspace,
   rightPanel,
   mapFloatingWindows,
@@ -56,48 +59,44 @@ export default function AppShell({
   onLayoutChange,
 }: AppShellProps) {
   const cfg = appLayoutConfig;
+  const { windowDockStore } = useStores();
+  const rightLayout = windowDockStore.rightWorkspaceLayout;
 
-  const [selectedRailItem, setSelectedRailItem] = useState<LeftRailItemId | null>(() =>
-    resolveInitialRailItem(leftPanelSlots),
-  );
-  const [leftPanelOpen, setLeftPanelOpen] = useState<boolean>(() => {
-    const initial = resolveInitialRailItem(leftPanelSlots);
-    return cfg.leftPanel.defaultOpen && initial !== null;
-  });
-  const [rightPanelOpen, setRightPanelOpen] = useState<boolean>(cfg.rightPanel.defaultOpen);
+  const [leftSidebarOpen, setLeftSidebarOpen] = useState<boolean>(cfg.leftSidebar.defaultOpen);
+  const [rightManuallyCollapsed, setRightManuallyCollapsed] = useState(false);
 
-  const enabledRailItems = useMemo(
-    () => leftRailItems.filter((item) => item.enabled && leftPanelSlots[item.id]),
-    [leftPanelSlots],
-  );
+  // Re-open automatically when windows appear after a fully hidden state.
+  useEffect(() => {
+    if (rightLayout !== 'hidden') return;
+    setRightManuallyCollapsed(false);
+  }, [rightLayout]);
 
   const notifyLayoutChange = useCallback(() => {
     onLayoutChange?.();
   }, [onLayoutChange]);
 
+  const showLeftSidebar = cfg.leftSidebar.enabled && leftSidebarOpen && leftSidebar != null;
+  const showRightContent = cfg.rightPanel.enabled && rightLayout !== 'hidden';
+  const rightExpanded = showRightContent && !rightManuallyCollapsed;
+
   useEffect(() => {
     notifyLayoutChange();
-  }, [leftPanelOpen, rightPanelOpen, selectedRailItem, notifyLayoutChange]);
-
-  const showLeftPanel =
-    cfg.leftPanel.enabled && leftPanelOpen && selectedRailItem !== null;
+  }, [leftSidebarOpen, rightExpanded, rightLayout, notifyLayoutChange]);
 
   const shellStyle = useMemo((): CSSProperties => {
-    const leftRailWidth =
-      cfg.leftRail.enabled && cfg.leftPanel.enabled ? cfg.leftRail.width : 0;
-    const leftPanelWidth = showLeftPanel ? cfg.leftPanel.width : 0;
-    const rightPanelWidth = !cfg.rightPanel.enabled
-      ? 0
-      : rightPanelOpen
-        ? cfg.rightPanel.width
-        : COLLAPSED_RAIL_EXPAND_WIDTH;
+    const leftWidth = showLeftSidebar
+      ? px(cfg.leftSidebar.width)
+      : cfg.leftSidebar.enabled
+        ? px(cfg.rightPanel.collapsedWidth)
+        : '0px';
 
     return {
-      '--layout-top-height': cfg.topBar.enabled ? px(cfg.topBar.height) : '0px',
-      '--layout-bottom-height': cfg.bottomBar.enabled ? px(cfg.bottomBar.height) : '0px',
-      '--layout-left-rail-width': px(leftRailWidth),
-      '--layout-left-panel-width': px(leftPanelWidth),
-      '--layout-right-panel-width': px(rightPanelWidth),
+      '--layout-top-bar-height': cfg.topBar.enabled ? px(cfg.topBar.height) : '0px',
+      '--layout-bottom-bar-height': cfg.bottomBar.enabled ? px(cfg.bottomBar.height) : '0px',
+      '--layout-left-sidebar-width': leftWidth,
+      '--layout-left-rail-width': '0px',
+      '--layout-left-panel-width': '0px',
+      '--layout-right-workspace-width': resolveRightWidth(rightLayout, rightManuallyCollapsed),
       '--layout-gap': px(cfg.spacing.gap),
       '--layout-panel-radius': px(cfg.borderRadius.panel),
       '--layout-z-top': cfg.zIndex.topBar,
@@ -105,114 +104,61 @@ export default function AppShell({
       '--layout-z-left-rail': cfg.zIndex.leftRail,
       '--layout-z-left-panel': cfg.zIndex.leftPanel,
       '--layout-z-right-panel': cfg.zIndex.rightPanel,
+      '--layout-z-map-toolbar': cfg.zIndex.mapToolbar,
+      '--layout-z-map-nav': cfg.zIndex.mapNav,
+      '--layout-map-toolbar-top': px(cfg.mapOverlay.toolbar.top),
+      '--layout-map-toolbar-left': px(cfg.mapOverlay.toolbar.left),
+      '--layout-map-nav-top': px(cfg.mapOverlay.nav.top),
+      '--layout-map-nav-right': px(cfg.mapOverlay.nav.right),
     } as CSSProperties;
-  }, [cfg, showLeftPanel, rightPanelOpen]);
-
-  const showLeftRail = cfg.leftRail.enabled && cfg.leftPanel.enabled;
-
-  const leftPanelContent =
-    selectedRailItem !== null ? leftPanelSlots[selectedRailItem] : null;
-
-  const handleRailSelect = (id: LeftRailItemId) => {
-    if (selectedRailItem === id && leftPanelOpen) {
-      setLeftPanelOpen(false);
-      return;
-    }
-    setSelectedRailItem(id);
-    setLeftPanelOpen(true);
-  };
-
-  const defaultBottom = (
-    <span aria-hidden="true">Timeline / actions area — reserved</span>
-  );
+  }, [cfg, showLeftSidebar, rightLayout, rightManuallyCollapsed]);
 
   return (
-    <div className={styles.shell} style={shellStyle}>
+    <div
+      className={styles.shell}
+      style={shellStyle}
+      data-right-layout={rightLayout}
+    >
       {cfg.topBar.enabled && (
-        <header className={styles.topBar}>
-          <div className={styles.topBarBrand}>
-            {cfg.branding.appIconPath && (
-              <ConfigIcon
-                iconPath={cfg.branding.appIconPath}
-                className={styles.topBarAppIcon}
-                tone="none"
-              />
-            )}
-            <h1 className={styles.topBarTitle}>{appTitle}</h1>
-          </div>
-          {engineLabel && (
-            <div className={styles.topBarMeta}>
-              <span>Engine:</span>
-              <strong>{engineLabel}</strong>
-            </div>
-          )}
-          <div className={styles.topBarActions}>{topBarActions}</div>
-        </header>
+        <div className={styles.topBarSlot}>
+          <TopNavBar appTitle={appTitle} appSubtitle={appSubtitle} clock={topBarActions} />
+        </div>
       )}
 
       <div className={styles.middleRow}>
-        {showLeftRail && (
-          <nav className={styles.leftRail} aria-label="Tools rail">
-            {enabledRailItems.map((item) => {
-              const isActive = selectedRailItem === item.id;
-              const classNames = [styles.railItem, isActive ? styles.railItemActive : '']
-                .filter(Boolean)
-                .join(' ');
-
-              return (
-                <Tooltip key={item.id} title={item.tooltip} placement="right">
+        {cfg.leftSidebar.enabled && (
+          <div className={styles.leftWorkspace}>
+            {showLeftSidebar ? (
+              <aside className={styles.leftSidebar} aria-label="Layers sidebar">
+                <div className={styles.panelCollapseRow}>
+                  <Tooltip title={cfg.labels.collapseSidebar}>
+                    <button
+                      type="button"
+                      className={styles.railCollapseButton}
+                      onClick={() => setLeftSidebarOpen(false)}
+                      aria-label={cfg.labels.collapseSidebar}
+                    >
+                      <ChevronLeftIcon fontSize="small" />
+                    </button>
+                  </Tooltip>
+                </div>
+                <div className={styles.leftSidebarInner}>{leftSidebar}</div>
+              </aside>
+            ) : (
+              <div className={styles.leftRailExpand}>
+                <Tooltip title={cfg.labels.expandSidebar} placement="right">
                   <button
                     type="button"
-                    className={classNames}
-                    onClick={() => handleRailSelect(item.id)}
-                    aria-pressed={isActive}
-                    aria-label={item.label}
+                    className={styles.railExpandButton}
+                    onClick={() => setLeftSidebarOpen(true)}
+                    aria-label={cfg.labels.expandSidebar}
                   >
-                    <ConfigIcon
-                      iconPath={item.iconPath}
-                      className={
-                        isActive
-                          ? `${styles.railItemIcon} ${styles.railItemActiveIcon}`
-                          : styles.railItemIcon
-                      }
-                      tone={isActive ? 'none' : 'muted'}
-                    />
+                    <ChevronRightIcon fontSize="small" />
                   </button>
                 </Tooltip>
-              );
-            })}
-            <div className={styles.leftRailSpacer} />
-            {!leftPanelOpen && selectedRailItem && (
-              <Tooltip title="Expand panel" placement="right">
-                <button
-                  type="button"
-                  className={styles.railExpandButton}
-                  onClick={() => setLeftPanelOpen(true)}
-                  aria-label="Expand panel"
-                >
-                  <ChevronRightIcon fontSize="small" />
-                </button>
-              </Tooltip>
+              </div>
             )}
-          </nav>
-        )}
-
-        {showLeftPanel && leftPanelContent && (
-          <aside className={styles.leftPanel} aria-label="Tools panel">
-            <div className={styles.panelCollapseRow}>
-              <Tooltip title="Collapse panel">
-                <button
-                  type="button"
-                  className={styles.railCollapseButton}
-                  onClick={() => setLeftPanelOpen(false)}
-                  aria-label="Collapse panel"
-                >
-                  <ChevronLeftIcon fontSize="small" />
-                </button>
-              </Tooltip>
-            </div>
-            <div className={styles.leftPanelInner}>{leftPanelContent}</div>
-          </aside>
+          </div>
         )}
 
         <main className={styles.mapWorkspace} ref={mapWorkspaceRef}>
@@ -220,48 +166,55 @@ export default function AppShell({
           {mapFloatingWindows}
         </main>
 
-        {cfg.rightPanel.enabled && rightPanelOpen && (
-          <aside
-            className={styles.rightPanel}
-            aria-label="Windows dock"
-            ref={rightPanelRef as React.Ref<HTMLElement>}
+        {showRightContent && (
+          <div
+            className={styles.rightWorkspace}
+            ref={rightPanelRef as React.Ref<HTMLDivElement>}
+            data-right-layout={rightLayout}
           >
-            <div className={styles.rightPanelHeader}>
-              <span className={styles.rightPanelLabel}>Windows</span>
-              <Tooltip title="Collapse windows dock">
-                <button
-                  type="button"
-                  className={styles.railCollapseButton}
-                  onClick={() => setRightPanelOpen(false)}
-                  aria-label="Collapse windows dock"
-                >
-                  <ChevronRightIcon fontSize="small" />
-                </button>
-              </Tooltip>
-            </div>
-            <div className={styles.rightPanelInner}>{rightPanel}</div>
-          </aside>
-        )}
-
-        {cfg.rightPanel.enabled && !rightPanelOpen && (
-          <div className={styles.rightRailExpand}>
-            <Tooltip title="Expand windows dock" placement="left">
-              <button
-                type="button"
-                className={styles.railExpandButton}
-                onClick={() => setRightPanelOpen(true)}
-                aria-label="Expand windows dock"
-              >
-                <ChevronLeftIcon fontSize="small" />
-              </button>
-            </Tooltip>
+            {rightExpanded ? (
+              <aside className={styles.rightPanel} aria-label="Operations workspace">
+                <div className={styles.rightPanelHeader}>
+                  <span className={styles.rightPanelLabel}>{rightDockConfig.header.title}</span>
+                  <Tooltip title={cfg.labels.collapseWorkspace}>
+                    <button
+                      type="button"
+                      className={styles.railCollapseButton}
+                      onClick={() => setRightManuallyCollapsed(true)}
+                      aria-label={cfg.labels.collapseWorkspace}
+                    >
+                      <ChevronRightIcon fontSize="small" />
+                    </button>
+                  </Tooltip>
+                </div>
+                <div className={styles.rightPanelInner}>{rightPanel}</div>
+              </aside>
+            ) : (
+              <div className={styles.rightRailExpand}>
+                <Tooltip title={cfg.labels.expandWorkspace} placement="left">
+                  <button
+                    type="button"
+                    className={styles.railExpandButton}
+                    onClick={() => setRightManuallyCollapsed(false)}
+                    aria-label={cfg.labels.expandWorkspace}
+                  >
+                    <ChevronLeftIcon fontSize="small" />
+                  </button>
+                </Tooltip>
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {cfg.bottomBar.enabled && (
-        <footer className={styles.bottomBar}>{bottomBar ?? defaultBottom}</footer>
+        <div className={styles.bottomBarSlot}>
+          {bottomBar ?? <OperationalStatusBar />}
+        </div>
       )}
     </div>
   );
 }
+
+const AppShell = observer(AppShellImpl);
+export default AppShell;

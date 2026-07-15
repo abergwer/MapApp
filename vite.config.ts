@@ -6,7 +6,13 @@ import cesium from 'vite-plugin-cesium'
 export default defineConfig({
   plugins: [react(), cesium()],
   optimizeDeps: {
-    include: ['maplibre-gl'],
+    include: [
+      'maplibre-gl',
+      'cesium',
+      '@cesium-suite/cesium-flight-simulator',
+      'react-redux',
+      '@reduxjs/toolkit',
+    ],
   },
   resolve: {
     alias: [{ find: /^maplibre-gl$/, replacement: 'maplibre-gl/dist/maplibre-gl.js' }],

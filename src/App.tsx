@@ -1,65 +1,67 @@
 import { observer } from 'mobx-react-lite'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import LayerManager from './Components/layerManager/LayerManager'
-import { mapEngineLabel } from './map/mapConfig'
 import { useStores } from './stores/StoreContext'
 import { buildLayers } from './Components/layerManager'
-import ClockBar from './Components/features/ClockBar'
-import CoordinatesBar from './Components/features/CoordinatesBar'
+import { AppShell, ClockBar } from './Components/features/app-shell'
 import { MapProvider } from './map/mapWrapper/MapProvider'
-import { AppShell } from './Components/features/app-shell'
-import MapOverlay from './map/mapWrapper/MapOverlay'
 import MapCanvas from './map/mapWrapper/MapCanvas'
-import { useCallback, useMemo, useRef, useState } from 'react'
-import { LayersPanel } from './Components/features/layers'
-import { MapToolsPanel } from './Components/features/map-tools'
-import EntitiesPanel from './Components/features/entities/components/EntitiesPanel'
+import { LeftSidebar } from './Components/features/left-sidebar'
+import { MapToolbar, MapNavControls } from './Components/features/map-tools'
 import { FloatingWindowsHost, RightDockPanel } from './Components/features/live-view'
+import { setBaseMapStyle } from './Components/features/map-tools/actions/mapStyleActions'
+import MapDarkOverlay from './Components/features/map-tools/components/MapDarkOverlay'
 
 function App() {
   const stores = useStores()
-  const { mapEngineStore } = stores;
-  const rightPanelRef = useRef<HTMLElement | null>(null);
-  const [dockDropActive, setDockDropActive] = useState(false);
+  const { mapEngineStore, mapStyleStore } = stores
+  const rightPanelRef = useRef<HTMLElement | null>(null)
+  const [dockDropActive, setDockDropActive] = useState(false)
 
   const triggerMapResize = useCallback(() => {
-    mapEngineStore.engine?.resize?.();
-  }, [mapEngineStore]);
+    mapEngineStore.engine?.resize?.()
+  }, [mapEngineStore])
 
-
-  const leftPanelSlots = useMemo(
-    () => ({
-      entities: <EntitiesPanel />,
-      mapTools: <MapToolsPanel />,
-      layers: <LayersPanel />,
-    }), [],);
+  // Sync store baseMap once the engine is ready (style apply waits for load).
+  useEffect(() => {
+    const engine = mapEngineStore.engine
+    if (!engine?.setBaseMap) return
+    try {
+      setBaseMapStyle(engine, mapStyleStore, mapStyleStore.baseMap)
+    } catch {
+      // Engine may still be loading style; MapLibreEngine defers safely.
+    }
+  }, [mapEngineStore.engine, mapStyleStore])
 
   return (
     <MapProvider>
       <AppShell
         appTitle="Map Engine Orchestrator"
-        engineLabel={mapEngineLabel[mapEngineStore.selectedEngine]}
         topBarActions={<ClockBar />}
-        leftPanelSlots={leftPanelSlots}
+        leftSidebar={<LeftSidebar />}
         onLayoutChange={triggerMapResize}
+        rightPanelRef={rightPanelRef}
         mapWorkspace={
-          <MapCanvas>
-            <LayerManager layers={buildLayers(stores)} />
-            <MapOverlay position="bottomLeft">
-              <CoordinatesBar />
-            </MapOverlay>
-          </MapCanvas>
+          <div className="map-workspace-surface">
+            <MapCanvas>
+              <LayerManager layers={buildLayers(stores)} />
+              <MapDarkOverlay />
+            </MapCanvas>
+          </div>
         }
         mapFloatingWindows={
-          <FloatingWindowsHost
-            dockDropRef={rightPanelRef}
-            onDropActiveChange={setDockDropActive}
-          />
+          <>
+            <FloatingWindowsHost
+              dockDropRef={rightPanelRef}
+              onDropActiveChange={setDockDropActive}
+            />
+            <MapToolbar />
+            <MapNavControls />
+          </>
         }
-
         rightPanel={<RightDockPanel dropActive={dockDropActive} />}
       />
     </MapProvider>
-
   )
 }
 

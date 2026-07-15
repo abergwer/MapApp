@@ -1,0 +1,140 @@
+.wrap {
+  position: absolute;
+  top: var(--layout-map-nav-top, var(--map-nav-top, 16px));
+  right: var(--layout-map-nav-right, var(--map-nav-right, 16px));
+  z-index: var(--layout-z-map-nav, 1300);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--map-nav-gap, 10px);
+  pointer-events: none;
+}
+
+.compassBtn {
+  pointer-events: auto;
+  position: relative;
+  width: var(--map-nav-compass, 72px);
+  height: var(--map-nav-compass, 72px);
+  padding: 0;
+  border: 1px solid var(--app-color-border-chrome);
+  border-radius: 50%;
+  background: var(--app-color-bg-chrome);
+  box-shadow: var(--app-shadow-chrome);
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  color: var(--app-color-text-on-chrome);
+}
+
+.compassBtn:hover {
+  border-color: var(--app-color-sidebar-accent-border);
+  box-shadow: var(--app-shadow-chrome-hover);
+}
+
+.compassRose {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  transition: transform 160ms ease-out;
+}
+
+.cardinal {
+  position: absolute;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--app-color-text-control);
+  text-shadow: var(--app-shadow-brand-icon);
+}
+
+.cardinalN {
+  top: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cardinalE {
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.cardinalS {
+  bottom: 7px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cardinalW {
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.needle {
+  width: 14px;
+  height: 34px;
+}
+
+.stack {
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  width: var(--map-nav-btn, 42px);
+  border: 1px solid var(--app-color-border-chrome);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--app-color-bg-chrome);
+  box-shadow: var(--app-shadow-chrome-stack);
+  backdrop-filter: blur(10px);
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--map-nav-btn, 42px);
+  height: var(--map-nav-btn, 42px);
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--app-color-border-subtle);
+  background: transparent;
+  color: var(--app-color-text-control);
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.btn:last-child {
+  border-bottom: none;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--app-color-nav-btn-hover);
+  color: var(--app-color-text-on-chrome);
+}
+
+.btnActive {
+  background: var(--app-color-nav-btn-active);
+  color: var(--app-color-nav-btn-active-text);
+  text-shadow: var(--app-color-sidebar-title-glow);
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.label3d {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.iconSvg {
+  width: var(--map-nav-icon, 18px);
+  height: var(--map-nav-icon, 18px);
+  display: block;
+}
+

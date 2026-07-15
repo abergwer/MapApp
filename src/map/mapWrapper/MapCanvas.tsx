@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { observer } from 'mobx-react-lite';
 import { createMapEngine } from '../engineFactory';
 import { useMapContext } from '../MapContext';
@@ -22,7 +22,7 @@ interface MapCanvasProps {
  * Must render under MapProvider (for containerRef) and typically inside AppShell.mapWorkspace.
  */
 function MapCanvasImpl({ children }: MapCanvasProps) {
-  const rootRef = useRef<HTMLDivElement>(null);
+  //const rootRef = useRef<HTMLDivElement>(null);
   const { containerRef } = useMapContext();
   const { mapEngineStore, entityService, drawingToolStore } = useStores();
 
@@ -69,19 +69,19 @@ function MapCanvasImpl({ children }: MapCanvasProps) {
   }, [containerRef, mapEngineStore, entityService, drawingToolStore]);
 
   useEffect(() => {
-    const root = rootRef.current;
-    if (!root) return;
+    //const root = rootRef.current;
+    //if (!root) return;
 
     const resizeObserver = new ResizeObserver(() => {
       mapEngineStore.engine?.resize?.();
     });
-    resizeObserver.observe(root);
+    // resizeObserver.observe(root);
     return () => resizeObserver.disconnect();
   }, [mapEngineStore]);
 
   return (
-    <div ref={rootRef} className="map-canvas-root">
-      <div ref={containerRef} className="map-engine-container" />
+    // <div ref={rootRef} className="map-canvas-root">
+      <div ref={containerRef} className="map-engine-container" >
       {children}
     </div>
   );

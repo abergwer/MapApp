@@ -35,23 +35,23 @@
 
 .crosshair::before {
   width: 1px;
-  height: 22px;
+  height: var(--dock-crosshair-size, 22px);
 }
 
 .crosshair::after {
-  width: 22px;
+  width: var(--dock-crosshair-size, 22px);
   height: 1px;
 }
 
 .cornerFrame {
   position: absolute;
-  inset: 10px;
+  inset: var(--dock-corner-inset, 10px);
 }
 
 .cornerBracket {
   position: absolute;
-  width: 14px;
-  height: 14px;
+  width: var(--dock-bracket-size, 14px);
+  height: var(--dock-bracket-size, 14px);
   border-color: var(--app-color-overlay-corner);
   opacity: 0.85;
 }

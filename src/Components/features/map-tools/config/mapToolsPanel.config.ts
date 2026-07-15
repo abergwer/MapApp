@@ -1,5 +1,6 @@
-import type { BaseMap } from '../../../stores/MapStyleStore';
-import type { MeasureTool } from '../../../stores/DrawingToolStore';
+import type { BaseMap } from '../../../../stores/MapStyleStore';
+import type { MeasureTool } from '../../../../stores/DrawingToolStore';
+import { mapToolbarConfig } from './mapToolbar.config';
 
 export interface MeasurementToolItemConfig {
   id: MeasureTool;
@@ -44,11 +45,12 @@ export const mapToolsPanelConfig = {
   viewControlsSection: {
     title: 'View Controls',
     defaultExpanded: true,
+    /** Shared with map floating toolbar brightness slider. */
     brightness: {
-      label: 'Brightness',
-      min: 0,
-      max: 120,
-      step: 1,
+      label: mapToolbarConfig.brightness.label,
+      min: mapToolbarConfig.brightness.min,
+      max: mapToolbarConfig.brightness.max,
+      step: mapToolbarConfig.brightness.step,
     },
   },
   measurementTools: [

@@ -42,7 +42,11 @@ export function createWebrtcViewer(options: WebrtcViewerOptions): WebrtcViewer {
 
   let stopped = false;
   const pc = new RTCPeerConnection(rtcConfig);
-  const socket: Socket = io(signalingUrl, { transports: ['websocket', 'polling'] });
+  const socket: Socket = io(signalingUrl, {
+    transports: ['websocket', 'polling'],
+    reconnection: false,
+    timeout: 2500,
+  });
   const stream = new MediaStream();
 
   // --- Peer connection events ---------------------------------------------

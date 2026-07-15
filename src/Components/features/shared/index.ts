@@ -1,11 +1,16 @@
 export { default as ConfigIcon } from './components/ConfigIcon';
 export type { ConfigIconTone } from './components/ConfigIcon';
 export { default as StatusBullet } from './components/StatusBullet';
-export type { StatusBulletTone, StatusBulletSize } from './components/StatusBullet';
+export type { StatusBulletTone, StatusBulletSize, StatusBulletState } from './components/StatusBullet';
+export { default as StatusBarItem } from './components/StatusBarItem';
+export type { StatusBarItemProps, StatusBarItemTone } from './components/StatusBarItem';
 export { default as PanelChrome } from './components/PanelChrome';
 export { default as CollapsiblePanelSection } from './components/CollapsiblePanelSection';
 export { default as DockWindowFrame } from './components/DockWindowFrame';
 export { default as FloatingWindow } from './components/FloatingWindow';
+export { default as WorkspaceCard } from './components/WorkspaceCard';
+export type { WorkspaceCardProps } from './components/WorkspaceCard';
 export { default as ToolTileButton } from './components/ToolTileButton';
 export { default as MapTypeTileButton } from './components/MapTypeTileButton';
 export { ToolsGrid, MapTypeGrid } from './components/PanelGrids';
+export { useLiveClock, formatLocalTime, formatUtc } from './hooks/useLiveClock';

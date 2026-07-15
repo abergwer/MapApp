@@ -1,26 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useLiveClock, formatLocalTime, formatUtc } from '../../shared/hooks/useLiveClock';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 
-const pad = (n: number) => String(n).padStart(2, '0');
-
-const formatTime = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-
-const formatUtc = (d: Date) => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())} UTC`;
-
 /**
- * Live clock overlay. Shows local time (ticking every second) plus the
- * current UTC time — handy when correlating map events across time zones.
+ * Top-nav live clock (MUI Paper + theme typography).
  */
 function ClockBar() {
-  const [now, setNow] = useState(() => new Date());
-
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const now = useLiveClock();
 
   return (
     <Paper sx={{ px: 1.25, py: 0.75, userSelect: 'none' }}>
@@ -35,7 +23,7 @@ function ClockBar() {
             fontVariantNumeric: 'tabular-nums',
           }}
         >
-          {formatTime(now)}
+          {formatLocalTime(now)}
         </Typography>
         <Typography
           component="span"
