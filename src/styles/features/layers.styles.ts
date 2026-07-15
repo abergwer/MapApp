@@ -50,33 +50,66 @@ export const groupTitle: SxProps<Theme> = {
   pb: 0.5,
 };
 
+/** Visibility row card: dot + label + count + switch (reference design). */
 export const layerRow: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
-  gap: 1,
-  px: 1,
+  gap: 0.75,
+  pl: 0.75,
+  pr: 0.5,
   py: 0.25,
-  borderRadius: 0.75,
-  cursor: 'pointer',
-  '&:hover': { bgcolor: `color-mix(in srgb, ${palette.accent} 8%, transparent)` },
+  mb: 0.75,
+  borderRadius: 1.5,
+  bgcolor: palette.panel,
+  border: `1px solid ${palette.border}`,
+  '&:hover': { borderColor: palette.borderBright },
 };
 
+/** Indented sub-row inside an expanded group. */
+export const layerSubRow: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 0.75,
+  ml: 3,
+  pl: 0.75,
+  pr: 0.5,
+  py: 0.125,
+  mb: 0.5,
+  borderRadius: 1,
+  bgcolor: `color-mix(in srgb, ${palette.panel} 55%, transparent)`,
+  border: `1px solid ${palette.border}`,
+};
+
+/** Dot colored per layer (reference design shows a round blue dot). */
 export const layerSwatch = (color: string): SxProps<Theme> => ({
   width: 9,
   height: 9,
-  borderRadius: '2px',
+  borderRadius: '50%',
   bgcolor: color,
+  boxShadow: `0 0 5px ${color}`,
   flexShrink: 0,
 });
 
 export const layerLabel: SxProps<Theme> = {
   flex: 1,
   fontSize: 13,
+  fontWeight: 600,
   color: 'text.primary',
+  textAlign: 'center',
 };
 
 export const layerCount: SxProps<Theme> = {
   fontFamily: fonts.mono,
   fontSize: 11,
+  fontStyle: 'italic',
   color: 'text.secondary',
+};
+
+/** Fixed-size slot so rows without an expand chevron still line up. */
+export const expandSlot: SxProps<Theme> = {
+  width: 26,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
 };

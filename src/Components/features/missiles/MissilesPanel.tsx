@@ -1,6 +1,7 @@
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { observer } from 'mobx-react-lite';
+import SectionCard from '../../common/SectionCard';
 import { useStores } from '../../../stores/StoreContext';
 import * as styles from '../../../styles/features/missiles.styles';
 
@@ -13,7 +14,7 @@ function MissilesPanelImpl() {
   const { missiles, selectedId } = missileStore;
 
   return (
-    <Box>
+    <SectionCard title="Active Missiles">
       {missiles.map((m) => {
         const selected = m.id === selectedId;
         return (
@@ -40,7 +41,7 @@ function MissilesPanelImpl() {
           No active missiles
         </Typography>
       )}
-    </Box>
+    </SectionCard>
   );
 }
 

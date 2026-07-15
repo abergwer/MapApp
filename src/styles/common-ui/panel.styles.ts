@@ -45,3 +45,100 @@ export const toolButton = (active: boolean): SxProps<Theme> => ({
     '&:hover': { bgcolor: `color-mix(in srgb, ${palette.accent} 30%, transparent)` },
   }),
 });
+
+// ── Section card (collapsible content block inside a nav view) ─────────
+
+export const sectionCard: SxProps<Theme> = {
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  borderRadius: 1.5,
+  mb: 1.5,
+};
+
+export const sectionHeader: SxProps<Theme> = {
+  px: 1.5,
+  py: 0.75,
+  bgcolor: palette.panelHeader,
+  borderBottom: `1px solid ${palette.border}`,
+  ...microLabel,
+  fontSize: 10,
+  color: 'text.secondary',
+};
+
+/** Centered chevron row that expands/collapses the section body. */
+export const sectionChevron: SxProps<Theme> = {
+  display: 'flex',
+  justifyContent: 'center',
+  py: 0,
+};
+
+export const sectionBody: SxProps<Theme> = {
+  px: 1,
+  pb: 1,
+};
+
+// ── Large selectable tool card (Distance/Area, map type, view toggles) ─
+
+export const toolCard = (selected: boolean): SxProps<Theme> => ({
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 0.5,
+  px: 1,
+  py: 1.25,
+  borderRadius: 1.5,
+  cursor: 'pointer',
+  textTransform: 'none',
+  fontSize: 12,
+  fontWeight: 600,
+  color: 'text.primary',
+  bgcolor: palette.panel,
+  border: `1px solid ${palette.border}`,
+  '&:hover': { borderColor: palette.borderBright },
+  ...(selected && {
+    color: palette.accentBright,
+    bgcolor: `color-mix(in srgb, ${palette.accent} 22%, ${palette.panel})`,
+    border: `1px solid ${palette.accent}`,
+    boxShadow: `0 0 10px color-mix(in srgb, ${palette.accent} 45%, transparent)`,
+    '&:hover': { borderColor: palette.accentBright },
+  }),
+  '&.Mui-disabled': { opacity: 0.45 },
+});
+
+/** Muted sub-caption inside a tool card. */
+export const toolCardCaption: SxProps<Theme> = {
+  fontSize: 11,
+  fontStyle: 'italic',
+  fontWeight: 400,
+  color: 'text.secondary',
+};
+
+/** Full-width red action (Clear buttons). */
+export const dangerButton: SxProps<Theme> = {
+  width: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 0.75,
+  py: 0.75,
+  borderRadius: 1.5,
+  textTransform: 'none',
+  fontSize: 13,
+  color: palette.danger,
+  bgcolor: `color-mix(in srgb, ${palette.danger} 8%, transparent)`,
+  border: `1px solid color-mix(in srgb, ${palette.danger} 45%, transparent)`,
+  '&:hover': { bgcolor: `color-mix(in srgb, ${palette.danger} 16%, transparent)` },
+};
+
+/** Label + control row (switch rows, slider rows). */
+export const controlRow: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+  gap: 1,
+  px: 0.5,
+  py: 0.5,
+};

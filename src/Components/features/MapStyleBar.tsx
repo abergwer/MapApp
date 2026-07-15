@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import IconButton from '@mui/material/IconButton';
 import Popover from '@mui/material/Popover';
@@ -10,7 +10,6 @@ import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import MapIcon from '@mui/icons-material/Map';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import { useMapContext } from '../../map/MapContext';
 import { useStores } from '../../stores/StoreContext';
 import { toolButton } from '../../styles/common-ui/panel.styles';
 import { brightnessPopover } from '../../styles/features/map.styles';
@@ -19,35 +18,15 @@ import config from '../../../config.json';
 /**
  * Map style controls as an icon strip: brightness (popover slider),
  * dark/satellite basemap toggle and the minimap/video panel toggles.
- * State lives in MapStyleStore + UIVisibilityStore.
+ * State lives in MapStyleStore + UIVisibilityStore; the brightness filter
+ * itself is applied by MapWrapper (single owner of the map container).
  */
 function MapStyleBarImpl() {
-  const { containerRef } = useMapContext();
   const { mapEngineStore, mapStyleStore, uiVisibilityStore } = useStores();
   const engine = mapEngineStore.engine;
   const { brightness, baseMap } = mapStyleStore;
   const { minimapVisible, videoVisible } = uiVisibilityStore;
   const [brightnessAnchor, setBrightnessAnchor] = useState<HTMLElement | null>(null);
-
-  // Dim the basemap when the slider goes down. Overlays (deck.gl, Leaflet
-  // draws) are left alone so they stay readable on a darker map.
-  // On MapLibre/Cesium, draw shapes share the basemap canvas and dim with it.
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const basemap = container.querySelector<HTMLElement>(
-      '.leaflet-tile-pane, .maplibregl-canvas, .cesium-widget canvas',
-    );
-    const deck = container.querySelector<HTMLElement>('.deck-overlay');
-
-    if (basemap) basemap.style.filter = `brightness(${brightness / 100})`;
-
-    return () => {
-      if (basemap) basemap.style.filter = '';
-      if (deck) deck.style.filter = '';
-    };
-  }, [containerRef, brightness]);
 
   const toggleSatellite = () => {
     if (!engine?.setBaseMap) return;

@@ -3,6 +3,8 @@ import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import LayersIcon from '@mui/icons-material/Layers'
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch'
+import PushPinIcon from '@mui/icons-material/PushPin'
+import TerrainIcon from '@mui/icons-material/Terrain'
 import ViewInArIcon from '@mui/icons-material/ViewInAr'
 import VideocamIcon from '@mui/icons-material/Videocam'
 import MapIcon from '@mui/icons-material/Map'
@@ -13,8 +15,11 @@ import MapWrapper from './map/mapWrapper/MapWrapper'
 import TopBar from './Components/layout/TopBar'
 import StatusBar from './Components/layout/StatusBar'
 import LayoutManager, { type PanelDef } from './Components/layout/LayoutManager'
+import LeftNav, { type LeftNavView } from './Components/layout/LeftNav'
 import LayersPanel from './Components/features/layers/LayersPanel'
 import MissilesPanel from './Components/features/missiles/MissilesPanel'
+import EntitiesPanel from './Components/features/entities/EntitiesPanel'
+import MapToolsPanel from './Components/features/map/MapToolsPanel'
 import MissileView3D from './Components/features/view3d/MissileView3D'
 import FloatingVideoWindow from './Components/features/video/FloatingVideoWindow'
 import MiniMap from './Components/features/MiniMap'
@@ -31,16 +36,32 @@ function App() {
   // Simulated live feed — replaced by the real server client later.
   useEffect(() => startMockTicker(stores), [stores])
 
-  const leftPanels: PanelDef[] = [
+  const leftViews: LeftNavView[] = [
+    {
+      id: 'entities',
+      title: 'Entities',
+      subtitle: 'Manage map entities',
+      icon: <PushPinIcon fontSize="small" />,
+      content: <EntitiesPanel />,
+    },
+    {
+      id: 'mapTools',
+      title: 'Map Tools',
+      subtitle: 'Map controls and view tools',
+      icon: <TerrainIcon fontSize="small" />,
+      content: <MapToolsPanel />,
+    },
     {
       id: 'layers',
       title: 'Layers',
+      subtitle: 'Toggle map layer visibility',
       icon: <LayersIcon fontSize="small" />,
       content: <LayersPanel />,
     },
     {
       id: 'missiles',
       title: 'Missiles',
+      subtitle: 'Live missile tracking',
       icon: <RocketLaunchIcon fontSize="small" />,
       content: <MissilesPanel />,
     },
@@ -84,7 +105,7 @@ function App() {
     <LayoutManager
       topBar={<TopBar />}
       statusBar={<StatusBar />}
-      leftPanels={leftPanels}
+      leftNav={<LeftNav views={leftViews} />}
       rightPanels={rightPanels}
     >
       {/*

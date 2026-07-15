@@ -26,7 +26,8 @@ export interface PanelDef {
 interface LayoutManagerProps {
   topBar: ReactNode;
   statusBar: ReactNode;
-  leftPanels: PanelDef[];
+  /** Left icon-rail navigator (see LeftNav). */
+  leftNav: ReactNode;
   rightPanels: PanelDef[];
   /** Map area content. */
   children: ReactNode;
@@ -47,6 +48,7 @@ const RailImpl = ({ side, panels }: { side: RailSide; panels: PanelDef[] }) => {
         <Tooltip title={collapsed ? 'Expand panels' : 'Collapse panels'} arrow>
           <IconButton
             size="small"
+            sx={layout.railIcon(false)}
             onClick={() => ui.toggleRail(side)}
             aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${side} panels`}
           >
@@ -61,6 +63,7 @@ const RailImpl = ({ side, panels }: { side: RailSide; panels: PanelDef[] }) => {
             <Tooltip key={p.id} title={p.title} placement={side === 'left' ? 'right' : 'left'} arrow>
               <IconButton
                 size="small"
+                sx={layout.railIcon(false)}
                 onClick={() => ui.expandRail(side)}
                 aria-label={`Expand ${p.title} panel`}
               >
@@ -83,15 +86,15 @@ const Rail = observer(RailImpl);
 
 /**
  * App shell: renders the dashboard grid from a declarative panel config so
- * new panels can be injected without touching the layout. Handles rail
- * collapse-to-icons (map gets wider) via UIVisibilityStore.
+ * new panels can be injected without touching the layout. The left side is
+ * an icon-rail navigator (LeftNav); the right rail collapses to icons.
  */
-function LayoutManagerImpl({ topBar, statusBar, leftPanels, rightPanels, children }: LayoutManagerProps) {
+function LayoutManagerImpl({ topBar, statusBar, leftNav, rightPanels, children }: LayoutManagerProps) {
   const { uiVisibilityStore: ui } = useStores();
   return (
     <Box sx={layout.appGrid(ui.railCollapsed.left, ui.railCollapsed.right)}>
       {topBar}
-      <Rail side="left" panels={leftPanels} />
+      {leftNav}
       <Box component="main" sx={layout.mapArea}>
         {children}
       </Box>

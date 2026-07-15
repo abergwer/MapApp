@@ -48,7 +48,26 @@ function MapWrapperImpl({
   onShapeDelete,
 }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, drawingToolStore, entityService } = useStores();
+  const { mapEngineStore, drawingToolStore, entityService, mapStyleStore, uiVisibilityStore } =
+    useStores();
+  const { brightness } = mapStyleStore;
+
+  // Apply the basemap brightness filter here (single place with access to
+  // the map container) so any control — side panel or floating strip — only
+  // needs to write `mapStyleStore.brightness`.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const basemap = container.querySelector<HTMLElement>(
+      '.leaflet-tile-pane, .maplibregl-canvas, .cesium-widget canvas',
+    );
+    if (basemap) basemap.style.filter = `brightness(${brightness / 100})`;
+
+    return () => {
+      if (basemap) basemap.style.filter = '';
+    };
+  }, [brightness]);
 
   // Register outbound notification callbacks. `EntityService` fires these
   // *after* every successful create / update / delete so the host app can
@@ -175,16 +194,18 @@ function MapWrapperImpl({
       <Box sx={mapStyles.mapFrame}>
         <Box ref={containerRef} sx={mapStyles.engineContainer} />
 
-        {/* Floating tool strip, top-center like the reference design. */}
-        <Box sx={mapStyles.toolStripWrap}>
-          <Paper sx={mapStyles.toolStrip}>
-            <ToolBar />
-            <Divider orientation="vertical" flexItem sx={mapStyles.toolStripDivider} />
-            <MeasuringTools />
-            <Divider orientation="vertical" flexItem sx={mapStyles.toolStripDivider} />
-            <MapStyleBar />
-          </Paper>
-        </Box>
+        {/* Optional floating tool strip — toggled from MAP TOOLS → "Map toolbar". */}
+        {uiVisibilityStore.toolbarVisible && (
+          <Box sx={mapStyles.toolStripWrap}>
+            <Paper sx={mapStyles.toolStrip}>
+              <ToolBar />
+              <Divider orientation="vertical" flexItem sx={mapStyles.toolStripDivider} />
+              <MeasuringTools />
+              <Divider orientation="vertical" flexItem sx={mapStyles.toolStripDivider} />
+              <MapStyleBar />
+            </Paper>
+          </Box>
+        )}
 
         <Box sx={mapStyles.coordsWrap}>
           <CoordinatesBar />
