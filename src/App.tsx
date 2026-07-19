@@ -20,7 +20,6 @@ import MissilesPanel from './Components/features/missiles/MissilesPanel'
 import EntitiesPanel from './Components/features/entities/EntitiesPanel'
 import IntelFeedPanel from './Components/features/intel/IntelFeedPanel'
 import MissileView3D from './Components/features/view3d/MissileView3D'
-import FloatingPanelWindow from './Components/common/FloatingPanelWindow'
 import MiniMap from './Components/features/MiniMap'
 import MiniVideo from './Components/features/MiniVideo'
 import { useStores } from './stores/StoreContext'
@@ -104,6 +103,7 @@ function App() {
     hidden: !ui.isPanelVisible(id) || ui.panels[id].mode !== 'docked',
     headerAction: panelActions(id, panelContent[id].title),
     content: id === 'view3d' ? <MissileView3D /> : panelContent[id].node,
+    floatContent: panelContent[id].node,
   }))
 
   return (
@@ -112,6 +112,7 @@ function App() {
       statusBar={<StatusBar />}
       leftNav={<LeftPanel views={leftViews} />}
       rightPanels={rightPanels}
+      showFloatingWindows
     >
       {/*
         Data contract with the map:
@@ -136,20 +137,6 @@ function App() {
         */}
         <LayersWrapper />
       </MapWrapper>
-
-      {workspaceIds
-        .filter((id) => ui.isPanelVisible(id) && ui.panels[id].mode !== 'docked')
-        .map((id) => (
-          <FloatingPanelWindow key={id} id={id} title={panelContent[id].title}>
-            {id === 'view3d' ? (
-              <MissileView3D fill />
-            ) : id === 'video' ? (
-              <MiniVideo fill />
-            ) : (
-              panelContent[id].node
-            )}
-          </FloatingPanelWindow>
-        ))}
     </LayoutManager>
   )
 }
