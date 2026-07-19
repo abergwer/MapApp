@@ -35,10 +35,6 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
     container.appendChild(canvas);
 
     const { width, height } = container.getBoundingClientRect();
-    if (width === 0 || height === 0) {
-      canvas.remove();
-      return;
-    }
     const viewState = engine.getViewState();
 
     // Deck.gl v9 initializes its GPU device asynchronously; picking before
@@ -48,8 +44,11 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
 
     const deck = new Deck({
       canvas,
-      width,
-      height,
+      // A container mid-layout (e.g. during an HMR remount) can measure 0×0;
+      // Deck can't initialize at zero size, so clamp — the ResizeObserver
+      // below corrects the dimensions as soon as layout settles.
+      width: Math.max(1, width),
+      height: Math.max(1, height),
       controller: false,
       viewState,
       layers,
@@ -132,11 +131,11 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
   }, [engine]);
 
   // Push updated layer arrays into the already-initialized Deck instance.
-  // useEffect(() => {
-  //   if (deckRef.current) {
-  //     deckRef.current.setProps({ layers });
-  //   }
-  // }, [layers]);
+  useEffect(() => {
+    if (deckRef.current) {
+      deckRef.current.setProps({ layers });
+    }
+  }, [layers]);
 
   return null;
 }

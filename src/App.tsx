@@ -9,7 +9,7 @@ import FmdGoodOutlinedIcon from '@mui/icons-material/FmdGoodOutlined'
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined'
 import RocketLaunchOutlinedIcon from '@mui/icons-material/RocketLaunchOutlined'
 import { observer } from 'mobx-react-lite'
-import LayerManager from './Components/layerManager/LayerManager'
+import LayersWrapper from './Components/layerManager/LayersWrapper'
 import MapWrapper from './map/mapWrapper/MapWrapper'
 import TopBar from './Components/layout/TopBar'
 import StatusBar from './Components/layout/StatusBar'
@@ -25,7 +25,6 @@ import MiniMap from './Components/features/MiniMap'
 import MiniVideo from './Components/features/MiniVideo'
 import { useStores } from './stores/StoreContext'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
-import { buildLayers } from './Components/layerManager'
 import { MOCK_SERVER_SHAPES, startMockTicker } from './mocks/mockData'
 import { DEMO_LAYER_TOGGLES } from './mocks/demoLayerToggles'
 import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
@@ -130,13 +129,12 @@ function App() {
       >
         {/*
           Layer injection point: real projects pass their own deck.gl layer
-          array here. `buildLayers` is the demo/testing reference set only.
-          Perf note: building fast-ticking layers directly in a top-level
-          observer re-renders the whole tree on every data tick — hosts with
-          live feeds should wrap their layer builder in a small child
-          observer component instead.
+          array here (`<LayerManager layers={...} />`). LayersWrapper is the
+          demo composition: a small observer child that builds the reference
+          layer set inside its own render, so live-feed ticks re-render only
+          it — not the whole App tree.
         */}
-        <LayerManager layers={buildLayers(stores)} />
+        <LayersWrapper />
       </MapWrapper>
 
       {workspaceIds

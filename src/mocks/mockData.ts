@@ -61,9 +61,9 @@ export const generateDrones = (count: number): DroneTarget[] =>
 
 // ── Seeds ──────────────────────────────────────────────────────────────
 
-export const MOCK_AIRCRAFT: AirCraftTarget[] = generateAircraft(8);
+export const MOCK_AIRCRAFT: AirCraftTarget[] = generateAircraft(800);
 
-export const MOCK_DRONES: DroneTarget[] = generateDrones(6);
+export const MOCK_DRONES: DroneTarget[] = generateDrones(600);
 
 /**
  * Missiles are simulated as a sliding window over a precomputed straight
