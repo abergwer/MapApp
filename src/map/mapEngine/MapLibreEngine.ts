@@ -237,6 +237,16 @@ export class MapLibreEngine implements MapEngine {
   setBaseMap(url: string): void {
     const map = this.map;
     if (!map) return;
+
+    // MapLibre throws "Cannot read properties of undefined (reading 'getLayer')"
+    // if the style isn't loaded yet — getLayer/getSource/getStyle() all reach
+    // into `map.style` which is only populated after the `load` event. Defer
+    // the swap until the style is ready.
+    if (!map.isStyleLoaded()) {
+      map.once('load', () => this.setBaseMap(url));
+      return;
+    }
+
     if (map.getLayer('raster-layer')) map.removeLayer('raster-layer');
     if (map.getSource('raster-tiles')) map.removeSource('raster-tiles');
     map.addSource('raster-tiles', {
@@ -247,10 +257,11 @@ export class MapLibreEngine implements MapEngine {
       maxzoom: 15,
       attribution: '© OpenStreetMap contributors',
     });
-    const firstLayerId = map.getStyle().layers?.[0]?.id;
+    const layers = map.getStyle().layers ?? [];
+    const firstLayerId = layers[0]?.id;
     map.addLayer(
       { id: 'raster-layer', type: 'raster', source: 'raster-tiles' },
-      firstLayerId === 'background' ? map.getStyle().layers?.[1]?.id : firstLayerId,
+      firstLayerId === 'background' ? layers[1]?.id : firstLayerId,
     );
   }
 }
