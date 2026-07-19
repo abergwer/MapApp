@@ -8,6 +8,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import FmdGoodOutlinedIcon from '@mui/icons-material/FmdGoodOutlined'
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined'
 import RocketLaunchOutlinedIcon from '@mui/icons-material/RocketLaunchOutlined'
+import { reaction } from 'mobx'
 import { observer } from 'mobx-react-lite'
 import LayersWrapper from './Components/layerManager/LayersWrapper'
 import MapWrapper from './map/mapWrapper/MapWrapper'
@@ -24,17 +25,46 @@ import MiniMap from './Components/features/MiniMap'
 import MiniVideo from './Components/features/MiniVideo'
 import { useStores } from './stores/StoreContext'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
-import { MOCK_SERVER_SHAPES, startMockTicker } from './mocks/mockData'
+import { LiveDataSocketProvider, liveDataStore, useLiveShapes } from './bridge'
 import { DEMO_LAYER_TOGGLES } from './mocks/demoLayerToggles'
 import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
-import type { MapShape } from './stores/shapes'
+import airCraftIcon from './assets/aircraft.png'
+import droneIcon from './assets/drone.png'
 
 function App() {
   const stores = useStores()
   const { uiVisibilityStore: ui } = stores
 
-  // Simulated live feed — replaced by the real server client later.
-  useEffect(() => startMockTicker(stores), [stores])
+  // Live feed: the demo server pushes targets/missiles over the bridge's WS
+  // into `liveDataStore`; mirror each frame into the app's entity stores so
+  // the existing layers/panels render server data. Counts + move intervals
+  // are configured at the top of server/server.js.
+  useEffect(() => {
+    const { airCraftStore, droneStore, missileStore } = stores
+    // Drop the local mock seeds — the server owns the data now.
+    airCraftStore.setTargets([])
+    droneStore.setTargets([])
+    missileStore.setAll([])
+    const disposers = [
+      reaction(
+        () => liveDataStore.aircraft,
+        (targets) => airCraftStore.setTargets(targets.map((t) => ({ ...t, icon: airCraftIcon }))),
+      ),
+      reaction(
+        () => liveDataStore.drones,
+        (targets) => droneStore.setTargets(targets.map((t) => ({ ...t, icon: droneIcon }))),
+      ),
+      reaction(
+        () => liveDataStore.missiles,
+        (missiles) => missileStore.setAll(missiles.slice()),
+      ),
+    ]
+    return () => disposers.forEach((dispose) => dispose())
+  }, [stores])
+
+  // Drawn shapes: hydrated once from the server's WS snapshot; user edits
+  // are pushed back over REST.
+  const liveShapes = useLiveShapes(liveDataStore)
   console.log('[App] render')
   const leftViews: LeftPanelView[] = [
     { id: 'entities', title: 'Entities', Icon: FmdGoodOutlinedIcon, content: <EntitiesPanel /> },
@@ -116,17 +146,16 @@ function App() {
     >
       {/*
         Data contract with the map:
-        • Inbound:  `shapes` — the array the host owns (initial payload +
-                    any live updates from the server). The map re-hydrates
-                    whenever the array reference changes.
-        • Outbound: `onShape*` fire on user draw / edit / delete so the
-                    host can push the change back to the server.
+        • Inbound:  `shapes` — hydrated once from the server's WS
+                    `shapeSnapshot`; after that the map is authoritative.
+        • Outbound: `onShape*` push user draw / edit / delete back to the
+                    server over REST (see src/bridge/useLiveShapes.ts).
       */}
       <MapWrapper
-        shapes={MOCK_SERVER_SHAPES}
-        onShapeCreate={(shape: MapShape) => console.log('[App] shape created', shape)}
-        onShapeUpdate={(shape: MapShape) => console.log('[App] shape updated', shape)}
-        onShapeDelete={(id: string) => console.log('[App] shape deleted', id)}
+        shapes={liveShapes.shapes}
+        onShapeCreate={liveShapes.onShapeCreate}
+        onShapeUpdate={liveShapes.onShapeUpdate}
+        onShapeDelete={liveShapes.onShapeDelete}
       >
         {/*
           Layer injection point: real projects pass their own deck.gl layer
@@ -141,4 +170,13 @@ function App() {
   )
 }
 
-export default observer(App)
+const ObservedApp = observer(App)
+
+/** Mounts the bridge's WS connection above the app (server → UI live feed). */
+export default function AppWithLiveData() {
+  return (
+    <LiveDataSocketProvider>
+      <ObservedApp />
+    </LiveDataSocketProvider>
+  )
+}
