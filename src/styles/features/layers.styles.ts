@@ -10,9 +10,10 @@ import { palette, symbology, fonts, microLabel, hexToRgba, type Rgba } from '../
 // ── deck.gl symbology ──────────────────────────────────────────────────
 
 export const layerColors = {
-  aircraft: hexToRgba(symbology.aircraft),
-  drone: hexToRgba(symbology.drone),
+  aircraft: hexToRgba(symbology.danger),
+  drone: hexToRgba(symbology.danger),
   missile: hexToRgba(symbology.missile),
+  missileSelected: hexToRgba(symbology.accent),
   missileTrack: hexToRgba(symbology.missile, 200),
   areaFill: hexToRgba(symbology.area, 36),
   areaLine: hexToRgba(symbology.area, 210),

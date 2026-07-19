@@ -72,6 +72,19 @@ export const floatWindow = (rect: {
   boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
 });
 
+/** Full-view variant: fills the map area (small inset margin). */
+export const maximizedWindow: SxProps<Theme> = {
+  position: 'absolute',
+  inset: 12,
+  zIndex: 1300,
+  display: 'flex',
+  flexDirection: 'column',
+  overflow: 'hidden',
+  bgcolor: palette.overlay,
+  backdropFilter: 'blur(4px)',
+  boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+};
+
 export const floatHeader: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',

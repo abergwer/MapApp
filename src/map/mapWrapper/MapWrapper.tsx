@@ -5,7 +5,7 @@ import Paper from '@mui/material/Paper';
 import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import { observer } from 'mobx-react-lite';
-import { createMapEngine } from '../EngineFactory';
+import { createMapEngine } from '../engineFactory';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
@@ -13,6 +13,7 @@ import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
+import MapControls from '../../Components/features/MapControls';
 import * as mapStyles from '../../styles/features/map.styles';
 import type { MapShape } from '../../stores/shapes';
 
@@ -48,7 +49,8 @@ function MapWrapperImpl({
   onShapeDelete,
 }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, drawingToolStore, entityService, mapStyleStore } = useStores();
+  const { mapEngineStore, drawingToolStore, entityService, mapStyleStore, uiVisibilityStore } =
+    useStores();
   const { brightness } = mapStyleStore;
 
   // Apply the basemap brightness filter here (single place with access to
@@ -196,9 +198,11 @@ function MapWrapperImpl({
       <Box sx={mapStyles.mapFrame}>
         <Box ref={containerRef} sx={mapStyles.engineContainer} />
 
-        {/* Always-visible toolbar clusters + brightness card (top-left). */}
-        <Box sx={mapStyles.toolStripWrap}>
-          <Box sx={mapStyles.toolStrip}>
+        {/* Toolbar clusters + brightness card (top-left); the TopBar
+            toolbar toggle shows/hides the whole strip. */}
+        {uiVisibilityStore.toolbarVisible && (
+          <Box sx={mapStyles.toolStripWrap}>
+            <Box sx={mapStyles.toolStrip}>
             <Paper sx={mapStyles.toolCluster}>
               <ToolBar />
             </Paper>
@@ -210,24 +214,30 @@ function MapWrapperImpl({
             </Paper>
           </Box>
 
-          <Paper sx={mapStyles.brightnessCard}>
-            <Box sx={mapStyles.brightnessHeader}>
-              <Typography sx={{ fontSize: 12, fontWeight: 600 }}>Brightness</Typography>
-              <Typography sx={{ fontSize: 11, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
-                {brightness}%
-              </Typography>
-            </Box>
-            <Slider
-              size="small"
-              value={brightness}
-              min={0}
-              max={120}
-              step={1}
-              onChange={(_, v) => mapStyleStore.setBrightness(v as number)}
-              aria-label="Map brightness"
-            />
-          </Paper>
-        </Box>
+          {uiVisibilityStore.brightnessCardVisible && (
+            <Paper sx={mapStyles.brightnessCard}>
+              <Box sx={mapStyles.brightnessHeader}>
+                <Typography sx={{ fontSize: 12, fontWeight: 600 }}>Brightness</Typography>
+                <Typography sx={{ fontSize: 11, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+                  {brightness}%
+                </Typography>
+              </Box>
+              <Slider
+                size="small"
+                value={brightness}
+                min={0}
+                max={120}
+                step={1}
+                onChange={(_, v) => mapStyleStore.setBrightness(v as number)}
+                aria-label="Map brightness"
+              />
+            </Paper>
+          )}
+          </Box>
+        )}
+
+        {/* Compass + zoom/3D/fullscreen stack (top-right, reference design). */}
+        <MapControls />
       </Box>
       {children}
     </MapContext.Provider>

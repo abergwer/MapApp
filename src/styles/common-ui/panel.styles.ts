@@ -11,6 +11,9 @@ export const panelRoot: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
+  // Fill the dock grid cell so every section uses all the space it has.
+  height: 1,
+  minHeight: 0,
 };
 
 export const panelHeader: SxProps<Theme> = {
@@ -32,6 +35,11 @@ export const panelTitle: SxProps<Theme> = {
 export const panelBody: SxProps<Theme> = {
   p: 1,
   minHeight: 0,
+  // Stretch the content to the full section height (single-child bodies).
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  '& > *': { flex: 1, minHeight: 0 },
 };
 
 /** Icon button inside a tool strip; highlighted while its tool is active.
@@ -63,7 +71,9 @@ export const sectionHeader: SxProps<Theme> = {
   borderBottom: `1px solid ${palette.border}`,
   ...microLabel,
   fontSize: 10,
-  color: 'text.secondary',
+  // Reference design: section titles glow in the accent color.
+  color: palette.accentBright,
+  textShadow: `0 0 8px color-mix(in srgb, ${palette.accent} 80%, transparent)`,
 };
 
 /** Centered chevron row that expands/collapses the section body. */
@@ -95,6 +105,12 @@ export const toolCard = (selected: boolean): SxProps<Theme> => ({
   fontSize: 12,
   fontWeight: 600,
   color: 'text.primary',
+  // Reference design: card icons + labels glow.
+  textShadow: '0 0 8px rgba(255, 255, 255, 0.35)',
+  '& svg': {
+    color: palette.accent,
+    filter: `drop-shadow(0 0 5px color-mix(in srgb, ${palette.accent} 75%, transparent))`,
+  },
   bgcolor: palette.panel,
   border: `1px solid ${palette.border}`,
   '&:hover': { borderColor: palette.borderBright },

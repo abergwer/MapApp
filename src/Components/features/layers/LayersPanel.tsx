@@ -53,12 +53,31 @@ function Row({ color, label, count, checked, onToggle, expandable, expanded, onE
   );
 }
 
+/**
+ * Host-injected layer-toggle definition. `id` is the visibility key the
+ * host's layer builder reads back via `uiVisibilityStore.isLayerVisible`.
+ * A def with `children` renders as an expandable group whose switch
+ * toggles every child.
+ */
+export interface LayerToggleDef {
+  id: string;
+  label: string;
+  color: string;
+  children?: LayerToggleDef[];
+}
+
+interface LayersPanelProps {
+  /** Toggle rows for the host's injected layers (none by default — the
+   *  base project only ships the built-in Drawn Shapes row). */
+  layers?: LayerToggleDef[];
+}
+
 /** LAYERS view: search + map layer visibility switches with groups. */
-function LayersPanelImpl() {
+function LayersPanelImpl({ layers = [] }: LayersPanelProps) {
   const stores = useStores();
   const { uiVisibilityStore: vis, drawingToolStore } = stores;
   const [shapesOpen, setShapesOpen] = useState(false);
-  const [dronesOpen, setDronesOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState('');
 
   const q = search.trim().toLowerCase();
@@ -71,9 +90,52 @@ function LayersPanelImpl() {
     kindCounts.set(s.kind, (kindCounts.get(s.kind) ?? 0) + 1);
   }
 
-  const dronesOn = vis.isLayerVisible('drones');
-  const ringsOn = vis.isLayerVisible('rangeRings');
-  const droneGroupEnabled = Number(dronesOn) + Number(ringsOn);
+  /** Render one injected toggle def (leaf row or expandable group). */
+  const renderDef = (def: LayerToggleDef) => {
+    const children = def.children ?? [];
+    if (children.length === 0) {
+      if (!show(def.label)) return null;
+      return (
+        <Row
+          key={def.id}
+          color={def.color}
+          label={def.label}
+          checked={vis.isLayerVisible(def.id)}
+          onToggle={(v) => vis.setLayerVisible(def.id, v)}
+        />
+      );
+    }
+
+    if (!show(def.label, ...children.map((c) => c.label))) return null;
+    const onCount = children.filter((c) => vis.isLayerVisible(c.id)).length;
+    const open = Boolean(openGroups[def.id]);
+    return (
+      <Box key={def.id}>
+        <Row
+          color={def.color}
+          label={def.label}
+          count={`${onCount}/${children.length}`}
+          checked={onCount === children.length}
+          onToggle={(v) => children.forEach((c) => vis.setLayerVisible(c.id, v))}
+          expandable
+          expanded={open}
+          onExpand={() => setOpenGroups((prev) => ({ ...prev, [def.id]: !prev[def.id] }))}
+        />
+        <Collapse in={open}>
+          {children.map((c) => (
+            <Row
+              key={c.id}
+              sub
+              color={c.color}
+              label={c.label}
+              checked={vis.isLayerVisible(c.id)}
+              onToggle={(v) => vis.setLayerVisible(c.id, v)}
+            />
+          ))}
+        </Collapse>
+      </Box>
+    );
+  };
 
   return (
     <>
@@ -104,11 +166,15 @@ function LayersPanelImpl() {
         {show('Drawn Shapes') && (
           <Collapse in={shapesOpen}>
             {[...kindCounts.entries()].map(([kind, count]) => (
-              <Box key={kind} sx={styles.layerSubRow}>
-                <Box sx={styles.expandSlot} />
-                <Typography sx={{ ...styles.layerLabel, textTransform: 'capitalize' }}>{kind}</Typography>
-                <Typography sx={{ ...styles.layerCount, pr: 1 }}>{count}</Typography>
-              </Box>
+              <Row
+                key={kind}
+                sub
+                color={palette.accent}
+                label={kind.charAt(0).toUpperCase() + kind.slice(1)}
+                count={`${count}`}
+                checked={vis.isLayerVisible(`drawnShapes:${kind}`)}
+                onToggle={(v) => vis.setLayerVisible(`drawnShapes:${kind}`, v)}
+              />
             ))}
             {kindCounts.size === 0 && (
               <Typography sx={{ ...styles.layerCount, ml: 4, mb: 0.5 }}>No shapes drawn</Typography>
@@ -116,66 +182,7 @@ function LayersPanelImpl() {
           </Collapse>
         )}
 
-        {show('Polygons') && (
-          <Row
-            color={palette.area}
-            label="Polygons"
-            checked={vis.isLayerVisible('polygons')}
-            onToggle={(v) => vis.setLayerVisible('polygons', v)}
-          />
-        )}
-
-        {show('Drones + Rings', 'Drones', 'Range Rings') && (
-          <Row
-            color={palette.drone}
-            label="Drones + Rings"
-            count={`${droneGroupEnabled}/2`}
-            checked={dronesOn && ringsOn}
-            onToggle={(v) => {
-              vis.setLayerVisible('drones', v);
-              vis.setLayerVisible('rangeRings', v);
-            }}
-            expandable
-            expanded={dronesOpen}
-            onExpand={() => setDronesOpen((v) => !v)}
-          />
-        )}
-        {show('Drones + Rings', 'Drones', 'Range Rings') && (
-          <Collapse in={dronesOpen}>
-            <Row
-              sub
-              color={palette.drone}
-              label="Drones"
-              checked={dronesOn}
-              onToggle={(v) => vis.setLayerVisible('drones', v)}
-            />
-            <Row
-              sub
-              color={palette.drone}
-              label="Range Rings"
-              checked={ringsOn}
-              onToggle={(v) => vis.setLayerVisible('rangeRings', v)}
-            />
-          </Collapse>
-        )}
-
-        {show('Missiles') && (
-          <Row
-            color={palette.missile}
-            label="Missiles"
-            checked={vis.isLayerVisible('missiles')}
-            onToggle={(v) => vis.setLayerVisible('missiles', v)}
-          />
-        )}
-
-        {show('Aircraft') && (
-          <Row
-            color={palette.aircraft}
-            label="Aircraft"
-            checked={vis.isLayerVisible('aircraft')}
-            onToggle={(v) => vis.setLayerVisible('aircraft', v)}
-          />
-        )}
+        {layers.map(renderDef)}
       </SectionCard>
     </>
   );

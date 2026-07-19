@@ -7,6 +7,7 @@ import RadarIcon from '@mui/icons-material/Radar';
 import DarkModeIcon from '@mui/icons-material/DarkMode';
 import LightModeIcon from '@mui/icons-material/LightMode';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import HandymanOutlinedIcon from '@mui/icons-material/HandymanOutlined';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../stores/StoreContext';
 import { palette } from '../../styles/system-ui/tokens';
@@ -16,7 +17,7 @@ const pad = (n: number) => String(n).padStart(2, '0');
 
 /** Top command bar: brand block + system status + theme switch + clock. */
 function TopBarImpl() {
-  const { mapEngineStore, themeStore } = useStores();
+  const { mapEngineStore, themeStore, uiVisibilityStore: ui } = useStores();
   const engineReady = Boolean(mapEngineStore.engine);
   const isDark = themeStore.theme === 'dark';
   const [now, setNow] = useState(() => new Date());
@@ -45,6 +46,17 @@ function TopBarImpl() {
         <Box sx={layout.statusDot(engineReady ? palette.ok : palette.warn)} />
         {engineReady ? 'System Operational' : 'Initializing'}
       </Box>
+
+      <Tooltip title={ui.toolbarVisible ? 'Hide map toolbar' : 'Show map toolbar'} arrow>
+        <IconButton
+          size="small"
+          onClick={() => ui.toggleToolbar()}
+          aria-label={ui.toolbarVisible ? 'Hide map toolbar' : 'Show map toolbar'}
+          sx={{ color: ui.toolbarVisible ? palette.accentBright : 'text.secondary' }}
+        >
+          <HandymanOutlinedIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
 
       <Tooltip title={isDark ? 'Switch to light theme' : 'Switch to dark theme'} arrow>
         <IconButton

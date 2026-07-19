@@ -28,27 +28,42 @@ const TICK_MS = 100;
 const TIME_COMPRESSION = 3;
 const SIM_SECONDS_PER_TICK = (TICK_MS / 1000) * TIME_COMPRESSION;
 
+const rand = (min: number, max: number) => min + Math.random() * (max - min);
+
+/** Generate `count` random targets inside the playbox. */
+function generateTargets(
+  count: number,
+  opts: {
+    idPrefix: string;
+    icon: string;
+    altitudeFt: [min: number, max: number];
+    speedKts: [min: number, max: number];
+  },
+): AirCraftTarget[] {
+  return Array.from({ length: count }, (_, i) => ({
+    id: `${opts.idPrefix}-${String(i + 1).padStart(2, '0')}`,
+    position: [rand(BOUNDS.minLng, BOUNDS.maxLng), rand(BOUNDS.minLat, BOUNDS.maxLat)] as [
+      number,
+      number,
+    ],
+    heading: Math.round(rand(0, 360)),
+    altitudeFt: Math.round(rand(...opts.altitudeFt)),
+    speedKts: Math.round(rand(...opts.speedKts)),
+    icon: opts.icon,
+  }));
+}
+
+export const generateAircraft = (count: number): AirCraftTarget[] =>
+  generateTargets(count, { idPrefix: 'AC', icon: airCraftIcon, altitudeFt: [6000, 16000], speedKts: [250, 420] });
+
+export const generateDrones = (count: number): DroneTarget[] =>
+  generateTargets(count, { idPrefix: 'DRN', icon: droneIcon, altitudeFt: [800, 1500], speedKts: [85, 130] });
+
 // ── Seeds ──────────────────────────────────────────────────────────────
 
-export const MOCK_AIRCRAFT: AirCraftTarget[] = [
-  { id: 'AC-101', position: [34.55, 32.05], heading: 40, altitudeFt: 8200, speedKts: 250, icon: airCraftIcon },
-  { id: 'AC-102', position: [35.01, 32.75], heading: 210, altitudeFt: 12500, speedKts: 320, icon: airCraftIcon },
-  { id: 'AC-103', position: [34.9, 31.55], heading: 350, altitudeFt: 6300, speedKts: 300, icon: airCraftIcon },
-  { id: 'AC-104', position: [35.45, 32.95], heading: 130, altitudeFt: 15000, speedKts: 410, icon: airCraftIcon },
-  { id: 'AC-105', position: [34.4, 31.9], heading: 75, altitudeFt: 9800, speedKts: 280, icon: airCraftIcon },
-  { id: 'AC-106', position: [35.4, 32.45], heading: 265, altitudeFt: 11000, speedKts: 340, icon: airCraftIcon },
-  { id: 'AC-107', position: [34.7, 32.55], heading: 10, altitudeFt: 7400, speedKts: 260, icon: airCraftIcon },
-  { id: 'AC-108', position: [35.15, 31.85], heading: 155, altitudeFt: 13200, speedKts: 380, icon: airCraftIcon },
-];
+export const MOCK_AIRCRAFT: AirCraftTarget[] = generateAircraft(8);
 
-export const MOCK_DRONES: DroneTarget[] = [
-  { id: 'DRN-01', position: [34.7818, 32.0853], heading: 90, altitudeFt: 1200, speedKts: 120, icon: droneIcon },
-  { id: 'DRN-02', position: [34.9885, 32.794], heading: 180, altitudeFt: 900, speedKts: 95, icon: droneIcon },
-  { id: 'DRN-03', position: [35.2137, 31.7683], heading: 300, altitudeFt: 1500, speedKts: 110, icon: droneIcon },
-  { id: 'DRN-04', position: [35.0, 32.3], heading: 25, altitudeFt: 800, speedKts: 85, icon: droneIcon },
-  { id: 'DRN-05', position: [34.5742, 31.6693], heading: 220, altitudeFt: 1100, speedKts: 100, icon: droneIcon },
-  { id: 'DRN-06', position: [34.85, 32.55], heading: 135, altitudeFt: 1350, speedKts: 130, icon: droneIcon },
-];
+export const MOCK_DRONES: DroneTarget[] = generateDrones(6);
 
 /**
  * Missiles are simulated as a sliding window over a precomputed straight
@@ -165,13 +180,14 @@ export const MOCK_SERVER_SHAPES: MapShape[] = [
 
 const toRad = (deg: number) => (deg * Math.PI) / 180;
 
-/** Advance a target along its heading; steer back when leaving the box. */
-function moveTarget<T extends AirCraftTarget | DroneTarget>(target: T): T {
-  const km = (target.speedKts * 1.852 * SIM_SECONDS_PER_TICK) / 3600;
+/** Advance a target along its heading; steer back when leaving the box.
+ *  `simSeconds` = elapsed simulation time since this target's last update. */
+function moveTarget<T extends AirCraftTarget | DroneTarget>(target: T, simSeconds: number): T {
+  const km = (target.speedKts * 1.852 * simSeconds) / 3600;
   const deg = km / 111;
-  // Heading drift scaled by tick length so the wander rate is the same at
-  // any tick frequency.
-  let heading = target.heading + (Math.random() - 0.5) * 2 * SIM_SECONDS_PER_TICK;
+  // Heading drift scaled by elapsed time so the wander rate is the same at
+  // any update frequency.
+  let heading = target.heading + (Math.random() - 0.5) * 2 * simSeconds;
   let lng = target.position[0] + deg * Math.sin(toRad(heading));
   let lat = target.position[1] + deg * Math.cos(toRad(heading));
   if (lng < BOUNDS.minLng || lng > BOUNDS.maxLng || lat < BOUNDS.minLat || lat > BOUNDS.maxLat) {
@@ -185,13 +201,22 @@ function moveTarget<T extends AirCraftTarget | DroneTarget>(target: T): T {
 /**
  * Start the simulated server feed. Pushes updates through the same store
  * setters a real socket client would use. Returns a stop function.
+ * Missiles update every tick (smooth chase view); aircraft/drones move far
+ * slower on screen, so they update once per SLOW_EVERY ticks — this cuts
+ * the per-tick React/deck work for the big entity lists to ~1 Hz.
  */
 export function startMockTicker(stores: RootStore): () => void {
+  const SLOW_EVERY = 10;
   let step = 0;
+  let tick = 0;
   const interval = setInterval(() => {
+    tick += 1;
     step = (step + SIM_SECONDS_PER_TICK * MISSILE_STEPS_PER_SIM_SECOND) % MAX_STEP;
-    stores.airCraftStore.setTargets(stores.airCraftStore.targets.map(moveTarget));
-    stores.droneStore.setTargets(stores.droneStore.targets.map(moveTarget));
+    if (tick % SLOW_EVERY === 0) {
+      const dt = SIM_SECONDS_PER_TICK * SLOW_EVERY;
+      stores.airCraftStore.setTargets(stores.airCraftStore.targets.map((t) => moveTarget(t, dt)));
+      stores.droneStore.setTargets(stores.droneStore.targets.map((t) => moveTarget(t, dt)));
+    }
     stores.missileStore.setAll(MISSILE_TRACKS.map((t, i) => missileWindow(t, step, i)));
   }, TICK_MS);
   return () => clearInterval(interval);

@@ -25,6 +25,15 @@ export interface MapEngine {
   /** Pan the view so the given coordinate is centered (keeps zoom). */
   setCenter?(lat: number, lng: number): void;
 
+  /** Zoom in/out by `delta` levels (animated). Optional. */
+  zoomBy?(delta: number): void;
+
+  /** Animate the view bearing (degrees clockwise from north). Optional. */
+  setBearing?(bearing: number): void;
+
+  /** Animate the view pitch (degrees from top-down). Optional. */
+  setPitch?(pitch: number): void;
+
   // Draw flows. The engine assigns a unique `id` to each freshly drawn
   // shape and surfaces it as the first arg of the onComplete callback,
   // so the caller can pair the geometry it builds with the same id the

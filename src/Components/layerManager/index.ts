@@ -8,12 +8,15 @@ import { createDrawnShapeLayers } from '../Layers/DrawnShapeLayers';
 import type { RootStore } from '../../stores/RootStore';
 
 /**
- * Build the array of Deck.gl layers from the current store state.
+ * DEMO/TESTING layer set. The base project treats layers as an injection
+ * point: real projects build their own deck.gl layer array and pass it to
+ * `<LayerManager layers={...} />` — this builder (and the entity stores it
+ * reads) is the reference composition used by the demo App only.
  *
- * To add a new layer: create a factory in `../Layers` and call it here.
- * MobX tracks the observable reads done inside this function — when wrapped
- * in a `reaction()` (see LayerManager) it will rerun automatically as the
- * underlying store collections change.
+ * To add a layer here: create a factory in `../Layers` and call it below.
+ * Visibility ids are free-form strings checked against
+ * `uiVisibilityStore.isLayerVisible` (pair them with the toggle defs the
+ * host passes to LayersPanel — see mocks/demoLayerToggles.ts).
  */
 export function buildLayers(stores: RootStore): Layer[] {
   const { drawingToolStore, uiVisibilityStore: vis } = stores;
@@ -21,13 +24,13 @@ export function buildLayers(stores: RootStore): Layer[] {
 
   // User-drawn shapes. The map engine's native edit tools drive the same
   // store via `entityService`; deck.gl only renders and picks here.
+  // Per-kind visibility: LayersPanel writes `drawnShapes:<kind>` keys
+  // (unknown keys default to visible).
   if (vis.isLayerVisible('drawnShapes')) {
-    layers.push(
-      ...createDrawnShapeLayers(
-        drawingToolStore.completedShapes,
-        drawingToolStore.selectedId,
-      ),
+    const visibleShapes = drawingToolStore.completedShapes.filter((s) =>
+      vis.isLayerVisible(`drawnShapes:${s.kind}`),
     );
+    layers.push(...createDrawnShapeLayers(visibleShapes, drawingToolStore.selectedId));
   }
   if (vis.isLayerVisible('polygons')) {
     layers.push(createPolygonLayer(stores.polygonStore.polygons));

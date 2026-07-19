@@ -18,12 +18,21 @@ export const kindRow: SxProps<Theme> = {
   '&:hover': { borderColor: palette.borderBright },
 };
 
+/** Kind-row leading icon: accent color with a soft glow (reference). */
+export const kindIcon: SxProps<Theme> = {
+  fontSize: 18,
+  color: palette.accent,
+  filter: `drop-shadow(0 0 5px color-mix(in srgb, ${palette.accent} 75%, transparent))`,
+};
+
 export const kindLabel: SxProps<Theme> = {
   flex: 1,
   fontSize: 13,
   fontWeight: 600,
   color: 'text.primary',
   textAlign: 'center',
+  // Reference design: entity titles glow softly.
+  textShadow: '0 0 8px rgba(255, 255, 255, 0.35)',
 };
 
 export const kindCount: SxProps<Theme> = {

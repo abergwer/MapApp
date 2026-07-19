@@ -1,11 +1,8 @@
-import { IconLayer, TextLayer } from '@deck.gl/layers';
+import { IconLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import airCraftIcon from '../../assets/aircraft.png';
 import type { AirCraftTarget } from '../../stores/AirCraftStore';
-import { layerColors, targetLabelProps } from '../../styles/features/layers.styles';
-
-const label = (d: AirCraftTarget) =>
-  `${d.id}\nALT ${d.altitudeFt} ft\nSPD ${d.speedKts} kts`;
+import { layerColors } from '../../styles/features/layers.styles';
 
 export function createAirCraftLayer(targets: AirCraftTarget[]): Layer[] {
   return [
@@ -20,12 +17,12 @@ export function createAirCraftLayer(targets: AirCraftTarget[]): Layer[] {
       getColor: layerColors.aircraft,
       getAngle: (d) => -d.heading,
     }),
-    new TextLayer<AirCraftTarget>({
-      id: 'aircraft-labels',
-      data: targets,
-      getPosition: (d) => d.position,
-      getText: label,
-      ...targetLabelProps,
-    }),
+    // new TextLayer<AirCraftTarget>({
+    //   id: 'aircraft-labels',
+    //   data: targets,
+    //   getPosition: (d) => d.position,
+    //   getText: label,
+    //   ...targetLabelProps,
+    // }),
   ];
 }

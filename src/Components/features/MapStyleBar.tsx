@@ -6,8 +6,12 @@ import DarkModeIcon from '@mui/icons-material/DarkMode';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import MapIcon from '@mui/icons-material/Map';
 import VideocamIcon from '@mui/icons-material/Videocam';
+import ViewInArIcon from '@mui/icons-material/ViewInAr';
+import RssFeedIcon from '@mui/icons-material/RssFeed';
+import Brightness6Icon from '@mui/icons-material/Brightness6';
 import { useStores } from '../../stores/StoreContext';
 import type { BaseMap } from '../../stores/MapStyleStore';
+import type { WorkspacePanelId } from '../../stores/UIVisibilityStore';
 import { toolButton } from '../../styles/common-ui/panel.styles';
 import config from '../../../config.json';
 
@@ -15,6 +19,14 @@ const BASEMAPS: { id: BaseMap; label: string; Icon: typeof WbSunnyIcon }[] = [
   { id: 'light', label: 'Light basemap', Icon: WbSunnyIcon },
   { id: 'dark', label: 'Dark basemap', Icon: DarkModeIcon },
   { id: 'satellite', label: 'Satellite basemap', Icon: SatelliteAltIcon },
+];
+
+/** Workspace panel toggles shown in the map toolbar (reference design). */
+const PANEL_TOGGLES: { id: WorkspacePanelId; label: string; Icon: typeof MapIcon }[] = [
+  { id: 'minimap', label: 'minimap panel', Icon: MapIcon },
+  { id: 'video', label: 'video panel', Icon: VideocamIcon },
+  { id: 'view3d', label: '3D view panel', Icon: ViewInArIcon },
+  { id: 'intel', label: 'intel feed panel', Icon: RssFeedIcon },
 ];
 
 /**
@@ -26,7 +38,6 @@ function MapStyleBarImpl() {
   const { mapEngineStore, mapStyleStore, uiVisibilityStore } = useStores();
   const engine = mapEngineStore.engine;
   const { baseMap } = mapStyleStore;
-  const { minimapVisible, videoVisible } = uiVisibilityStore;
   const supportsBaseMap = Boolean(engine?.setBaseMap);
 
   const handleBaseMap = (next: BaseMap) => {
@@ -54,25 +65,36 @@ function MapStyleBarImpl() {
         </Tooltip>
       ))}
 
-      <Tooltip title={minimapVisible ? 'Hide minimap panel' : 'Show minimap panel'} arrow>
-        <IconButton
-          size="small"
-          onClick={() => uiVisibilityStore.toggleMinimap()}
-          sx={toolButton(minimapVisible)}
-          aria-label={minimapVisible ? 'Hide minimap panel' : 'Show minimap panel'}
-        >
-          <MapIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
+      {PANEL_TOGGLES.map(({ id, label, Icon }) => {
+        const visible = uiVisibilityStore.isPanelVisible(id);
+        const title = `${visible ? 'Hide' : 'Show'} ${label}`;
+        return (
+          <Tooltip key={id} title={title} arrow>
+            <IconButton
+              size="small"
+              onClick={() => uiVisibilityStore.togglePanel(id)}
+              sx={toolButton(visible)}
+              aria-label={title}
+            >
+              <Icon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        );
+      })}
 
-      <Tooltip title={videoVisible ? 'Hide video panel' : 'Show video panel'} arrow>
+      <Tooltip
+        title={uiVisibilityStore.brightnessCardVisible ? 'Hide brightness control' : 'Show brightness control'}
+        arrow
+      >
         <IconButton
           size="small"
-          onClick={() => uiVisibilityStore.toggleVideo()}
-          sx={toolButton(videoVisible)}
-          aria-label={videoVisible ? 'Hide video panel' : 'Show video panel'}
+          onClick={() => uiVisibilityStore.toggleBrightnessCard()}
+          sx={toolButton(uiVisibilityStore.brightnessCardVisible)}
+          aria-label={
+            uiVisibilityStore.brightnessCardVisible ? 'Hide brightness control' : 'Show brightness control'
+          }
         >
-          <VideocamIcon fontSize="small" />
+          <Brightness6Icon fontSize="small" />
         </IconButton>
       </Tooltip>
     </>

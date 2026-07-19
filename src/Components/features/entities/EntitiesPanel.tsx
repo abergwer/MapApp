@@ -71,7 +71,7 @@ function EntitiesPanelImpl() {
                 onClick={() => setOpenKinds((prev) => ({ ...prev, [kind]: !prev[kind] }))}
                 aria-label={`${open ? 'Collapse' : 'Expand'} ${kindLabel(kind)} entities`}
               >
-                {Icon && <Icon sx={{ fontSize: 18, color: 'text.secondary' }} />}
+                {Icon && <Icon sx={styles.kindIcon} />}
                 <Typography sx={styles.kindLabel}>{kindLabel(kind)}</Typography>
                 <Typography sx={styles.kindCount}>{shapes.length}</Typography>
                 {open ? (

@@ -1,30 +1,41 @@
-import { useRef } from 'react';
+import { useRef, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import CloseIcon from '@mui/icons-material/Close';
+import CloseFullscreenIcon from '@mui/icons-material/CloseFullscreen';
+import OpenInFullIcon from '@mui/icons-material/OpenInFull';
 import PictureInPictureIcon from '@mui/icons-material/PictureInPicture';
 import { observer } from 'mobx-react-lite';
-import MiniVideo from '../MiniVideo';
-import { useStores } from '../../../stores/StoreContext';
-import * as styles from '../../../styles/features/video.styles';
+import { useStores } from '../../stores/StoreContext';
+import type { WorkspacePanelId } from '../../stores/UIVisibilityStore';
+import * as styles from '../../styles/features/video.styles';
 
-const MIN_W = 220;
-const MIN_H = 170;
+const MIN_W = 240;
+const MIN_H = 190;
 
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), Math.max(min, max));
 
+interface FloatingPanelWindowProps {
+  /** Workspace panel whose mode/rect this window renders. */
+  id: WorkspacePanelId;
+  title: string;
+  children: ReactNode;
+}
+
 /**
- * Floating video window over the map area: draggable by its header,
- * resizable by the bottom-right handle. Position/size persist in
- * UIVisibilityStore so the window comes back where the user left it.
- * Rendered inside the (relatively positioned) map grid cell.
+ * Floating/maximized window for a workspace panel over the map area:
+ * draggable by its header, resizable by the bottom-right handle, with the
+ * standard window actions (full view / dock / close). Position and size
+ * persist in UIVisibilityStore so the window comes back where it was left.
  */
-function FloatingVideoWindowImpl() {
+function FloatingPanelWindowImpl({ id, title, children }: FloatingPanelWindowProps) {
   const { uiVisibilityStore: ui } = useStores();
   const rootRef = useRef<HTMLDivElement>(null);
+  const { mode, rect } = ui.panels[id];
+  const maximized = mode === 'maximized';
 
   /** Shared pointer-tracking for drag + resize (no external dependency). */
   const track = (
@@ -47,9 +58,10 @@ function FloatingVideoWindowImpl() {
   };
 
   const startDrag = (e: React.PointerEvent) => {
-    const start = ui.videoFloatRect;
+    if (maximized) return;
+    const start = rect;
     track(e, (dx, dy, bounds) => {
-      ui.setVideoFloatRect({
+      ui.setPanelRect(id, {
         ...start,
         x: clamp(start.x + dx, 0, bounds.width - start.width),
         y: clamp(start.y + dy, 0, bounds.height - start.height),
@@ -59,9 +71,9 @@ function FloatingVideoWindowImpl() {
 
   const startResize = (e: React.PointerEvent) => {
     e.stopPropagation();
-    const start = ui.videoFloatRect;
+    const start = rect;
     track(e, (dx, dy, bounds) => {
-      ui.setVideoFloatRect({
+      ui.setPanelRect(id, {
         ...start,
         width: clamp(start.width + dx, MIN_W, bounds.width - start.x),
         height: clamp(start.height + dy, MIN_H, bounds.height - start.y),
@@ -70,15 +82,28 @@ function FloatingVideoWindowImpl() {
   };
 
   return (
-    <Paper ref={rootRef} sx={styles.floatWindow(ui.videoFloatRect)}>
+    <Paper ref={rootRef} sx={maximized ? styles.maximizedWindow : styles.floatWindow(rect)}>
       <Box sx={styles.floatHeader} onPointerDown={startDrag}>
-        <Typography sx={styles.floatTitle}>Video Feed</Typography>
+        <Typography sx={styles.floatTitle}>{title}</Typography>
         <Box sx={{ display: 'flex' }} onPointerDown={(e) => e.stopPropagation()}>
+          <Tooltip title={maximized ? 'Restore window' : 'Full view'} arrow>
+            <IconButton
+              size="small"
+              onClick={() => ui.setPanelMode(id, maximized ? 'floating' : 'maximized')}
+              aria-label={maximized ? `Restore ${title} window` : `Full view ${title}`}
+            >
+              {maximized ? (
+                <CloseFullscreenIcon fontSize="inherit" />
+              ) : (
+                <OpenInFullIcon fontSize="inherit" />
+              )}
+            </IconButton>
+          </Tooltip>
           <Tooltip title="Dock to panel" arrow>
             <IconButton
               size="small"
-              onClick={() => ui.setVideoMode('docked')}
-              aria-label="Dock video to panel"
+              onClick={() => ui.setPanelMode(id, 'docked')}
+              aria-label={`Dock ${title} to panel`}
             >
               <PictureInPictureIcon fontSize="inherit" />
             </IconButton>
@@ -86,8 +111,8 @@ function FloatingVideoWindowImpl() {
           <Tooltip title="Close" arrow>
             <IconButton
               size="small"
-              onClick={() => ui.setVideoVisible(false)}
-              aria-label="Close video"
+              onClick={() => ui.setPanelVisible(id, false)}
+              aria-label={`Close ${title}`}
             >
               <CloseIcon fontSize="inherit" />
             </IconButton>
@@ -95,13 +120,13 @@ function FloatingVideoWindowImpl() {
         </Box>
       </Box>
 
-      <Box sx={styles.floatBody}>
-        <MiniVideo fill />
-      </Box>
+      <Box sx={styles.floatBody}>{children}</Box>
 
-      <Box sx={styles.resizeHandle} onPointerDown={startResize} aria-label="Resize video window" />
+      {!maximized && (
+        <Box sx={styles.resizeHandle} onPointerDown={startResize} aria-label={`Resize ${title} window`} />
+      )}
     </Paper>
   );
 }
 
-export default observer(FloatingVideoWindowImpl);
+export default observer(FloatingPanelWindowImpl);

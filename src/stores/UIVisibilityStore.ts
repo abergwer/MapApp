@@ -1,20 +1,15 @@
 import { makeAutoObservable } from 'mobx';
 
-/** Ids of the toggleable map layers (drives buildLayers + LayersPanel). */
-export type EntityLayerId =
-  | 'aircraft'
-  | 'drones'
-  | 'missiles'
-  | 'polygons'
-  | 'rangeRings'
-  | 'drawnShapes';
-
 export type RailSide = 'left' | 'right';
 
-export type VideoMode = 'docked' | 'floating';
+/** Workspace (right dock) panels that can float/maximize/close. */
+export type WorkspacePanelId = 'view3d' | 'video' | 'minimap' | 'intel';
 
-/** Views selectable via the left panel tabs. */
-export type LeftViewId = 'entities' | 'layers' | 'missiles';
+export type PanelMode = 'docked' | 'floating' | 'maximized';
+
+/** Left-panel tab id. Free-form: the host injects its own views (see
+ *  LeftPanel `views` prop); 'entities'/'layers' are the base views. */
+export type LeftViewId = string;
 
 export interface FloatRect {
   x: number;
@@ -23,46 +18,59 @@ export interface FloatRect {
   height: number;
 }
 
+export interface WorkspacePanelState {
+  visible: boolean;
+  mode: PanelMode;
+  rect: FloatRect;
+}
+
 export class UIVisibilityStore {
-  minimapVisible = true;
-  videoVisible = true;
+  /** Per-workspace-panel window state (docked in the rail, floating over
+   *  the map, or maximized over the map). */
+  panels: Record<WorkspacePanelId, WorkspacePanelState> = {
+    view3d: { visible: true, mode: 'docked', rect: { x: 56, y: 88, width: 380, height: 320 } },
+    video: { visible: true, mode: 'docked', rect: { x: 24, y: 56, width: 320, height: 260 } },
+    minimap: { visible: true, mode: 'docked', rect: { x: 88, y: 120, width: 340, height: 260 } },
+    intel: { visible: true, mode: 'docked', rect: { x: 120, y: 152, width: 320, height: 380 } },
+  };
+
+  /** Brightness card under the map toolbar. */
+  brightnessCardVisible = true;
+
+  /** The tool clusters overlaid on the map (draw/measure/style strip). */
+  toolbarVisible = true;
+
+  /** Right WORKSPACE dock width in px (user-resizable by dragging its edge). */
+  rightDockWidth = 620;
 
   /** Active view in the left panel tabs. */
   activeLeftView: LeftViewId = 'entities';
 
-  /** Docked in the right rail, or floating over the map. */
-  videoMode: VideoMode = 'docked';
-  videoFloatRect: FloatRect = { x: 24, y: 56, width: 320, height: 260 };
-
-  /** 3D chase view: docked in the right rail, or floating over the map. */
-  view3dMode: VideoMode = 'docked';
-  view3dFloatRect: FloatRect = { x: 56, y: 88, width: 380, height: 320 };
-
   /** Rails collapse to a narrow icon strip so the map gets wider. */
   railCollapsed: Record<RailSide, boolean> = { left: false, right: false };
 
-  layerVisibility: Record<EntityLayerId, boolean> = {
-    aircraft: true,
-    drones: true,
-    missiles: true,
-    polygons: true,
-    rangeRings: true,
-    drawnShapes: true,
-  };
+  /**
+   * Visibility of the map layers by free-form id. The base project does NOT
+   * define the ids — whichever layer set the host injects (see `buildLayers`
+   * for the demo reference) reads its own ids here, and the host passes
+   * matching toggle definitions to LayersPanel. Unknown ids default to
+   * visible so hosts don't need to pre-register anything.
+   */
+  layerVisibility: Record<string, boolean> = {};
 
   constructor() {
     makeAutoObservable(this);
   }
 
-  isLayerVisible(id: EntityLayerId) {
-    return this.layerVisibility[id];
+  isLayerVisible(id: string) {
+    return this.layerVisibility[id] ?? true;
   }
 
-  toggleLayer(id: EntityLayerId) {
-    this.layerVisibility[id] = !this.layerVisibility[id];
+  toggleLayer(id: string) {
+    this.layerVisibility[id] = !this.isLayerVisible(id);
   }
 
-  setLayerVisible(id: EntityLayerId, value: boolean) {
+  setLayerVisible(id: string, value: boolean) {
     this.layerVisibility[id] = value;
   }
 
@@ -72,20 +80,38 @@ export class UIVisibilityStore {
     this.railCollapsed.left = false;
   }
 
-  setVideoMode(mode: VideoMode) {
-    this.videoMode = mode;
+  isPanelVisible(id: WorkspacePanelId) {
+    return this.panels[id].visible;
   }
 
-  setVideoFloatRect(rect: FloatRect) {
-    this.videoFloatRect = rect;
+  setPanelVisible(id: WorkspacePanelId, value: boolean) {
+    this.panels[id].visible = value;
+    // Re-opening a closed panel always returns it to the dock.
+    if (value === false) this.panels[id].mode = 'docked';
   }
 
-  setView3dMode(mode: VideoMode) {
-    this.view3dMode = mode;
+  togglePanel(id: WorkspacePanelId) {
+    this.setPanelVisible(id, !this.panels[id].visible);
   }
 
-  setView3dFloatRect(rect: FloatRect) {
-    this.view3dFloatRect = rect;
+  setPanelMode(id: WorkspacePanelId, mode: PanelMode) {
+    this.panels[id].mode = mode;
+  }
+
+  setPanelRect(id: WorkspacePanelId, rect: FloatRect) {
+    this.panels[id].rect = rect;
+  }
+
+  toggleBrightnessCard() {
+    this.brightnessCardVisible = !this.brightnessCardVisible;
+  }
+
+  toggleToolbar() {
+    this.toolbarVisible = !this.toolbarVisible;
+  }
+
+  setRightDockWidth(width: number) {
+    this.rightDockWidth = Math.min(960, Math.max(340, Math.round(width)));
   }
 
   toggleRail(side: RailSide) {
@@ -94,21 +120,5 @@ export class UIVisibilityStore {
 
   expandRail(side: RailSide) {
     this.railCollapsed[side] = false;
-  }
-
-  setMinimapVisible(value: boolean) {
-    this.minimapVisible = value;
-  }
-
-  toggleMinimap() {
-    this.minimapVisible = !this.minimapVisible;
-  }
-
-  setVideoVisible(value: boolean) {
-    this.videoVisible = value;
-  }
-
-  toggleVideo() {
-    this.videoVisible = !this.videoVisible;
   }
 }

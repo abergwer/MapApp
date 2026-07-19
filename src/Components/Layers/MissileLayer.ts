@@ -1,7 +1,7 @@
-import { IconLayer, PathLayer, TextLayer } from '@deck.gl/layers';
+import { IconLayer, PathLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import type { Missile } from '../../stores/MissileStore';
-import { layerColors, targetLabelProps } from '../../styles/features/layers.styles';
+import { layerColors } from '../../styles/features/layers.styles';
 import { hexToRgba, symbology } from '../../styles/system-ui/tokens';
 
 const head = (d: Missile) => d.path[d.path.length - 1];
@@ -26,7 +26,7 @@ export function createMissilesLayer(
       id: 'missiles-layer',
       data: missiles,
       getPath: (d) => d.path,
-      getColor: (d) => (isSelected(d) ? layerColors.missile : layerColors.missileTrack),
+      getColor: (d) => (isSelected(d) ? layerColors.missileSelected : layerColors.missileTrack),
       getWidth: (d) => (isSelected(d) ? 5 : 2),
       widthUnits: 'pixels',
       capRounded: true,
@@ -39,16 +39,16 @@ export function createMissilesLayer(
       getPosition: head,
       getIcon: () => ({ url: DELTA_ICON, width: 64, height: 64, mask: true }),
       getSize: (d) => (isSelected(d) ? 34 : 24),
-      getColor: (d) => (isSelected(d) ? layerColors.missile : hexToRgba(symbology.bg, 235)),
+      getColor: (d) => (isSelected(d) ? layerColors.missileSelected : hexToRgba(symbology.bg, 235)),
       getAngle: (d) => -d.heading,
     }),
-    new TextLayer<Missile>({
-      id: 'missile-labels',
-      data: missiles,
-      getPosition: head,
-      getText: (d) => d.id,
-      ...targetLabelProps,
-    }),
+    // new TextLayer<Missile>({
+    //   id: 'missile-labels',
+    //   data: missiles,
+    //   getPosition: head,
+    //   getText: (d) => d.id,
+    //   ...targetLabelProps,
+    // }),
   ];
 }
 

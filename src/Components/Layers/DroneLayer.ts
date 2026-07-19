@@ -1,11 +1,8 @@
-import { IconLayer, TextLayer } from '@deck.gl/layers';
+import { IconLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import droneIcon from '../../assets/drone.png';
 import type { DroneTarget } from '../../stores/DroneStore';
-import { layerColors, targetLabelProps } from '../../styles/features/layers.styles';
-
-const label = (d: DroneTarget) =>
-  `${d.id}\nALT ${d.altitudeFt} ft\nSPD ${d.speedKts} kts`;
+import { layerColors } from '../../styles/features/layers.styles';
 
 export function createDroneLayer(targets: DroneTarget[]): Layer[] {
   return [
@@ -17,12 +14,12 @@ export function createDroneLayer(targets: DroneTarget[]): Layer[] {
       getSize: 28,
       getColor: layerColors.drone,
     }),
-    new TextLayer<DroneTarget>({
-      id: 'drone-labels',
-      data: targets,
-      getPosition: (d) => d.position,
-      getText: label,
-      ...targetLabelProps,
-    }),
+    // new TextLayer<DroneTarget>({
+    //   id: 'drone-labels',
+    //   data: targets,
+    //   getPosition: (d) => d.position,
+    //   getText: label,
+    //   ...targetLabelProps,
+    // }),
   ];
 }

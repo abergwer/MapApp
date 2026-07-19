@@ -132,11 +132,11 @@ function LayerManagerImpl({ layers }: LayerManagerProps) {
   }, [engine]);
 
   // Push updated layer arrays into the already-initialized Deck instance.
-  useEffect(() => {
-    if (deckRef.current) {
-      deckRef.current.setProps({ layers });
-    }
-  }, [layers]);
+  // useEffect(() => {
+  //   if (deckRef.current) {
+  //     deckRef.current.setProps({ layers });
+  //   }
+  // }, [layers]);
 
   return null;
 }

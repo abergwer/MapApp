@@ -8,15 +8,23 @@ import { palette, fonts, microLabel } from './tokens';
 
 /** Width of a rail collapsed to just its arrow. */
 const RAIL_COLLAPSED_W = '36px';
-const LEFT_PANEL_W = '300px';
-const RIGHT_DOCK_W = '620px';
+/** Permanent left icon rail width. */
+const LEFT_RAIL_W = 44;
+/** Icon rail + open content column. */
+const LEFT_PANEL_W = `${LEFT_RAIL_W + 300}px`;
+/** Default right dock width; live value comes from UIVisibilityStore. */
+export const RIGHT_DOCK_DEFAULT_W = 620;
 
-export const appGrid = (leftCollapsed: boolean, rightCollapsed: boolean): SxProps<Theme> => ({
+export const appGrid = (
+  leftCollapsed: boolean,
+  rightCollapsed: boolean,
+  rightWidth: number = RIGHT_DOCK_DEFAULT_W,
+): SxProps<Theme> => ({
   height: '100svh',
   display: 'grid',
   gridTemplateRows: 'auto minmax(0, 1fr) auto',
-  gridTemplateColumns: `${leftCollapsed ? RAIL_COLLAPSED_W : LEFT_PANEL_W} minmax(0, 1fr) ${
-    rightCollapsed ? RAIL_COLLAPSED_W : RIGHT_DOCK_W
+  gridTemplateColumns: `${leftCollapsed ? `${LEFT_RAIL_W}px` : LEFT_PANEL_W} minmax(0, 1fr) ${
+    rightCollapsed ? RAIL_COLLAPSED_W : `${rightWidth}px`
   }`,
   gridTemplateAreas: `
     "top    top top"
@@ -49,10 +57,27 @@ export const collapsedRail = (side: 'left' | 'right'): SxProps<Theme> => ({
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'center',
+  gap: 0.75,
   pt: 1,
   ...(side === 'left'
     ? { borderRight: `1px solid ${palette.border}` }
     : { borderLeft: `1px solid ${palette.border}` }),
+});
+
+/** View icon inside the collapsed left rail (reference design): the active
+ *  view glows in the accent color. */
+export const railIcon = (active: boolean): SxProps<Theme> => ({
+  width: 30,
+  height: 30,
+  borderRadius: 1,
+  color: active ? palette.accentBright : 'text.secondary',
+  ...(active && {
+    bgcolor: `color-mix(in srgb, ${palette.accent} 18%, transparent)`,
+    '& svg': {
+      filter: `drop-shadow(0 0 6px color-mix(in srgb, ${palette.accent} 80%, transparent))`,
+    },
+  }),
+  '&:hover': { color: active ? palette.accentBright : 'text.primary' },
 });
 
 // ── Left panel (tabbed) ──────────────────────────────────────────────
@@ -61,12 +86,35 @@ export const leftPanelRoot: SxProps<Theme> = {
   gridArea: 'left',
   minHeight: 0,
   display: 'flex',
-  flexDirection: 'column',
+  flexDirection: 'row',
   borderRight: `1px solid ${palette.border}`,
   overflow: 'hidden',
 };
 
-/** Header row: view title left, pill tabs right (reference design). */
+/** Permanent vertical icon rail (reference design): one icon per view,
+ *  always visible; icons select the view / toggle the content column. */
+export const leftIconRail: SxProps<Theme> = {
+  width: 44,
+  flexShrink: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: 1.75,
+  pt: 1,
+  borderRight: `1px solid ${palette.border}`,
+  bgcolor: palette.panelHeader,
+};
+
+/** Content column next to the rail (hidden while collapsed). */
+export const leftPanelContent: SxProps<Theme> = {
+  flex: 1,
+  minWidth: 0,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+};
+
+/** Header row: active view title (reference design). */
 export const leftPanelHeader: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'center',
@@ -85,33 +133,13 @@ export const leftPanelBody: SxProps<Theme> = {
   p: 1.5,
 };
 
-/** Segmented pill tabs container. */
-export const pillTabs: SxProps<Theme> = {
-  display: 'flex',
-  gap: 0.25,
-  p: 0.25,
-  borderRadius: 1,
-  bgcolor: palette.bg,
-  border: `1px solid ${palette.border}`,
-};
-
-export const pillTab = (active: boolean): SxProps<Theme> => ({
-  px: 1,
-  py: 0.4,
-  borderRadius: 0.75,
-  ...microLabel,
-  fontSize: 9,
-  cursor: 'pointer',
-  color: active ? '#fff' : 'text.secondary',
-  bgcolor: active ? palette.accent : 'transparent',
-  '&:hover': { color: active ? '#fff' : 'text.primary' },
-});
-
 export const viewTitle: SxProps<Theme> = {
   ...microLabel,
   fontSize: 13,
   color: 'text.primary',
   lineHeight: 1.3,
+  // Reference design: the active view title glows softly.
+  textShadow: `0 0 10px color-mix(in srgb, ${palette.accent} 70%, transparent)`,
 };
 
 /** Small squared collapse/expand arrow button. */
@@ -159,6 +187,20 @@ export const dockRoot: SxProps<Theme> = {
   flexDirection: 'column',
   borderLeft: `1px solid ${palette.border}`,
   overflow: 'hidden',
+  position: 'relative',
+};
+
+/** Invisible grab strip on the dock's left edge (drag = resize width). */
+export const dockResizeHandle: SxProps<Theme> = {
+  position: 'absolute',
+  left: 0,
+  top: 0,
+  bottom: 0,
+  width: 6,
+  cursor: 'col-resize',
+  touchAction: 'none',
+  zIndex: 10,
+  '&:hover': { bgcolor: `color-mix(in srgb, ${palette.accent} 35%, transparent)` },
 };
 
 export const dockHeader: SxProps<Theme> = {
@@ -174,17 +216,19 @@ export const dockHeader: SxProps<Theme> = {
   color: 'text.secondary',
 };
 
-/** 2-column panel grid like the reference workspace. */
-export const dockGrid: SxProps<Theme> = {
+/** Panel grid like the reference workspace: 2 columns normally, a single
+ *  column when only one panel is docked (the dock also shrinks — see
+ *  LayoutManager's effective width). */
+export const dockGrid = (singleColumn: boolean): SxProps<Theme> => ({
   flex: 1,
   minHeight: 0,
   display: 'grid',
-  gridTemplateColumns: '1fr 1fr',
+  gridTemplateColumns: singleColumn ? '1fr' : '1fr 1fr',
   gridAutoRows: 'minmax(0, 1fr)',
   gap: 1,
   p: 1,
   overflowY: 'auto',
-};
+});
 
 // ── Top bar ────────────────────────────────────────────────────────────
 

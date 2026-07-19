@@ -67,7 +67,7 @@ function createBasemapLayer() {
  *    clamped MAX_ZOOM, the minimap's viewState stops changing and we skip
  *    the redundant `setProps` + GPU redraw.
  */
-function MiniMapImpl() {
+function MiniMapImpl({ fill = false }: { fill?: boolean }) {
   const { mapEngineStore } = useStores();
   const engine = mapEngineStore.engine;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -147,7 +147,8 @@ function MiniMapImpl() {
       ref={containerRef}
       sx={{
         width: 1,
-        aspectRatio: '4 / 3',
+        // `fill` stretches to the parent (dock section / floating window).
+        ...(fill ? { height: 1 } : { aspectRatio: '4 / 3' }),
         overflow: 'hidden',
         bgcolor: 'background.default',
       }}
