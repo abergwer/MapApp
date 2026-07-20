@@ -53,12 +53,13 @@ export const list: SxProps<Theme> = {
   flex: 1,
   minHeight: 0,
   overflowY: 'auto',
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 0.75,
 };
 
+/** Rows are absolutely positioned inside the virtualized list spacer. */
 export const row = (selected: boolean): SxProps<Theme> => ({
+  position: 'absolute',
+  left: 0,
+  height: 44,
   width: 1,
   display: 'flex',
   alignItems: 'center',

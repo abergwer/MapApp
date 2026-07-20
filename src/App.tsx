@@ -65,7 +65,6 @@ function App() {
   // Drawn shapes: hydrated once from the server's WS snapshot; user edits
   // are pushed back over REST.
   const liveShapes = useLiveShapes(liveDataStore)
-  console.log('[App] render')
   const leftViews: LeftPanelView[] = [
     { id: 'entities', title: 'Entities', Icon: FmdGoodOutlinedIcon, content: <EntitiesPanel /> },
     {

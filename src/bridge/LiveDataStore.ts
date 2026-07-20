@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx'
+import { makeAutoObservable, observable } from 'mobx'
 import type { MapShape } from '../stores/DrawingToolStore'
 import type { Missile, Target } from './types'
 
@@ -26,7 +26,14 @@ export class LiveDataStore {
   shapesHydrated = false
 
   constructor() {
-    makeAutoObservable(this)
+    // The live arrays are replaced wholesale on every server tick — deep
+    // per-object observability would proxy thousands of fresh objects per
+    // frame for nothing, so they are tracked by reference only.
+    makeAutoObservable(this, {
+      drones: observable.shallow,
+      aircraft: observable.shallow,
+      missiles: observable.shallow,
+    })
   }
 
   setTargets(drones: Target[], aircraft: Target[]) {

@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, observable } from 'mobx';
 import { MOCK_DRONES } from '../mocks/mockData';
 
 export interface DroneTarget {
@@ -15,7 +15,9 @@ export class DroneStore {
   targets: DroneTarget[] = MOCK_DRONES;
 
   constructor() {
-    makeAutoObservable(this);
+    // Live feeds replace the whole array every tick — shallow tracking
+    // avoids deep-proxying thousands of fresh target objects per frame.
+    makeAutoObservable(this, { targets: observable.shallow });
   }
 
   setTargets(targets: DroneTarget[]) {

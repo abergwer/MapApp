@@ -1,4 +1,4 @@
-import { makeAutoObservable } from 'mobx';
+import { makeAutoObservable, observable } from 'mobx';
 import { MOCK_MISSILES } from '../mocks/mockData';
 
 export interface Missile {
@@ -19,7 +19,9 @@ export class MissileStore {
   selectedId: string | null = null;
 
   constructor() {
-    makeAutoObservable(this);
+    // The live feed replaces the whole array at 10Hz — shallow tracking
+    // avoids deep-proxying every missile (path arrays included) per tick.
+    makeAutoObservable(this, { missiles: observable.shallow });
   }
 
   setSelectedId(id: string | null) {
