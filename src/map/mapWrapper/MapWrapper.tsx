@@ -14,6 +14,8 @@ import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
+import LOSControls from '../../Components/features/LOSControls';
+import LOSProfileChart from '../../Components/features/LOSProfileChart';
 import MiniMap from '../../Components/features/MiniMap';
 import MiniVideo from '../../Components/features/MiniVideo';
 import type { MapShape } from '../../stores/shapes';
@@ -205,10 +207,24 @@ function MapWrapperImpl({
             <ToolBar />
             <MeasuringTools />
             <MapStyleBar />
+            <LOSControls />
           </Stack>
 
           <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
             <CoordinatesBar />
+          </Box>
+
+          {/* Bottom-center: LOS elevation profile (only when a line is on screen). */}
+          <Box
+            sx={{
+              position: 'absolute',
+              bottom: 12,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: 1100,
+            }}
+          >
+            <LOSProfileChart />
           </Box>
 
           {/* Bottom-right, lifted above the engine scale bar (~20px tall). */}

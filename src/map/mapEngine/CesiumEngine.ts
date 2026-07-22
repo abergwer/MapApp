@@ -129,24 +129,24 @@ export class CesiumEngine implements MapEngine {
     this.viewer = undefined;
   }
 
-  startDrawPoint(onComplete: (id: string, position: [number, number]) => void): void {
+  startDrawPoint(_onComplete: (id: string, position: [number, number]) => void): void {
     throw new Error('Method not implemented.');
   }
-  startDrawLine(onComplete: (id: string, positions: [number, number][]) => void): void {
+  startDrawLine(_onComplete: (id: string, positions: [number, number][]) => void): void {
     throw new Error('Method not implemented.');
   }
-  startDrawPolygon(onComplete: (id: string, positions: [number, number][]) => void): void {
+  startDrawPolygon(_onComplete: (id: string, positions: [number, number][]) => void): void {
     throw new Error('Method not implemented.');
   }
-  startDrawCircle(onComplete: (id: string, center: [number, number], radius: number) => void): void {
-    throw new Error('Method not implemented.');
-  }
-
-  startDrawEllipse(onComplete: (id: string, center: [number, number], radiusX: number, radiusY: number) => void): void {
+  startDrawCircle(_onComplete: (id: string, center: [number, number], radius: number) => void): void {
     throw new Error('Method not implemented.');
   }
 
-  startDrawSector(onComplete: (
+  startDrawEllipse(_onComplete: (id: string, center: [number, number], radiusX: number, radiusY: number) => void): void {
+    throw new Error('Method not implemented.');
+  }
+
+  startDrawSector(_onComplete: (
     id: string,
     center: [number, number],
     radius: number,

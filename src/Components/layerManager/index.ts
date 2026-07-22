@@ -6,6 +6,7 @@ import { createDroneLayer } from '../Layers/DroneLayer';
 import { createAirCraftLayer } from '../Layers/AirCraftLayer';
 import { createRangeRingsLayer } from '../Layers/RangeRingsLayer';
 import { createDrawnShapeLayers } from '../Layers/DrawnShapeLayers';
+import { createLOSLayers, createAreaLOSLayers } from '../Layers/LOSLayer';
 import type { RootStore } from '../../stores/RootStore';
 
 /**
@@ -26,6 +27,10 @@ export function createLayerBuilder(stores: RootStore): () => Layer[] {
   const { drawingToolStore } = stores;
 
   const groups: IComputedValue<Layer[]>[] = [
+    // Line-of-sight coverage polygons. Bottom of the stack: large area
+    // fills that everything else should render above.
+    computed(() => createAreaLOSLayers(stores.areaLOSStore)),
+    computed(() => createLOSLayers(stores.losStore)),
     // User-drawn shapes. The map engine's native edit tools drive the same
     // store via `entityService`; deck.gl only renders and picks here.
     computed(() =>
