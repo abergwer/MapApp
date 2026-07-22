@@ -1,3 +1,4 @@
+import { computed, type IComputedValue } from 'mobx';
 import type { Layer } from '@deck.gl/core';
 import { createPolygonLayer } from '../Layers/PolygonLayer';
 import { createMissilesLayer } from '../Layers/MissileLayer';
@@ -8,27 +9,41 @@ import { createDrawnShapeLayers } from '../Layers/DrawnShapeLayers';
 import type { RootStore } from '../../stores/RootStore';
 
 /**
- * Build the array of Deck.gl layers from the current store state.
+ * Create a layer-builder function for the given stores.
  *
- * To add a new layer: create a factory in `../Layers` and call it here.
- * MobX tracks the observable reads done inside this function — when wrapped
- * in a `reaction()` (see LayerManager) it will rerun automatically as the
- * underlying store collections change.
+ * Each layer group is wrapped in a MobX `computed`, so a group is only
+ * rebuilt when an observable *it* reads changes. Groups whose stores
+ * didn't change return their cached array — same `Layer` references —
+ * and deck.gl skips them entirely when diffing.
+ *
+ * Example: a stress-missile tick recomputes ONLY the stress-missile
+ * group; drawn shapes, drones, aircraft, etc. come from cache.
+ *
+ * To add a new layer: create a factory in `../Layers` and add a
+ * `computed(...)` entry below (array order = z-order, first is bottom).
  */
-export function buildLayers(stores: RootStore): Layer[] {
+export function createLayerBuilder(stores: RootStore): () => Layer[] {
   const { drawingToolStore } = stores;
-  return [
+
+  const groups: IComputedValue<Layer[]>[] = [
     // User-drawn shapes. The map engine's native edit tools drive the same
     // store via `entityService`; deck.gl only renders and picks here.
-    ...createDrawnShapeLayers(
-      drawingToolStore.completedShapes,
-      drawingToolStore.selectedId,
+    computed(() =>
+      createDrawnShapeLayers(
+        drawingToolStore.completedShapes,
+        drawingToolStore.selectedId,
+      ),
     ),
-    createPolygonLayer(stores.polygonStore.polygons),
-    createMissilesLayer(stores.missileStore.missiles),
-    createDroneLayer(stores.droneStore.targets),
-    createAirCraftLayer(stores.airCraftStore.targets),
-    createRangeRingsLayer(stores.droneStore.targets),
+    computed(() => [createPolygonLayer(stores.polygonStore.polygons)]),
+    computed(() => [createMissilesLayer(stores.missileStore.missiles)]),
+    computed(() => [createDroneLayer(stores.droneStore.targets)]),
+    computed(() => [createAirCraftLayer(stores.airCraftStore.targets)]),
+    computed(() => [createRangeRingsLayer(stores.droneStore.targets)]),
   ];
+
+  // Calling `.get()` inside a reaction (see LayerManager) keeps the
+  // computeds tracked, so the reaction re-fires when any group's
+  // underlying observables change.
+  return () => groups.flatMap((group) => group.get());
 }
 

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { observer } from 'mobx-react-lite'
@@ -5,12 +6,17 @@ import LayerManager from './Components/layerManager/LayerManager'
 import MapWrapper from './map/mapWrapper/MapWrapper'
 import { mapEngineLabel } from './map/mapConfig'
 import { useStores } from './stores/StoreContext'
-import { buildLayers } from './Components/layerManager'
+import { createLayerBuilder } from './Components/layerManager'
 import { DEMO_SERVER_SHAPES } from './stores/DrawingToolStore'
 import type { MapShape } from './stores/shapes'
 
 function App() {
   const stores = useStores()
+
+
+  // Built once. Layer updates flow through a MobX reaction inside
+  // LayerManager — App no longer re-renders when layer data changes.
+  const buildLayers = useMemo(() => createLayerBuilder(stores), [stores])
 
   return (
     <Box
@@ -48,7 +54,7 @@ function App() {
         onShapeUpdate={(shape: MapShape) => console.log('[App] shape updated', shape)}
         onShapeDelete={(id: string) => console.log('[App] shape deleted', id)}
       >
-        <LayerManager layers={buildLayers(stores)} />
+        <LayerManager buildLayers={buildLayers} />
       </MapWrapper>
     </Box>
   )
