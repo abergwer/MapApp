@@ -63,7 +63,6 @@ export interface UseWebSocketOptions<
 
 export interface WebSocketService<TOutgoing extends OutgoingMap = OutgoingMap> {
   status: WebSocketStatus
-  lastMessage: MessageEvent | null
   /** Send a declared message as JSON: `{ [messageKey]: name, ...payload }`. */
   send: <K extends keyof TOutgoing>(
     name: K,

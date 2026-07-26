@@ -50,7 +50,6 @@ export function useWebSocket<
   } = options
 
   const [status, setStatus] = useState<WebSocketStatus>('closed')
-  const [lastMessage, setLastMessage] = useState<MessageEvent | null>(null)
 
   const socketRef = useRef<WebSocket | null>(null)
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -89,7 +88,9 @@ export function useWebSocket<
     }
 
     ws.onmessage = (event) => {
-      setLastMessage(event)
+      // Opt-in: storing every frame in state re-renders the consumer per
+      // message, which is pure overhead on high-frequency streams.
+      //if (trackLastMessage) setLastMessage(event)
       callbacksRef.current.onMessage?.(event)
 
       let data: unknown
@@ -173,7 +174,6 @@ export function useWebSocket<
 
   return {
     status,
-    lastMessage,
     send,
     sendRaw,
     connect,
