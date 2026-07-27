@@ -25,15 +25,28 @@ import MiniMap from './Components/features/MiniMap'
 import MiniVideo from './Components/features/MiniVideo'
 import { useStores } from './stores/StoreContext'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
-import { buildLayers } from './Components/layerManager'
-import { MOCK_SERVER_SHAPES, startMockTicker } from './mocks/mockData'
+import {
+  buildLiveDataLayers,
+  liveDataStore,
+  LiveDataSocketProvider,
+  useLiveShapes,
+} from './bridge'
+import { startMockTicker } from './mocks/mockData'
 import { DEMO_LAYER_TOGGLES } from './mocks/demoLayerToggles'
 import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
-import type { MapShape } from './stores/shapes'
+import { createDrawnShapeLayers } from './Components/Layers/DrawnShapeLayers'
 
 function App() {
   const stores = useStores()
   const { uiVisibilityStore: ui } = stores
+  const { drawingToolStore } = stores
+
+  const { shapes, onShapeCreate, onShapeUpdate, onShapeDelete } = useLiveShapes(liveDataStore)
+
+  const layers = [
+    ...createDrawnShapeLayers(drawingToolStore.completedShapes, drawingToolStore.selectedId),
+    ...buildLiveDataLayers(liveDataStore),
+  ]
 
   // Simulated live feed — replaced by the real server client later.
   useEffect(() => startMockTicker(stores), [stores])
@@ -123,20 +136,12 @@ function App() {
                     host can push the change back to the server.
       */}
       <MapWrapper
-        shapes={MOCK_SERVER_SHAPES}
-        onShapeCreate={(shape: MapShape) => console.log('[App] shape created', shape)}
-        onShapeUpdate={(shape: MapShape) => console.log('[App] shape updated', shape)}
-        onShapeDelete={(id: string) => console.log('[App] shape deleted', id)}
+        shapes={shapes}
+        onShapeCreate={onShapeCreate}
+        onShapeUpdate={onShapeUpdate}
+        onShapeDelete={onShapeDelete}
       >
-        {/*
-          Layer injection point: real projects pass their own deck.gl layer
-          array here. `buildLayers` is the demo/testing reference set only.
-          Perf note: building fast-ticking layers directly in a top-level
-          observer re-renders the whole tree on every data tick — hosts with
-          live feeds should wrap their layer builder in a small child
-          observer component instead.
-        */}
-        <LayerManager layers={buildLayers(stores)} />
+        <LayerManager layers={layers} />
       </MapWrapper>
 
       {workspaceIds
@@ -156,4 +161,17 @@ function App() {
   )
 }
 
-export default observer(App)
+const ObservedApp = observer(App)
+
+/**
+ * The bridge's WebSocket lives in `LiveDataSocketProvider`; its incoming
+ * frames feed `liveDataStore` and `useLiveShapes` sends shape CRUD over the
+ * same socket, so the provider must sit above the component using the hook.
+ */
+export default function AppWithLiveData() {
+  return (
+    <LiveDataSocketProvider>
+      <ObservedApp />
+    </LiveDataSocketProvider>
+  )
+}

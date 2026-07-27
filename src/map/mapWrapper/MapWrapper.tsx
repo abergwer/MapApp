@@ -5,7 +5,7 @@ import Paper from '@mui/material/Paper';
 import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import { observer } from 'mobx-react-lite';
-import { createMapEngine } from '../engineFactory';
+import { createMapEngine } from '../EngineFactory';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
