@@ -76,9 +76,9 @@ function fill(
   return [r, g, b, AREA_FILL_ALPHA];
 }
 
-/** Area LOS (viewshed): visible/shadow polygon fills + observer dot. */
+/** Area LOS (viewshed): drawn polygon outline + visible/shadow fills + observer dot. */
 export function createAreaLOSLayers(areaLOSStore: AreaLOSStore): Layer[] {
-  const { visibleGeoJSON, shadowGeoJSON, observer } = areaLOSStore;
+  const { visibleGeoJSON, shadowGeoJSON, observer, polygon } = areaLOSStore;
   if (!observer) return [];
 
   const layers: Layer[] = [];
@@ -103,6 +103,30 @@ export function createAreaLOSLayers(areaLOSStore: AreaLOSStore): Layer[] {
         filled: true,
         stroked: false,
         getFillColor: fill(LOS_COLORS.VISIBLE_LINE),
+      }),
+    );
+  }
+
+  // Keep the shape the user drew on screen, above the fills — MapboxDraw
+  // removes its own copy once the draw finishes and nothing else re-renders it.
+  if (polygon && polygon.length >= 3) {
+    const ring = [...polygon];
+    const [fx, fy] = ring[0];
+    const [lx, ly] = ring[ring.length - 1];
+    if (fx !== lx || fy !== ly) ring.push(ring[0]);
+    layers.push(
+      new GeoJsonLayer({
+        id: 'area-los-polygon',
+        data: {
+          type: 'Feature',
+          geometry: { type: 'Polygon', coordinates: [ring] },
+          properties: {},
+        },
+        filled: false,
+        stroked: true,
+        getLineColor: [255, 255, 255, 220],
+        getLineWidth: 2,
+        lineWidthUnits: 'pixels',
       }),
     );
   }
