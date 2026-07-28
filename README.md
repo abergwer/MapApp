@@ -1,5 +1,27 @@
 # React + TypeScript + Vite
 
+## End-to-end tests
+
+The Playwright suite starts Vite and the demo WebSocket server automatically.
+
+```bash
+npm run test:e2e
+```
+
+Open Playwright's interactive test UI:
+
+```bash
+npm run test:e2e:ui
+```
+
+Open the HTML report from the latest run:
+
+```bash
+npm run test:e2e:report
+```
+
+For a visible browser without the interactive UI, run `npm run test:e2e:headed`.
+
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
 Currently, two official plugins are available:

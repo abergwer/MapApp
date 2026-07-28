@@ -20,7 +20,7 @@ import LayersPanel from './Components/features/layers/LayersPanel'
 import MissilesPanel from './Components/features/missiles/MissilesPanel'
 import EntitiesPanel from './Components/features/entities/EntitiesPanel'
 import IntelFeedPanel from './Components/features/intel/IntelFeedPanel'
-import MissileView3D from './Components/features/view3d/MissileView3D'
+import LazyMissileView3D from './Components/features/view3d/LazyMissileView3D'
 import MiniMap from './Components/features/MiniMap'
 import MiniVideo from './Components/features/MiniVideo'
 import { useStores } from './stores/StoreContext'
@@ -112,7 +112,7 @@ function App() {
   /** Panel content, shared between the dock and the floating window. The
    *  dock sections stretch to their full grid cell, so content uses `fill`. */
   const panelContent: Record<WorkspacePanelId, { title: string; node: React.ReactNode }> = {
-    view3d: { title: '3D View', node: <MissileView3D fill /> },
+    view3d: { title: '3D View', node: <LazyMissileView3D fill /> },
     video: { title: 'Video Feed', node: <MiniVideo fill /> },
     minimap: { title: 'Mini Map', node: <MiniMap fill /> },
     intel: {
@@ -131,7 +131,7 @@ function App() {
     title: panelContent[id].title,
     hidden: !ui.isPanelVisible(id) || ui.panels[id].mode !== 'docked',
     headerAction: panelActions(id, panelContent[id].title),
-    content: id === 'view3d' ? <MissileView3D /> : panelContent[id].node,
+    content: id === 'view3d' ? <LazyMissileView3D /> : panelContent[id].node,
     floatContent: panelContent[id].node,
   }))
 
