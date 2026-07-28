@@ -33,7 +33,7 @@ const LOOK_AHEAD_KM = 1.8;
  * bank drops a wingtip ~450 m below center — below terrain it gets
  * depth-occluded (the "half hidden wing"). Real altitude is in the readout.
  */
-const DISPLAY_ALT_M = 700;
+const DISPLAY_ALT_M = 900;
 
 const deg2rad = (d: number) => (d * Math.PI) / 180;
 
