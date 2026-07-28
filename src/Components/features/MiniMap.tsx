@@ -15,8 +15,6 @@ import { useStores } from '../../stores/StoreContext';
 const ZOOM_OFFSET = 4;
 /** Minimap never zooms past this — keeps the overview at ~city scale. */
 const MAX_ZOOM = 8;
-/** Fixed thumbnail dimensions, in CSS pixels. */
-const SIZE = { width: 200, height: 150 } as const;
 
 // --- Helpers --------------------------------------------------------------
 
@@ -69,7 +67,7 @@ function createBasemapLayer() {
  *    clamped MAX_ZOOM, the minimap's viewState stops changing and we skip
  *    the redundant `setProps` + GPU redraw.
  */
-function MiniMapImpl() {
+function MiniMapImpl({ fill = false }: { fill?: boolean }) {
   const { mapEngineStore } = useStores();
   const engine = mapEngineStore.engine;
   const containerRef = useRef<HTMLDivElement>(null);
@@ -147,13 +145,11 @@ function MiniMapImpl() {
   return (
     <Paper
       ref={containerRef}
-      elevation={6}
       sx={{
-        ...SIZE,
-        borderRadius: 1.5,
+        width: 1,
+        // `fill` stretches to the parent (dock section / floating window).
+        ...(fill ? { height: 1 } : { aspectRatio: '4 / 3' }),
         overflow: 'hidden',
-        border: 1,
-        borderColor: 'divider',
         bgcolor: 'background.default',
       }}
     >

@@ -7,6 +7,7 @@ import { DrawingToolStore } from './DrawingToolStore';
 import { EntityService } from './EntityService';
 import { MapStyleStore } from './MapStyleStore';
 import { UIVisibilityStore } from './UIVisibilityStore';
+import { ThemeStore } from './ThemeStore';
 
 export class RootStore {
   droneStore = new DroneStore();
@@ -17,6 +18,7 @@ export class RootStore {
   drawingToolStore = new DrawingToolStore();
   mapStyleStore = new MapStyleStore();
   uiVisibilityStore = new UIVisibilityStore();
+  themeStore = new ThemeStore();
 
   // Single writer for drawn-entity CRUD. Every create / edit / delete goes
   // through here so external consumers can subscribe via `setHooks(...)` and

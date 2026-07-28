@@ -1,26 +1,25 @@
 import { useEffect, useRef, type ReactNode } from 'react';
 import { reaction } from 'mobx';
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
+import Paper from '@mui/material/Paper';
+import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import { observer } from 'mobx-react-lite';
-import { createMapEngine } from '../EngineFactory';
-import { mapEngineLabel } from '../mapConfig';
+import { createMapEngine } from '../engineFactory';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
-import CoordinatesBar from '../../Components/features/CoordinatesBar';
 import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
-import MiniMap from '../../Components/features/MiniMap';
-import MiniVideo from '../../Components/features/MiniVideo';
+import MapControls from '../../Components/features/MapControls';
+import * as mapStyles from '../../styles/features/map.styles';
 import type { MapShape } from '../../stores/shapes';
 
 const defaultOptions = {
-  center: [32.0853, 34.7818] as [number, number],
-  zoom: 10,
+  center: [32.2, 34.95] as [number, number],
+  zoom: 8,
 };
 
 interface MapWrapperProps {
@@ -50,8 +49,26 @@ function MapWrapperImpl({
   onShapeDelete,
 }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const { mapEngineStore, uiVisibilityStore, drawingToolStore, entityService } = useStores();
-  const { minimapVisible, videoVisible } = uiVisibilityStore;
+  const { mapEngineStore, drawingToolStore, entityService, mapStyleStore, uiVisibilityStore } =
+    useStores();
+  const { brightness } = mapStyleStore;
+
+  // Apply the basemap brightness filter here (single place with access to
+  // the map container) so any control — side panel or floating strip — only
+  // needs to write `mapStyleStore.brightness`.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const basemap = container.querySelector<HTMLElement>(
+      '.leaflet-tile-pane, .maplibregl-canvas, .cesium-widget canvas',
+    );
+    if (basemap) basemap.style.filter = `brightness(${brightness / 100})`;
+
+    return () => {
+      if (basemap) basemap.style.filter = '';
+    };
+  }, [brightness]);
 
   // Register outbound notification callbacks. `EntityService` fires these
   // *after* every successful create / update / delete so the host app can
@@ -101,6 +118,9 @@ function MapWrapperImpl({
       // (MiniMap, LayerManager, future overlays) can react without opening
       // their own onViewChange subscription.
       unsubscribeViewChange = eng.onViewChange((vs) => mapEngineStore.setViewState(vs));
+
+      // Last-clicked coordinate feeds the status bar COORDINATE cell.
+      eng.onMapClick?.((lat, lng) => mapEngineStore.setLastClick({ lat, lng }));
 
       // Round-trip user edits/deletes back through the entity service —
       // the single writer that also fans out to any hook subscribers.
@@ -175,66 +195,51 @@ function MapWrapperImpl({
 
   return (
     <MapContext.Provider value={{ containerRef }}>
-      <Stack spacing={1.5} sx={{ width: '100%', flex: 1, minHeight: 500 }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-          <Typography variant="body2" color="text.secondary">
-            Selected engine:
-          </Typography>
-          <Typography variant="body2" sx={{ fontWeight: 700 }}>
-            {mapEngineLabel[mapEngineStore.selectedEngine]}
-          </Typography>
-        </Stack>
+      <Box sx={mapStyles.mapFrame}>
+        <Box ref={containerRef} sx={mapStyles.engineContainer} />
 
-        <Box
-          sx={{
-            position: 'relative',
-            flex: 1,
-            minHeight: 600,
-            borderRadius: 2,
-            overflow: 'hidden',
-            display: 'flex',
-          }}
-        >
-          <Box ref={containerRef} sx={{ flex: 1, minWidth: 0, minHeight: 0 }} />
-
-          <Stack
-            direction="row"
-            spacing={1}
-            sx={{ position: 'absolute', top: 12, left: 12, zIndex: 1100 }}
-          >
-            <ToolBar />
-            <MeasuringTools />
-            <MapStyleBar />
-          </Stack>
-
-          <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
-            <CoordinatesBar />
+        {/* Toolbar clusters + brightness card (top-left); the TopBar
+            toolbar toggle shows/hides the whole strip. */}
+        {uiVisibilityStore.toolbarVisible && (
+          <Box sx={mapStyles.toolStripWrap}>
+            <Box sx={mapStyles.toolStrip}>
+            <Paper sx={mapStyles.toolCluster}>
+              <ToolBar />
+            </Paper>
+            <Paper sx={mapStyles.toolCluster}>
+              <MeasuringTools />
+            </Paper>
+            <Paper sx={mapStyles.toolCluster}>
+              <MapStyleBar />
+            </Paper>
           </Box>
 
-          {/* Bottom-right, lifted above the engine scale bar (~20px tall). */}
-          {minimapVisible && (
-            <Box sx={{ position: 'absolute', bottom: 36, right: 12, zIndex: 1100 }}>
-              <MiniMap />
-            </Box>
+          {uiVisibilityStore.brightnessCardVisible && (
+            <Paper sx={mapStyles.brightnessCard}>
+              <Box sx={mapStyles.brightnessHeader}>
+                <Typography sx={{ fontSize: 12, fontWeight: 600 }}>Brightness</Typography>
+                <Typography sx={{ fontSize: 11, color: 'text.secondary', fontVariantNumeric: 'tabular-nums' }}>
+                  {brightness}%
+                </Typography>
+              </Box>
+              <Slider
+                size="small"
+                value={brightness}
+                min={0}
+                max={120}
+                step={1}
+                onChange={(_, v) => mapStyleStore.setBrightness(v as number)}
+                aria-label="Map brightness"
+              />
+            </Paper>
           )}
+          </Box>
+        )}
 
-          {/* Mini video sits directly above the minimap slot on the right. */}
-          {videoVisible && (
-            <Box
-              sx={{
-                position: 'absolute',
-                // 36 (minimap bottom) + 150 (minimap height) + 8 (gap) = 194
-                bottom: minimapVisible ? 194 : 36,
-                right: 12,
-                zIndex: 1100,
-              }}
-            >
-              <MiniVideo onClose={() => uiVisibilityStore.setVideoVisible(false)} />
-            </Box>
-          )}
-        </Box>
-        {children}
-      </Stack>
+        {/* Compass + zoom/3D/fullscreen stack (top-right, reference design). */}
+        <MapControls />
+      </Box>
+      {children}
     </MapContext.Provider>
   );
 }

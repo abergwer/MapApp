@@ -65,7 +65,8 @@ export class MapLibreEngine implements MapEngine {
     });
     this.map = map;
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
+    // Navigation is provided by the app's custom compass + control stack
+    // (MapControls); only the scale control stays native.
     map.addControl(
       new maplibregl.ScaleControl({ maxWidth: 80, unit: 'metric' }),
       'bottom-right',
@@ -225,6 +226,23 @@ export class MapLibreEngine implements MapEngine {
 
   removeMeasurements(): void {
     this.measure?.removeAll();
+  }
+
+  setCenter(lat: number, lng: number): void {
+    this.map?.easeTo({ center: [lng, lat] });
+  }
+
+  zoomBy(delta: number): void {
+    if (!this.map) return;
+    this.map.easeTo({ zoom: this.map.getZoom() + delta });
+  }
+
+  setBearing(bearing: number): void {
+    this.map?.easeTo({ bearing });
+  }
+
+  setPitch(pitch: number): void {
+    this.map?.easeTo({ pitch });
   }
 
   // ── Basemap ──────────────────────────────────────────────────────────

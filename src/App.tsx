@@ -1,57 +1,181 @@
+import { useEffect } from 'react'
+import IconButton from '@mui/material/IconButton'
+import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
+import OpenInNewIcon from '@mui/icons-material/OpenInNew'
+import OpenInFullIcon from '@mui/icons-material/OpenInFull'
+import CloseIcon from '@mui/icons-material/Close'
+import FmdGoodOutlinedIcon from '@mui/icons-material/FmdGoodOutlined'
+import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined'
+import RocketLaunchOutlinedIcon from '@mui/icons-material/RocketLaunchOutlined'
+import { reaction } from 'mobx'
 import { observer } from 'mobx-react-lite'
-import LayerManager from './Components/layerManager/LayerManager'
+import LayersWrapper from './Components/layerManager/LayersWrapper'
 import MapWrapper from './map/mapWrapper/MapWrapper'
-import { mapEngineLabel } from './map/mapConfig'
+import TopBar from './Components/layout/TopBar'
+import StatusBar from './Components/layout/StatusBar'
+import LayoutManager, { type PanelDef } from './Components/layout/LayoutManager'
+import LeftPanel, { type LeftPanelView } from './Components/layout/LeftPanel'
+import LayersPanel from './Components/features/layers/LayersPanel'
+import MissilesPanel from './Components/features/missiles/MissilesPanel'
+import EntitiesPanel from './Components/features/entities/EntitiesPanel'
+import IntelFeedPanel from './Components/features/intel/IntelFeedPanel'
+import MissileView3D from './Components/features/view3d/MissileView3D'
+import MiniMap from './Components/features/MiniMap'
+import MiniVideo from './Components/features/MiniVideo'
 import { useStores } from './stores/StoreContext'
-import { buildLayers } from './Components/layerManager'
-import { DEMO_SERVER_SHAPES } from './stores/DrawingToolStore'
-import type { MapShape } from './stores/shapes'
+import type { WorkspacePanelId } from './stores/UIVisibilityStore'
+import { LiveDataSocketProvider, liveDataStore, useLiveShapes } from './bridge'
+import { DEMO_LAYER_TOGGLES } from './mocks/demoLayerToggles'
+import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
+import airCraftIcon from './assets/aircraft.png'
+import droneIcon from './assets/drone.png'
 
 function App() {
   const stores = useStores()
+  const { uiVisibilityStore: ui } = stores
+
+  // Live feed: the demo server pushes targets/missiles over the bridge's WS
+  // into `liveDataStore`; mirror each frame into the app's entity stores so
+  // the existing layers/panels render server data. Counts + move intervals
+  // are configured at the top of server/server.js.
+  useEffect(() => {
+    const { airCraftStore, droneStore, missileStore } = stores
+    // Drop the local mock seeds — the server owns the data now.
+    airCraftStore.setTargets([])
+    droneStore.setTargets([])
+    missileStore.setAll([])
+    const disposers = [
+      reaction(
+        () => liveDataStore.aircraft,
+        (targets) => airCraftStore.setTargets(targets.map((t) => ({ ...t, icon: airCraftIcon }))),
+      ),
+      reaction(
+        () => liveDataStore.drones,
+        (targets) => droneStore.setTargets(targets.map((t) => ({ ...t, icon: droneIcon }))),
+      ),
+      reaction(
+        () => liveDataStore.missiles,
+        (missiles) => missileStore.setAll(missiles.slice()),
+      ),
+    ]
+    return () => disposers.forEach((dispose) => dispose())
+  }, [stores])
+
+  // Drawn shapes: hydrated once from the server's WS snapshot; user edits
+  // are pushed back over REST.
+  const liveShapes = useLiveShapes(liveDataStore)
+  const leftViews: LeftPanelView[] = [
+    { id: 'entities', title: 'Entities', Icon: FmdGoodOutlinedIcon, content: <EntitiesPanel /> },
+    {
+      id: 'layers',
+      title: 'Layers',
+      Icon: LayersOutlinedIcon,
+      content: <LayersPanel layers={DEMO_LAYER_TOGGLES} />,
+    },
+    { id: 'missiles', title: 'Missiles', Icon: RocketLaunchOutlinedIcon, content: <MissilesPanel /> },
+  ]
+
+  /** Standard workspace-panel window actions: full view / float / close. */
+  const panelActions = (id: WorkspacePanelId, title: string) => (
+    <Box sx={{ display: 'flex' }}>
+      <Tooltip title="Full view" arrow>
+        <IconButton
+          size="small"
+          onClick={() => ui.setPanelMode(id, 'maximized')}
+          aria-label={`Full view ${title}`}
+        >
+          <OpenInFullIcon fontSize="inherit" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Float over the map" arrow>
+        <IconButton
+          size="small"
+          onClick={() => ui.setPanelMode(id, 'floating')}
+          aria-label={`Float ${title} window`}
+        >
+          <OpenInNewIcon fontSize="inherit" />
+        </IconButton>
+      </Tooltip>
+      <Tooltip title="Close" arrow>
+        <IconButton
+          size="small"
+          onClick={() => ui.setPanelVisible(id, false)}
+          aria-label={`Close ${title}`}
+        >
+          <CloseIcon fontSize="inherit" />
+        </IconButton>
+      </Tooltip>
+    </Box>
+  )
+
+  /** Panel content, shared between the dock and the floating window. The
+   *  dock sections stretch to their full grid cell, so content uses `fill`. */
+  const panelContent: Record<WorkspacePanelId, { title: string; node: React.ReactNode }> = {
+    view3d: { title: '3D View', node: <MissileView3D fill /> },
+    video: { title: 'Video Feed', node: <MiniVideo fill /> },
+    minimap: { title: 'Mini Map', node: <MiniMap fill /> },
+    intel: {
+      title: 'Intel Feed',
+      // Demo injection: real projects pass their own kinds + target getter.
+      // The getter runs inside the panel's observer render, so the live
+      // tick subscriptions belong to the panel — not to App.
+      node: <IntelFeedPanel kinds={DEMO_INTEL_KINDS} getTargets={demoIntelTargets(stores)} />,
+    },
+  }
+
+  const workspaceIds: WorkspacePanelId[] = ['view3d', 'video', 'minimap', 'intel']
+
+  const rightPanels: PanelDef[] = workspaceIds.map((id) => ({
+    id,
+    title: panelContent[id].title,
+    hidden: !ui.isPanelVisible(id) || ui.panels[id].mode !== 'docked',
+    headerAction: panelActions(id, panelContent[id].title),
+    content: id === 'view3d' ? <MissileView3D /> : panelContent[id].node,
+    floatContent: panelContent[id].node,
+  }))
 
   return (
-    <Box
-      component="main"
-      sx={{
-        minHeight: '100svh',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 2,
-        p: { xs: 2, md: 4 },
-      }}
+    <LayoutManager
+      topBar={<TopBar />}
+      statusBar={<StatusBar />}
+      leftNav={<LeftPanel views={leftViews} />}
+      rightPanels={rightPanels}
+      showFloatingWindows
     >
-      <Typography variant="h3" component="h1">
-        Map Engine Orchestrator
-      </Typography>
-      <Typography color="text.secondary">
-        This app uses{' '}
-        <Box component="strong" sx={{ color: 'primary.light' }}>
-          {mapEngineLabel[stores.mapEngineStore.selectedEngine]}
-        </Box>{' '}
-        as the selected map engine.
-      </Typography>
-
       {/*
         Data contract with the map:
-        • Inbound:  `shapes` — the array the host owns (initial payload +
-                    any live updates from the server). The map re-hydrates
-                    whenever the array reference changes.
-        • Outbound: `onShape*` fire on user draw / edit / delete so the
-                    host can push the change back to the server.
+        • Inbound:  `shapes` — hydrated once from the server's WS
+                    `shapeSnapshot`; after that the map is authoritative.
+        • Outbound: `onShape*` push user draw / edit / delete back to the
+                    server over REST (see src/bridge/useLiveShapes.ts).
       */}
       <MapWrapper
-        shapes={DEMO_SERVER_SHAPES}
-        onShapeCreate={(shape: MapShape) => console.log('[App] shape created', shape)}
-        onShapeUpdate={(shape: MapShape) => console.log('[App] shape updated', shape)}
-        onShapeDelete={(id: string) => console.log('[App] shape deleted', id)}
+        shapes={liveShapes.shapes}
+        onShapeCreate={liveShapes.onShapeCreate}
+        onShapeUpdate={liveShapes.onShapeUpdate}
+        onShapeDelete={liveShapes.onShapeDelete}
       >
-        <LayerManager layers={buildLayers(stores)} />
+        {/*
+          Layer injection point: real projects pass their own deck.gl layer
+          array here (`<LayerManager layers={...} />`). LayersWrapper is the
+          demo composition: a small observer child that builds the reference
+          layer set inside its own render, so live-feed ticks re-render only
+          it — not the whole App tree.
+        */}
+        <LayersWrapper />
       </MapWrapper>
-    </Box>
+    </LayoutManager>
   )
 }
 
-export default observer(App)
+const ObservedApp = observer(App)
+
+/** Mounts the bridge's WS connection above the app (server → UI live feed). */
+export default function AppWithLiveData() {
+  return (
+    <LiveDataSocketProvider>
+      <ObservedApp />
+    </LiveDataSocketProvider>
+  )
+}

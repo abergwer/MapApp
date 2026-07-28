@@ -1,136 +1,103 @@
-import { useEffect } from 'react';
 import { observer } from 'mobx-react-lite';
-import Paper from '@mui/material/Paper';
-import Stack from '@mui/material/Stack';
-import Slider from '@mui/material/Slider';
-import ToggleButton from '@mui/material/ToggleButton';
+import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
-import Typography from '@mui/material/Typography';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
+import DarkModeIcon from '@mui/icons-material/DarkMode';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import MapIcon from '@mui/icons-material/Map';
 import VideocamIcon from '@mui/icons-material/Videocam';
-import { useMapContext } from '../../map/MapContext';
+import ViewInArIcon from '@mui/icons-material/ViewInAr';
+import RssFeedIcon from '@mui/icons-material/RssFeed';
+import Brightness6Icon from '@mui/icons-material/Brightness6';
 import { useStores } from '../../stores/StoreContext';
+import type { BaseMap } from '../../stores/MapStyleStore';
+import type { WorkspacePanelId } from '../../stores/UIVisibilityStore';
+import { toolButton } from '../../styles/common-ui/panel.styles';
 import config from '../../../config.json';
 
+const BASEMAPS: { id: BaseMap; label: string; Icon: typeof WbSunnyIcon }[] = [
+  { id: 'light', label: 'Light basemap', Icon: WbSunnyIcon },
+  { id: 'dark', label: 'Dark basemap', Icon: DarkModeIcon },
+  { id: 'satellite', label: 'Satellite basemap', Icon: SatelliteAltIcon },
+];
+
+/** Workspace panel toggles shown in the map toolbar (reference design). */
+const PANEL_TOGGLES: { id: WorkspacePanelId; label: string; Icon: typeof MapIcon }[] = [
+  { id: 'minimap', label: 'minimap panel', Icon: MapIcon },
+  { id: 'video', label: 'video panel', Icon: VideocamIcon },
+  { id: 'view3d', label: '3D view panel', Icon: ViewInArIcon },
+  { id: 'intel', label: 'intel feed panel', Icon: RssFeedIcon },
+];
+
 /**
- * Map style controls bar. Reads brightness/baseMap from MapStyleStore and
- * minimap/video visibility from UIVisibilityStore — all four pieces of state
- * can now be driven by other components (or devtools) without prop drilling.
+ * Basemap + panel toggles for the map toolbar. State lives in
+ * MapStyleStore + UIVisibilityStore; the brightness filter is applied by
+ * MapWrapper (single owner of the map container).
  */
 function MapStyleBarImpl() {
-  const { containerRef } = useMapContext();
   const { mapEngineStore, mapStyleStore, uiVisibilityStore } = useStores();
   const engine = mapEngineStore.engine;
-  const { brightness, baseMap } = mapStyleStore;
-  const { minimapVisible, videoVisible } = uiVisibilityStore;
+  const { baseMap } = mapStyleStore;
+  const supportsBaseMap = Boolean(engine?.setBaseMap);
 
-  // Dim the basemap when the slider goes down. Overlays (deck.gl, Leaflet
-  // draws) are left alone so they stay readable on a darker map.
-  // On MapLibre/Cesium, draw shapes share the basemap canvas and dim with it.
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const basemap = container.querySelector<HTMLElement>(
-      '.leaflet-tile-pane, .maplibregl-canvas, .cesium-widget canvas',
-    );
-    const deck = container.querySelector<HTMLElement>('.deck-overlay');
-
-    if (basemap) basemap.style.filter = `brightness(${brightness / 100})`;
-
-    return () => {
-      if (basemap) basemap.style.filter = '';
-      if (deck) deck.style.filter = '';
-    };
-  }, [containerRef, brightness]);
-
-  const toggleSatellite = () => {
-    if (!engine?.setBaseMap) return;
-    const next = baseMap === 'satellite' ? 'light' : 'satellite';
+  const handleBaseMap = (next: BaseMap) => {
+    if (!engine?.setBaseMap || baseMap === next) return;
     engine.setBaseMap(config.MapStyles[next]);
     mapStyleStore.setBaseMap(next);
   };
 
-  const supportsBaseMap = Boolean(engine?.setBaseMap);
-  const isSatellite = baseMap === 'satellite';
-
   return (
-    <Paper sx={{ px: 1.25, py: 0.75 }}>
-      <Stack direction="row" spacing={1.5} sx={{ alignItems: 'center' }}>
-        <Stack direction="row" spacing={1} sx={{ alignItems: 'center', px: 0.75 }}>
-          <WbSunnyIcon fontSize="small" sx={{ opacity: 0.85 }} />
-          <Slider
-            size="small"
-            value={brightness}
-            min={0}
-            max={120}
-            step={1}
-            onChange={(_, v) => mapStyleStore.setBrightness(v as number)}
-            aria-label="Map brightness"
-            sx={{ width: 110 }}
-          />
-          <Typography
-            variant="caption"
-            sx={{ minWidth: 36, textAlign: 'right', opacity: 0.75, fontVariantNumeric: 'tabular-nums' }}
-          >
-            {brightness}%
-          </Typography>
-        </Stack>
-
-        <Tooltip
-          title={supportsBaseMap ? 'Toggle satellite view' : 'Not supported by this engine'}
-          arrow
-        >
+    <>
+      {BASEMAPS.map(({ id, label, Icon }) => (
+        <Tooltip key={id} title={supportsBaseMap ? label : 'Not supported by this engine'} arrow>
           {/* span wrapper so Tooltip still fires when the button is disabled */}
           <span>
-            <ToggleButton
-              value="satellite"
+            <IconButton
               size="small"
-              color="primary"
-              selected={isSatellite}
-              onChange={toggleSatellite}
+              onClick={() => handleBaseMap(id)}
               disabled={!supportsBaseMap}
+              sx={toolButton(baseMap === id)}
+              aria-label={label}
             >
-              <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-                <SatelliteAltIcon fontSize="small" />
-                <span>{isSatellite ? 'Satellite' : 'Light'}</span>
-              </Stack>
-            </ToggleButton>
+              <Icon fontSize="small" />
+            </IconButton>
           </span>
         </Tooltip>
+      ))}
 
-        <Tooltip title={minimapVisible ? 'Hide minimap' : 'Show minimap'} arrow>
-          <ToggleButton
-            value="minimap"
-            size="small"
-            color="primary"
-            selected={minimapVisible}
-            onChange={() => uiVisibilityStore.toggleMinimap()}
-          >
-            <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
-              <MapIcon fontSize="small" />
-              <span>Minimap</span>
-            </Stack>
-          </ToggleButton>
-        </Tooltip>
+      {PANEL_TOGGLES.map(({ id, label, Icon }) => {
+        const visible = uiVisibilityStore.isPanelVisible(id);
+        const title = `${visible ? 'Hide' : 'Show'} ${label}`;
+        return (
+          <Tooltip key={id} title={title} arrow>
+            <IconButton
+              size="small"
+              onClick={() => uiVisibilityStore.togglePanel(id)}
+              sx={toolButton(visible)}
+              aria-label={title}
+            >
+              <Icon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        );
+      })}
 
-        <Tooltip title={videoVisible ? 'Hide video' : 'Show video'} arrow>
-          <ToggleButton
-            value="video"
-            size="small"
-            color="primary"
-            selected={videoVisible}
-            onChange={() => uiVisibilityStore.toggleVideo()}
-            aria-label={videoVisible ? 'Hide video' : 'Show video'}
-          >
-            <span>Video</span>
-            <VideocamIcon fontSize="small" />
-          </ToggleButton>
-        </Tooltip>
-      </Stack>
-    </Paper>
+      <Tooltip
+        title={uiVisibilityStore.brightnessCardVisible ? 'Hide brightness control' : 'Show brightness control'}
+        arrow
+      >
+        <IconButton
+          size="small"
+          onClick={() => uiVisibilityStore.toggleBrightnessCard()}
+          sx={toolButton(uiVisibilityStore.brightnessCardVisible)}
+          aria-label={
+            uiVisibilityStore.brightnessCardVisible ? 'Hide brightness control' : 'Show brightness control'
+          }
+        >
+          <Brightness6Icon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+    </>
   );
 }
 

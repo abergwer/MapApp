@@ -7,6 +7,8 @@ export class MapEngineStore {
   readonly selectedEngine: MapEngineType = initialEngine;
   engine: MapEngine | null = null;
   viewState: MapViewState | null = null;
+  /** Last map click, shown in the status bar COORDINATE cell. */
+  lastClick: { lat: number; lng: number } | null = null;
 
   constructor() {
     makeAutoObservable(this, { selectedEngine: false });
@@ -21,5 +23,9 @@ export class MapEngineStore {
 
   setViewState(vs: MapViewState) {
     this.viewState = vs;
+  }
+
+  setLastClick(coords: { lat: number; lng: number }) {
+    this.lastClick = coords;
   }
 }

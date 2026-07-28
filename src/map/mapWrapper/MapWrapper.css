@@ -1,17 +1,18 @@
 /*
  * Only `.measure-label` is referenced from outside JSX — the MapLibre engine
  * creates DOM markers with this class name (see MapLibreEngine.ts). All other
- * layout/styling has migrated to Material UI's `sx` prop.
+ * layout/styling has migrated to Material UI's `sx` prop. Colors mirror the
+ * design tokens in src/styles/system-ui/tokens.ts (CSS can't import TS).
  */
 .measure-label {
-  background: rgba(20, 24, 32, 0.92);
-  color: #f3f4f6;
+  background: rgba(12, 17, 25, 0.92);
+  color: #d9e2ee;
+  border: 1px solid #1d2938;
   padding: 4px 8px;
   border-radius: 4px;
-  font: 12px/1 sans-serif;
+  font: 11px/1.2 Consolas, monospace;
   white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-  border: none;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
   width: auto !important;
   height: auto !important;
   transform: translate(-50%, -50%);

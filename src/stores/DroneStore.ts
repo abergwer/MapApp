@@ -1,28 +1,23 @@
-import { makeAutoObservable } from 'mobx';
-import droneIcon from '../assets/drone.png';
+import { makeAutoObservable, observable } from 'mobx';
+import { MOCK_DRONES } from '../mocks/mockData';
 
 export interface DroneTarget {
   id: string;
   position: [number, number];
   icon: string;
+  /** Degrees clockwise from north. */
+  heading: number;
+  altitudeFt: number;
+  speedKts: number;
 }
 
-const seedTargets: DroneTarget[] = [
-  { id: 't1', position: [34.7818, 32.0853], icon: droneIcon }, // Tel Aviv
-  { id: 't2', position: [34.9885, 32.7940], icon: droneIcon }, // Haifa
-  { id: 't3', position: [34.8555, 32.1093], icon: droneIcon }, // Herzliya
-  { id: 't4', position: [35.2137, 31.7683], icon: droneIcon }, // Jerusalem
-  { id: 't5', position: [34.9519, 29.5577], icon: droneIcon }, // Eilat
-  { id: 't6', position: [35.3027, 32.9216], icon: droneIcon }, // Nazareth
-  { id: 't7', position: [34.5742, 31.6693], icon: droneIcon }, // Ashdod
-  { id: 't8', position: [34.7930, 31.2518], icon: droneIcon }, // Be'er Sheva
-];
-
 export class DroneStore {
-  targets: DroneTarget[] = seedTargets;
+  targets: DroneTarget[] = MOCK_DRONES;
 
   constructor() {
-    makeAutoObservable(this);
+    // Live feeds replace the whole array every tick — shallow tracking
+    // avoids deep-proxying thousands of fresh target objects per frame.
+    makeAutoObservable(this, { targets: observable.shallow });
   }
 
   setTargets(targets: DroneTarget[]) {

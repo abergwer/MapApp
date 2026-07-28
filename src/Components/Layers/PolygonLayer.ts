@@ -1,14 +1,15 @@
 import { PolygonLayer } from '@deck.gl/layers';
 import type { PolygonFeature } from '../../stores/PolygonStore';
+import { layerColors } from '../../styles/features/layers.styles';
 
 export function createPolygonLayer(polygons: PolygonFeature[]) {
   return new PolygonLayer<PolygonFeature>({
     id: 'sample-polygons',
     data: polygons,
     getPolygon: (f) => f.contour,
-    getFillColor: [255, 60, 60, 180],
-    getLineColor: [200, 0, 0, 255],
-    getLineWidth: 3,
+    getFillColor: layerColors.areaFill,
+    getLineColor: layerColors.areaLine,
+    getLineWidth: 2,
     lineWidthUnits: 'pixels',
     lineWidthMinPixels: 2,
     filled: true,
