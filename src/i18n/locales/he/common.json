@@ -1,0 +1,68 @@
+{
+    "app": {
+        "title": "מתאם מנוע המפות",
+        "subtitle": "אפליקציה זו משתמשת ב־{{engine}} כמנוע המפה הנבחר."
+    },
+    "language": {
+        "label": "שפה",
+        "en": "אנגלית",
+        "he": "עברית"
+    },
+    "toolbar": {
+        "draw": "שרטוט",
+        "drawTools": "כלי שרטוט",
+        "measurements": "מדידות",
+        "cancel": "ביטול",
+        "editHint": "לחצו על צורה לעריכה · Esc לביטול הבחירה",
+        "tools": {
+            "point": "נקודה",
+            "line": "קו",
+            "polygon": "מצולע",
+            "circle": "מעגל",
+            "ellipse": "אליפסה",
+            "sector": "מקטע",
+            "route": "מסלול"
+        },
+        "measure": {
+            "measure": "מדידה",
+            "distance": "מרחק",
+            "area": "שטח",
+            "remove": "הסרת מדידות"
+        }
+    },
+    "MapStyleBar": {
+        "minimap": "מפת התמצאות",
+        "video": "וידאו"
+    },
+    "LOS": {
+        "label": "קו ראייה",
+        "startPoint": "נקודת התחלה",
+        "endPoint": "נקודת סיום",
+        "clear": "נקה",
+        "Area": {
+            "label": "שטח ראייה",
+            "centerPoint": "נקודת מרכז",
+            "radius": "רדיוס",
+            "clear": "נקה"
+        },
+        "lineButton": {
+            "idle": { "label": "קו ראייה", "tooltip": "קו ראייה: לחצו, ואז בחרו צופה ומטרה על המפה" },
+            "computing": { "label": "קו ראייה · מחשב…", "tooltip": "מחשב קו ראייה" },
+            "ready": { "label": "קו ראייה · ניקוי", "tooltip": "לחצו כדי לנקות את הקו" },
+            "error": { "label": "קו ראייה · שגיאה", "tooltip": "החישוב נכשל — לחצו כדי לנקות" },
+            "clickObserver": "קו ראייה · לחצו על הצופה…",
+            "clickTarget": "קו ראייה · לחצו על המטרה…",
+            "clickHint": "לחצו על המפה (Esc לביטול)"
+        },
+        "areaButton": {
+            "idle": { "label": "שטח", "tooltip": "קו ראייה שטחי: מקמו את הצופה, ואז שרטטו פוליגון" },
+            "computing": { "label": "שטח · מחשב…", "tooltip": "מחשב שטח נצפה" },
+            "ready": { "label": "שטח · ניקוי", "tooltip": "לחצו כדי לנקות את הכיסוי" },
+            "error": { "label": "שטח · שגיאה", "tooltip": "החישוב נכשל — לחצו כדי לנקות" },
+            "clickObserver": "שטח · לחצו על הצופה…",
+            "clickHint": "לחצו על המפה (Esc לביטול)",
+            "drawPolygon": "שטח · שרטטו מצולע…",
+            "drawHint": "לחצו על קודקודים סביב הצופה, לחיצה כפולה לסיום (Esc לביטול)"
+        }
+    }
+}
