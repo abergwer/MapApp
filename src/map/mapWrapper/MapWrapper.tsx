@@ -98,7 +98,7 @@ function MapWrapperImpl({
 
     let eng: MapEngine | undefined;
     let cancelled = false;
-    let handleResize: (() => void) | undefined;
+    let resizeObserver: ResizeObserver | undefined;
     let unsubscribeViewChange: (() => void) | undefined;
     let stopEditHandoff: (() => void) | undefined;
 
@@ -149,15 +149,18 @@ function MapWrapperImpl({
         { fireImmediately: true },
       );
 
-      handleResize = () => eng?.resize?.();
-      window.addEventListener('resize', handleResize);
+      // Track the container's own size, not just `window` resize — panel
+      // dock/undock and rail collapse change the map's box without any
+      // window event. Leaflet in particular keeps a stale internal size
+      // (gray unrendered strip + projection out of sync with the deck
+      // overlay) until resize()/invalidateSize() runs.
+      resizeObserver = new ResizeObserver(() => eng?.resize?.());
+      resizeObserver.observe(containerRef.current!);
     });
 
     return () => {
       cancelled = true;
-      if (handleResize) {
-        window.removeEventListener('resize', handleResize);
-      }
+      resizeObserver?.disconnect();
       unsubscribeViewChange?.();
       stopEditHandoff?.();
       mapEngineStore.setEngine(null);

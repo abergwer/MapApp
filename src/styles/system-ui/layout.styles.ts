@@ -10,30 +10,39 @@ import { palette, fonts, microLabel } from './tokens';
 const RAIL_COLLAPSED_W = '36px';
 /** Permanent left icon rail width. */
 const LEFT_RAIL_W = 44;
-/** Icon rail + open content column. */
-const LEFT_PANEL_W = `${LEFT_RAIL_W + 300}px`;
 /** Default right dock width; live value comes from UIVisibilityStore. */
 export const RIGHT_DOCK_DEFAULT_W = 620;
+/** The map never gives up more than this to the side columns. */
+const MIN_MAP_W = 480;
+/** Narrowest the open dock may be squeezed to on small windows. */
+const DOCK_MIN_W = 220;
 
 export const appGrid = (
   leftCollapsed: boolean,
   rightCollapsed: boolean,
   rightWidth: number = RIGHT_DOCK_DEFAULT_W,
-): SxProps<Theme> => ({
-  height: '100svh',
-  display: 'grid',
-  gridTemplateRows: 'auto minmax(0, 1fr) auto',
-  gridTemplateColumns: `${leftCollapsed ? `${LEFT_RAIL_W}px` : LEFT_PANEL_W} minmax(0, 1fr) ${
-    rightCollapsed ? RAIL_COLLAPSED_W : `${rightWidth}px`
-  }`,
-  gridTemplateAreas: `
+): SxProps<Theme> => {
+  const leftPx = leftCollapsed ? LEFT_RAIL_W : LEFT_RAIL_W + 300;
+  // On small windows the stored dock width can swallow the whole map
+  // (e.g. 1024px window: 344 + 620 left a 42px map sliver) — cap the dock
+  // column so the map keeps MIN_MAP_W before the dock starts shrinking.
+  const rightCol = rightCollapsed
+    ? RAIL_COLLAPSED_W
+    : `clamp(${DOCK_MIN_W}px, calc(100vw - ${leftPx}px - ${MIN_MAP_W}px), ${rightWidth}px)`;
+  return {
+    height: '100svh',
+    display: 'grid',
+    gridTemplateRows: 'auto minmax(0, 1fr) auto',
+    gridTemplateColumns: `${leftPx}px minmax(0, 1fr) ${rightCol}`,
+    gridTemplateAreas: `
     "top    top top"
     "left   map right"
     "status status status"
   `,
-  bgcolor: 'background.default',
-  overflow: 'hidden',
-});
+    bgcolor: 'background.default',
+    overflow: 'hidden',
+  };
+};
 
 export const mapArea: SxProps<Theme> = {
   gridArea: 'map',
