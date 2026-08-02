@@ -7,8 +7,8 @@ import { DrawingToolStore } from './DrawingToolStore';
 import { EntityService } from './EntityService';
 import { MapStyleStore } from './MapStyleStore';
 import { UIVisibilityStore } from './UIVisibilityStore';
-import { LOSStore } from './LOSStore';
-import { AreaLOSStore } from './AreaLOSStore';
+import { LOSStore } from '../los/LOSStore';
+import { AreaLOSStore } from '../los/AreaLOSStore';
 
 export class RootStore {
   droneStore = new DroneStore();

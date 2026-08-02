@@ -6,7 +6,7 @@ import { createDroneLayer } from '../Layers/DroneLayer';
 import { createAirCraftLayer } from '../Layers/AirCraftLayer';
 import { createRangeRingsLayer } from '../Layers/RangeRingsLayer';
 import { createDrawnShapeLayers } from '../Layers/DrawnShapeLayers';
-import { createLOSLayers, createAreaLOSLayers } from '../Layers/LOSLayer';
+import { createLOSLayers, createAreaLOSLayers } from '../../los/LOSLayers';
 import type { RootStore } from '../../stores/RootStore';
 
 /**

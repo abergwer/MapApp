@@ -8,10 +8,10 @@ import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
 import Tooltip from '@mui/material/Tooltip';
 import TuneIcon from '@mui/icons-material/Tune';
-import { useStores } from '../../stores/StoreContext';
+import { useStores } from '../stores/StoreContext';
 
 /** LOS settings popover: observer/target heights above ground. */
-function LOSPanelImpl() {
+function LOSHeightsPanelImpl() {
   const { losStore } = useStores();
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
@@ -64,5 +64,5 @@ function LOSPanelImpl() {
   );
 }
 
-const LOSPanel = observer(LOSPanelImpl);
-export default LOSPanel;
+const LOSHeightsPanel = observer(LOSHeightsPanelImpl);
+export default LOSHeightsPanel;

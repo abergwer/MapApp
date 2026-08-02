@@ -1,7 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { FeatureCollection } from 'geojson';
-import { computeLOS } from '../los/LOSService';
-import type { LOSPoint, LOSProfileSample } from '../los/types';
+import { computeLOS } from './LOSService';
+import type { LOSPoint, LOSProfileSample } from './types';
 
 export type LOSStatus = 'idle' | 'computing' | 'ready' | 'error';
 
@@ -21,9 +21,6 @@ export class LOSStore {
   /** Two-click placement flow is active (observer, then target). */
   placing = false;
 
-  /** Single-click move flow is active for one existing endpoint. */
-  moving: 'observer' | 'target' | null = null;
-
   /** Observer height above ground (m). Stamped on the observer at placement. */
   observerHeightM = 2;
 
@@ -37,7 +34,7 @@ export class LOSStore {
   }
 
   beginPlacement() {
-    this.clearLOS();
+    this.clear();
     this.placing = true;
   }
 
@@ -71,10 +68,9 @@ export class LOSStore {
     }
   }
 
-  clearLOS() {
+  clear() {
     this.requestSeq += 1; // invalidate any in-flight response
     this.placing = false;
-    this.moving = null;
     this.observer = null;
     this.target = null;
     this.status = 'idle';

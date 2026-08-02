@@ -1,7 +1,7 @@
 import { makeAutoObservable, reaction, runInAction } from 'mobx';
 import type { FeatureCollection } from 'geojson';
-import { computeAreaLOS } from '../los/LOSService';
-import type { LOSPoint } from '../los/types';
+import { computeAreaLOS } from './LOSService';
+import type { LOSPoint } from './types';
 import type { LOSStore, LOSStatus } from './LOSStore';
 
 /**

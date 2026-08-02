@@ -2,8 +2,8 @@ import { observer } from 'mobx-react-lite';
 import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
-import { useStores } from '../../stores/StoreContext';
-import { LOS_COLORS } from '../../los/constants';
+import { useStores } from '../stores/StoreContext';
+import { LOS_COLORS } from './constants';
 
 const WIDTH = 360;
 const HEIGHT = 140;
