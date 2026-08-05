@@ -303,14 +303,23 @@ function missileFrame() {
   return JSON.stringify({ type: 'missileUpdate', missiles: missiles.map(wireMissile) })
 }
 
+/** Backpressure cap: frames are full snapshots, so skipping a slow client is
+ *  lossless — without this, a stalled client (backgrounded tab, dead TCP)
+ *  buffers every frame on the heap until the process OOMs. */
+const MAX_BUFFERED_BYTES = 1_000_000
+
 function broadcast(frame) {
   for (const client of wss.clients) {
-    if (client.readyState === client.OPEN) client.send(frame)
+    if (client.readyState === client.OPEN && client.bufferedAmount < MAX_BUFFERED_BYTES) {
+      client.send(frame)
+    }
   }
 }
 
 wss.on('connection', (socket) => {
   console.log(`[ws] client connected (${wss.clients.size} total)`)
+  socket.isAlive = true
+  socket.on('pong', () => (socket.isAlive = true))
   // Shape snapshot + immediate frames so a new client doesn't wait a tick.
   socket.send(JSON.stringify({ type: 'shapeSnapshot', shapes }))
   socket.send(targetFrame())
@@ -319,6 +328,20 @@ wss.on('connection', (socket) => {
     console.log(`[ws] client disconnected (${wss.clients.size} total)`),
   )
 })
+
+// Reap connections that stopped answering pings (their send buffers never
+// drain and they'd otherwise linger as OPEN zombies).
+setInterval(() => {
+  for (const client of wss.clients) {
+    if (!client.isAlive) {
+      console.log('[ws] terminating unresponsive client')
+      client.terminate()
+      continue
+    }
+    client.isAlive = false
+    client.ping()
+  }
+}, 30_000)
 
 setInterval(() => {
   tickTargets()

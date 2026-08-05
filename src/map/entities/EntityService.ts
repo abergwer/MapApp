@@ -1,5 +1,5 @@
-import type { DrawingToolStore } from './DrawingToolStore';
-import type { MapShape } from './shapes';
+import type { DrawingToolStore } from '../../stores/DrawingToolStore';
+import type { EntityData, MapShape } from '../../stores/shapes';
 
 /**
  * Optional callbacks fired *after* a successful local write.
@@ -43,10 +43,12 @@ export class EntityService {
     this.hooks = hooks;
   }
 
-  /** Persist a freshly drawn entity. */
+  /** Persist a freshly drawn entity. Completing a draw disarms the one-shot
+   *  tool so UI buttons don't stay lit after the shape lands. */
   create(shape: MapShape): void {
     this.store.commit();
     this.store.recordShape(shape);
+    this.store.setActiveDrawTool(null);
     this.hooks.onCreate?.(shape);
   }
 
@@ -69,6 +71,28 @@ export class EntityService {
   /** Look up a single entity by id, or `undefined` if it isn't present. */
   get(id: string): MapShape | undefined {
     return this.store.completedShapes.find((s) => s.id === id);
+  }
+
+  /** Merge a patch into a shape's attached entity data (name / attributes).
+   *  No-op for plain graphics that carry no entity data. Geometry is
+   *  untouched — use `update` for that. */
+  updateEntityData(id: string, patch: Partial<EntityData>): void {
+    const shape = this.get(id);
+    if (!shape?.entity) return;
+    this.update({
+      ...shape,
+      entity: {
+        ...shape.entity,
+        ...patch,
+        attributes: patch.attributes ?? shape.entity.attributes,
+      },
+    });
+  }
+
+  /** Next auto-name for a new instance of a type: "<baseName> <n>". */
+  nextEntityName(typeId: string, baseName: string): string {
+    const count = this.store.completedShapes.filter((s) => s.entity?.typeId === typeId).length;
+    return `${baseName} ${count + 1}`;
   }
 
   // ── Inbound: server / host-driven writes ────────────────────────────

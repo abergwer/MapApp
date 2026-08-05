@@ -31,7 +31,7 @@ export type {
 export type { BaseMap } from '../stores/MapStyleStore';
 
 // ── Service layer: entity CRUD hooks ──────────────────────────────────
-export type { EntityHooks } from '../stores/EntityService';
+export type { EntityHooks } from '../map/entities/EntityService';
 
 // ── Map engine abstraction ────────────────────────────────────────────
 export type {

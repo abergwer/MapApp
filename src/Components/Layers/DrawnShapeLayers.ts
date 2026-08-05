@@ -1,21 +1,40 @@
 import { IconLayer, PathLayer, PolygonLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import type { MapShape } from '../../stores/DrawingToolStore';
+import { getEntityType } from '../../map/entities/entityTypes';
 import { ellipseRing, sectorRing } from '../../map/utils/geo';
 
 /**
  * Map-pin marker for drawn points, inlined as an SVG data URL so there's no
  * atlas image to ship or load. `anchorY` (see below) puts the pin's tip on the
  * coordinate; the fill/stroke live in the SVG since IconLayer can't tint an
- * RGB icon without a mask.
+ * RGB icon without a mask. Pins are generated per color (entity types color
+ * their own points) and cached by color key.
  */
-const PIN_ICON = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
-  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">` +
-  `<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" ` +
-  `fill="rgb(0, 122, 255)" stroke="rgb(0, 70, 150)"  stroke-width="1.5"/>` +
-  `<circle cx="12" cy="12" r="4.5" fill="rgb(135, 206, 255)"/>` +
-  `</svg>`,
-)}`;
+const pinIconCache = new Map<string, string>();
+function pinIcon(rgb: [number, number, number]): string {
+  const key = rgb.join(',');
+  let url = pinIconCache.get(key);
+  if (!url) {
+    const [r, g, b] = rgb;
+    const darker = `rgb(${Math.round(r * 0.55)}, ${Math.round(g * 0.55)}, ${Math.round(b * 0.55)})`;
+    const lighter = `rgb(${Math.round(r + (255 - r) * 0.6)}, ${Math.round(g + (255 - g) * 0.6)}, ${Math.round(b + (255 - b) * 0.6)})`;
+    url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="36" viewBox="0 0 24 36">` +
+      `<path d="M12 0C5.4 0 0 5.4 0 12c0 9 12 24 12 24s12-15 12-24C24 5.4 18.6 0 12 0z" ` +
+      `fill="rgb(${r}, ${g}, ${b})" stroke="${darker}"  stroke-width="1.5"/>` +
+      `<circle cx="12" cy="12" r="4.5" fill="${lighter}"/>` +
+      `</svg>`,
+    )}`;
+    pinIconCache.set(key, url);
+  }
+  return url;
+}
+
+/** Entity-type color if the shape carries one, else the layer default. */
+function shapeColor(s: MapShape, fallback: [number, number, number]): [number, number, number] {
+  return getEntityType(s.entity?.typeId)?.color ?? fallback;
+}
 
 /**
  * Deck.gl rendering for user-drawn shapes. The shape whose id equals
@@ -63,8 +82,8 @@ export function createDrawnShapeLayers(
       autoHighlight: true,
       highlightColor: [255, 255, 255, 80],
       getPolygon: (s) => s.positions,
-      getFillColor: [0, 150, 255, 60],
-      getLineColor: [0, 150, 255, 220],
+      getFillColor: (s) => [...shapeColor(s, [0, 150, 255]), 60],
+      getLineColor: (s) => [...shapeColor(s, [0, 150, 255]), 220],
       getLineWidth: 2,
       lineWidthUnits: 'pixels',
       lineWidthMinPixels: 2,
@@ -76,8 +95,8 @@ export function createDrawnShapeLayers(
       autoHighlight: true,
       highlightColor: [255, 255, 255, 80],
       getPolygon: (s) => areaRing(s),
-      getFillColor: [255, 170, 0, 55],
-      getLineColor: [255, 170, 0, 220],
+      getFillColor: (s) => [...shapeColor(s, [255, 170, 0]), 55],
+      getLineColor: (s) => [...shapeColor(s, [255, 170, 0]), 220],
       getLineWidth: 2,
       lineWidthUnits: 'pixels',
       lineWidthMinPixels: 2,
@@ -89,7 +108,7 @@ export function createDrawnShapeLayers(
       autoHighlight: true,
       highlightColor: [255, 255, 255, 120],
       getPath: (s) => s.positions,
-      getColor: [0, 200, 140, 230],
+      getColor: (s) => [...shapeColor(s, [0, 200, 140]), 230],
       getWidth: 3,
       widthUnits: 'pixels',
       widthMinPixels: 2,
@@ -103,8 +122,8 @@ export function createDrawnShapeLayers(
       autoHighlight: true,
       highlightColor: [255, 255, 255, 160],
       getPosition: (s) => s.position,
-      getIcon: () => ({
-        url: PIN_ICON,
+      getIcon: (s) => ({
+        url: pinIcon(shapeColor(s, [0, 122, 255])),
         width: 24,
         height: 36,
         anchorY: 36, // pin tip sits exactly on the coordinate

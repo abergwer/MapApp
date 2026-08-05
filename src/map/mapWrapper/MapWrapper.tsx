@@ -14,6 +14,7 @@ import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
 import MapControls from '../../Components/features/MapControls';
+import EntityEditWindow from '../../Components/features/entities/EntityEditWindow';
 import * as mapStyles from '../../styles/features/map.styles';
 import type { MapShape } from '../../stores/shapes';
 
@@ -241,6 +242,9 @@ function MapWrapperImpl({
 
         {/* Compass + zoom/3D/fullscreen stack (top-right, reference design). */}
         <MapControls />
+
+        {/* Floating inspector for the selected entity (name / attributes). */}
+        <EntityEditWindow />
       </Box>
       {children}
     </MapContext.Provider>

@@ -4,7 +4,7 @@ import { MissileStore } from './MissileStore';
 import { PolygonStore } from './PolygonStore';
 import { MapEngineStore } from './MapEngineStore';
 import { DrawingToolStore } from './DrawingToolStore';
-import { EntityService } from './EntityService';
+import { EntityService } from '../map/entities/EntityService';
 import { MapStyleStore } from './MapStyleStore';
 import { UIVisibilityStore } from './UIVisibilityStore';
 import { ThemeStore } from './ThemeStore';

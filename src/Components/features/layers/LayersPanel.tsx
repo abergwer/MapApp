@@ -10,6 +10,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import { observer } from 'mobx-react-lite';
 import SectionCard from '../../common/SectionCard';
 import { useStores } from '../../../stores/StoreContext';
+import { getEntityType, entityTypeCss } from '../../../map/entities/entityTypes';
 import { palette } from '../../../styles/system-ui/tokens';
 import * as styles from '../../../styles/features/layers.styles';
 
@@ -84,10 +85,19 @@ function LayersPanelImpl({ layers = [] }: LayersPanelProps) {
   const show = (...labels: string[]) =>
     !q || labels.some((l) => l.toLowerCase().includes(q));
 
-  // Read-only per-kind breakdown of the drawn shapes.
-  const kindCounts = new Map<string, number>();
+  // Read-only breakdown of the drawn shapes: entity shapes get one sub-row
+  // per entity type, plain graphics one per kind.
+  const subRows = new Map<string, { label: string; color: string; count: number }>();
   for (const s of drawingToolStore.completedShapes) {
-    kindCounts.set(s.kind, (kindCounts.get(s.kind) ?? 0) + 1);
+    const type = getEntityType(s.entity?.typeId);
+    const key = type ? `drawnShapes:type:${type.id}` : `drawnShapes:${s.kind}`;
+    const row = subRows.get(key) ?? {
+      label: type ? type.name : s.kind.charAt(0).toUpperCase() + s.kind.slice(1),
+      color: type ? entityTypeCss(type) : palette.accent,
+      count: 0,
+    };
+    row.count += 1;
+    subRows.set(key, row);
   }
 
   /** Render one injected toggle def (leaf row or expandable group). */
@@ -165,18 +175,18 @@ function LayersPanelImpl({ layers = [] }: LayersPanelProps) {
         )}
         {show('Drawn Shapes') && (
           <Collapse in={shapesOpen}>
-            {[...kindCounts.entries()].map(([kind, count]) => (
+            {[...subRows.entries()].map(([key, row]) => (
               <Row
-                key={kind}
+                key={key}
                 sub
-                color={palette.accent}
-                label={kind.charAt(0).toUpperCase() + kind.slice(1)}
-                count={`${count}`}
-                checked={vis.isLayerVisible(`drawnShapes:${kind}`)}
-                onToggle={(v) => vis.setLayerVisible(`drawnShapes:${kind}`, v)}
+                color={row.color}
+                label={row.label}
+                count={`${row.count}`}
+                checked={vis.isLayerVisible(key)}
+                onToggle={(v) => vis.setLayerVisible(key, v)}
               />
             ))}
-            {kindCounts.size === 0 && (
+            {subRows.size === 0 && (
               <Typography sx={{ ...styles.layerCount, ml: 4, mb: 0.5 }}>No shapes drawn</Typography>
             )}
           </Collapse>

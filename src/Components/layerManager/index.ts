@@ -24,11 +24,14 @@ export function buildLayers(stores: RootStore): Layer[] {
 
   // User-drawn shapes. The map engine's native edit tools drive the same
   // store via `entityService`; deck.gl only renders and picks here.
-  // Per-kind visibility: LayersPanel writes `drawnShapes:<kind>` keys
-  // (unknown keys default to visible).
+  // Visibility: entity shapes use per-type keys `drawnShapes:type:<typeId>`,
+  // plain graphics use per-kind keys `drawnShapes:<kind>` (LayersPanel
+  // writes both; unknown keys default to visible).
   if (vis.isLayerVisible('drawnShapes')) {
     const visibleShapes = drawingToolStore.completedShapes.filter((s) =>
-      vis.isLayerVisible(`drawnShapes:${s.kind}`),
+      s.entity
+        ? vis.isLayerVisible(`drawnShapes:type:${s.entity.typeId}`)
+        : vis.isLayerVisible(`drawnShapes:${s.kind}`),
     );
     layers.push(...createDrawnShapeLayers(visibleShapes, drawingToolStore.selectedId));
   }

@@ -27,6 +27,8 @@ export interface Measurement {
 
 export class DrawingToolStore {
   activeDrawTool: DrawTool | null = null;
+  /** Registry id of the entity type being drawn, set via `armEntityDraw`. */
+  activeEntityTypeId: string | null = null;
   activeMeasureTool: MeasureTool | null = null;
   /**
    * The id of the shape currently selected for editing, or null. This is the
@@ -59,6 +61,13 @@ export class DrawingToolStore {
     // deselects the old shape and calls `endEdit`, aborting the new draw.
     if (tool !== null) this.selectedId = null;
     this.activeDrawTool = tool;
+    this.activeEntityTypeId = null;
+  }
+
+  /** Arm a draw for a specific entity type (toolbar / panel buttons). */
+  armEntityDraw(typeId: string, tool: DrawTool) {
+    this.setActiveDrawTool(tool);
+    this.activeEntityTypeId = typeId;
   }
 
   setActiveMeasureTool(tool: MeasureTool | null) {
