@@ -9,9 +9,8 @@ import StraightenIcon from '@mui/icons-material/Straighten';
 import SquareFootIcon from '@mui/icons-material/SquareFoot';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
 import type { DrawTool, DrawingToolStore, MeasureTool } from '../../stores/DrawingToolStore';
-import type { EntityService } from '../../map/entities/EntityService';
-import type { EntityTypeDef } from '../../map/entities/entityTypes';
-import type { MapShape } from '../../stores/shapes';
+import type { EntityDefinition } from './entities/entityDefinitions';
+import type { EntityService } from './entities/EntityService';
 
 /**
  * Shared draw/measure tool definitions + engine wiring, used by both the
@@ -39,61 +38,68 @@ export const MEASURE_TOOLS: { id: MeasureTool; label: string; Icon: typeof Strai
  * are created through the single CRUD writer (and, in future, persisted to
  * the server) instead of being dropped to console.log.
  *
- * `decorate` lets callers enrich the finished shape (e.g. attach entity
- * data) before it is committed.
+ * When `def` (an entity-type definition) is given, the completed shape is
+ * tagged with its `defId` so the instance renders and groups as that type.
  */
 export function startDraw(
   engine: MapEngine,
   tool: DrawTool,
   entities: EntityService,
-  decorate: (shape: MapShape) => MapShape = (shape) => shape,
+  def?: EntityDefinition,
 ) {
-  const create = (shape: MapShape) => entities.create(decorate(shape));
+  const data = def ? { defId: def.id } : {};
   switch (tool) {
     case 'point':
-      return engine.startDrawPoint((id, position) => create({ id, kind: 'point', position }));
+      return engine.startDrawPoint((id, position) =>
+        entities.create({ ...data, id, kind: 'point', position }),
+      );
     case 'line':
-      return engine.startDrawLine((id, positions) => create({ id, kind: 'line', positions }));
+      return engine.startDrawLine((id, positions) =>
+        entities.create({ ...data, id, kind: 'line', positions }),
+      );
     case 'polygon':
       return engine.startDrawPolygon((id, positions) =>
-        create({ id, kind: 'polygon', positions }),
+        entities.create({ ...data, id, kind: 'polygon', positions }),
       );
     case 'circle':
       return engine.startDrawCircle((id, center, radius) =>
-        create({ id, kind: 'circle', center, radius }),
+        entities.create({ ...data, id, kind: 'circle', center, radius }),
       );
     case 'ellipse':
       return engine.startDrawEllipse?.((id, center, radiusX, radiusY) =>
-        create({ id, kind: 'ellipse', center, radiusX, radiusY }),
+        entities.create({ ...data, id, kind: 'ellipse', center, radiusX, radiusY }),
       );
     case 'sector':
       return engine.startDrawSector?.((id, center, radius, startBearing, endBearing) =>
-        create({ id, kind: 'sector', center, radius, startBearing, endBearing }),
+        entities.create({ ...data, id, kind: 'sector', center, radius, startBearing, endBearing }),
       );
     case 'route':
-      return engine.startDrawRoute?.((id, positions) => create({ id, kind: 'route', positions }));
+      return engine.startDrawRoute?.((id, positions) =>
+        entities.create({ ...data, id, kind: 'route', positions }),
+      );
   }
 }
 
 /**
- * Start drawing a configurable entity: same engine flow as `startDraw`,
- * but the finished shape is stamped with the type's entity data (auto
- * name + seeded default attributes).
+ * Arm (or, when already armed with the same def + geometry, cancel)
+ * drawing an instance of an entity-type definition. Shared by the toolbar
+ * and the Entities panel so their behavior can never diverge.
  */
-export function startDrawEntity(
+export function toggleDrawEntity(
   engine: MapEngine,
+  def: EntityDefinition,
   geometry: DrawTool,
+  store: DrawingToolStore,
   entities: EntityService,
-  type: EntityTypeDef,
 ) {
-  return startDraw(engine, geometry, entities, (shape) => ({
-    ...shape,
-    entity: {
-      typeId: type.id,
-      name: entities.nextEntityName(type.id, type.name),
-      attributes: { ...type.defaultAttributes },
-    },
-  }));
+  if (store.activeDefId === def.id && store.activeDrawTool === geometry) {
+    engine.cancelDrawing();
+    store.setActiveDrawTool(null);
+    store.setSelectedId(null);
+    return;
+  }
+  store.setActiveDrawTool(geometry, def.id);
+  startDraw(engine, geometry, entities, def);
 }
 
 export function startMeasure(engine: MapEngine, tool: MeasureTool, store: DrawingToolStore) {

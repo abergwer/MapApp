@@ -12,21 +12,20 @@ import { reaction } from 'mobx'
 import { observer } from 'mobx-react-lite'
 import LayersWrapper from './Components/layerManager/LayersWrapper'
 import MapWrapper from './map/mapWrapper/MapWrapper'
-import TopBar from './Components/layout/TopBar'
-import StatusBar from './Components/layout/StatusBar'
+import TopBar from './Components/systemUI/map/TopBar'
 import LayoutManager, { type PanelDef } from './Components/layout/LayoutManager'
 import LeftPanel, { type LeftPanelView } from './Components/layout/LeftPanel'
-import LayersPanel from './Components/features/layers/LayersPanel'
-import MissilesPanel from './Components/features/missiles/MissilesPanel'
+import LayersPanel from './Components/systemUI/layers/LayersPanel'
+import MissilesPanel from './Components/systemUI/missiles/MissilesPanel'
 import EntitiesPanel from './Components/features/entities/EntitiesPanel'
-import IntelFeedPanel from './Components/features/intel/IntelFeedPanel'
-import LazyMissileView3D from './Components/features/view3d/LazyMissileView3D'
-import MiniMap from './Components/features/MiniMap'
-import MiniVideo from './Components/features/MiniVideo'
+import IntelFeedPanel from './Components/systemUI/intel/IntelFeedPanel'
+import LazyMissileView3D from './Components/features/view-3d/LazyMissileView3D'
+import MiniMap from './Components/features/mini-map/MiniMap'
+import MiniVideo from './Components/features/mini-video/MiniVideo'
 import { useStores } from './stores/StoreContext'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
 import { LiveDataSocketProvider, liveDataStore, useLiveShapes } from './bridge'
-import { DEMO_LAYER_TOGGLES } from './mocks/demoLayerToggles'
+import { DEMO_LAYERS } from './mocks/demoLayers'
 import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
 import airCraftIcon from './assets/aircraft.png'
 import droneIcon from './assets/drone.png'
@@ -63,15 +62,17 @@ function App() {
   }, [stores])
 
   // Drawn shapes: hydrated once from the server's WS snapshot; user edits
-  // are pushed back over REST.
+  // are pushed back over REST. (Entity types are code-declared — see
+  // Components/features/entities/entityDefinitions.ts — so nothing to sync for them.)
   const liveShapes = useLiveShapes(liveDataStore)
+
   const leftViews: LeftPanelView[] = [
     { id: 'entities', title: 'Entities', Icon: FmdGoodOutlinedIcon, content: <EntitiesPanel /> },
     {
       id: 'layers',
       title: 'Layers',
       Icon: LayersOutlinedIcon,
-      content: <LayersPanel layers={DEMO_LAYER_TOGGLES} />,
+      content: <LayersPanel layers={DEMO_LAYERS} />,
     },
     { id: 'missiles', title: 'Missiles', Icon: RocketLaunchOutlinedIcon, content: <MissilesPanel /> },
   ]
@@ -138,7 +139,6 @@ function App() {
   return (
     <LayoutManager
       topBar={<TopBar />}
-      statusBar={<StatusBar />}
       leftNav={<LeftPanel views={leftViews} />}
       rightPanels={rightPanels}
       showFloatingWindows
@@ -157,13 +157,14 @@ function App() {
         onShapeDelete={liveShapes.onShapeDelete}
       >
         {/*
-          Layer injection point: real projects pass their own deck.gl layer
-          array here (`<LayerManager layers={...} />`). LayersWrapper is the
-          demo composition: a small observer child that builds the reference
-          layer set inside its own render, so live-feed ticks re-render only
-          it — not the whole App tree.
+          Layer injection point: real projects declare their own layer-group
+          list (one entry = panel toggle + deck.gl builder, see
+          mocks/demoLayers.ts) and pass it to BOTH LayersWrapper and
+          LayersPanel. LayersWrapper is a small observer child that builds
+          the layers inside its own render, so live-feed ticks re-render
+          only it — not the whole App tree.
         */}
-        <LayersWrapper />
+        <LayersWrapper groups={DEMO_LAYERS} />
       </MapWrapper>
     </LayoutManager>
   )

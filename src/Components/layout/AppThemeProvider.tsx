@@ -3,7 +3,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../stores/StoreContext';
-import { THEMES } from '../../styles/system-ui/theme';
+import { THEMES } from './styles/theme';
 
 /**
  * Store-driven ThemeProvider: swaps the whole MUI theme (and the `--ma-*`

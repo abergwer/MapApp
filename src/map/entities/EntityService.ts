@@ -1,5 +1,5 @@
 import type { DrawingToolStore } from '../../stores/DrawingToolStore';
-import type { EntityData, MapShape } from '../../stores/shapes';
+import type { MapShape } from '../../stores/shapes';
 
 /**
  * Optional callbacks fired *after* a successful local write.
@@ -9,7 +9,9 @@ import type { EntityData, MapShape } from '../../stores/shapes';
  * that happens on the map — without ever touching the internal store.
  */
 export interface EntityHooks {
-  onCreate?: (shape: MapShape) => void;
+  /** May return (a promise of) the authoritative shape — e.g. carrying a
+   *  server-assigned id. The service then re-keys the local shape to it. */
+  onCreate?: (shape: MapShape) => void | Promise<MapShape | undefined>;
   onUpdate?: (shape: MapShape) => void;
   onDelete?: (id: string) => void;
 }
@@ -32,6 +34,10 @@ export interface EntityHooks {
 export class EntityService {
   private readonly store: DrawingToolStore;
   private hooks: EntityHooks;
+  /** Temp id → resolves to the authoritative id once the create is acked.
+   *  Outbound updates/deletes for a still-pending shape wait on this so
+   *  they never hit the host with an id it doesn't know yet. */
+  private pendingIds = new Map<string, Promise<string>>();
 
   constructor(store: DrawingToolStore, hooks: EntityHooks = {}) {
     this.store = store;
@@ -44,19 +50,43 @@ export class EntityService {
   }
 
   /** Persist a freshly drawn entity. Completing a draw disarms the one-shot
-   *  tool so UI buttons don't stay lit after the shape lands. */
+   *  tool so UI buttons don't stay lit after the shape lands. The shape is
+   *  recorded optimistically under its temp id; if the create ack returns a
+   *  different (server-assigned) id, the local shape is re-keyed to it. */
   create(shape: MapShape): void {
     this.store.commit();
     this.store.recordShape(shape);
     this.store.setActiveDrawTool(null);
-    this.hooks.onCreate?.(shape);
+    const ack = this.hooks.onCreate?.(shape);
+    if (!(ack instanceof Promise)) return;
+    const tempId = shape.id;
+    const settled = ack
+      .then((saved) => {
+        if (saved && saved.id !== tempId) {
+          this.store.replaceShapeId(tempId, saved.id);
+          return saved.id;
+        }
+        return tempId;
+      })
+      .catch((err) => {
+        console.error('[entities] create ack failed; keeping temp id', err);
+        return tempId;
+      })
+      .finally(() => this.pendingIds.delete(tempId));
+    this.pendingIds.set(tempId, settled);
   }
 
   /** Persist an edit to an existing entity (vertex drag, resize, rotate…). */
   update(shape: MapShape): void {
     this.store.commit();
-    this.store.updateShape(shape);
-    this.hooks.onUpdate?.(shape);
+    // Engine edit round-trips rebuild the shape from geometry only — merge
+    // over the stored copy so metadata (defId, name, parentId…) survives.
+    const prev = this.get(shape.id);
+    const merged = prev ? ({ ...prev, ...shape } as MapShape) : shape;
+    this.store.updateShape(merged);
+    const pending = this.pendingIds.get(merged.id);
+    if (pending) void pending.then((id) => this.hooks.onUpdate?.({ ...merged, id }));
+    else this.hooks.onUpdate?.(merged);
   }
 
   /** Delete an entity by id. Clears the selection first so the engine
@@ -65,34 +95,23 @@ export class EntityService {
     this.store.commit();
     if (this.store.selectedId === id) this.store.setSelectedId(null);
     this.store.removeShape(id);
-    this.hooks.onDelete?.(id);
+    // Detach any sub-entities that pointed at the deleted parent (same
+    // history snapshot, so one undo restores both parent and links).
+    for (const s of this.store.completedShapes.slice()) {
+      if (s.parentId === id) {
+        const detached = { ...s, parentId: undefined };
+        this.store.updateShape(detached);
+        this.hooks.onUpdate?.(detached);
+      }
+    }
+    const pending = this.pendingIds.get(id);
+    if (pending) void pending.then((finalId) => this.hooks.onDelete?.(finalId));
+    else this.hooks.onDelete?.(id);
   }
 
   /** Look up a single entity by id, or `undefined` if it isn't present. */
   get(id: string): MapShape | undefined {
     return this.store.completedShapes.find((s) => s.id === id);
-  }
-
-  /** Merge a patch into a shape's attached entity data (name / attributes).
-   *  No-op for plain graphics that carry no entity data. Geometry is
-   *  untouched — use `update` for that. */
-  updateEntityData(id: string, patch: Partial<EntityData>): void {
-    const shape = this.get(id);
-    if (!shape?.entity) return;
-    this.update({
-      ...shape,
-      entity: {
-        ...shape.entity,
-        ...patch,
-        attributes: patch.attributes ?? shape.entity.attributes,
-      },
-    });
-  }
-
-  /** Next auto-name for a new instance of a type: "<baseName> <n>". */
-  nextEntityName(typeId: string, baseName: string): string {
-    const count = this.store.completedShapes.filter((s) => s.entity?.typeId === typeId).length;
-    return `${baseName} ${count + 1}`;
   }
 
   // ── Inbound: server / host-driven writes ────────────────────────────

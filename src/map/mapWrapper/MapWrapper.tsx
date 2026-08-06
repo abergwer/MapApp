@@ -10,12 +10,12 @@ import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
 import './MapWrapper.css';
-import ToolBar from '../../Components/features/ToolBar';
-import MeasuringTools from '../../Components/features/MeasuringTools';
-import MapStyleBar from '../../Components/features/MapStyleBar';
-import MapControls from '../../Components/features/MapControls';
+import ToolBar from '../ui/ToolBar';
+import MeasuringTools from '../ui/MeasuringTools';
+import MapStyleBar from '../ui/MapStyleBar';
+import MapControls from '../ui/MapControls';
 import EntityEditWindow from '../../Components/features/entities/EntityEditWindow';
-import * as mapStyles from '../../styles/features/map.styles';
+import * as mapStyles from '../ui/styles/map.styles';
 import type { MapShape } from '../../stores/shapes';
 
 const defaultOptions = {
@@ -34,8 +34,10 @@ interface MapWrapperProps {
    * when the server actually sent one.
    */
   shapes?: MapShape[];
-  /** Notified after a new shape is drawn by the user. */
-  onShapeCreate?: (shape: MapShape) => void;
+  /** Notified after a new shape is drawn by the user. May return (a promise
+   *  of) the authoritative shape — e.g. with a server-assigned id — and the
+   *  map re-keys the local shape to it. */
+  onShapeCreate?: (shape: MapShape) => void | Promise<MapShape | undefined>;
   /** Notified after an existing shape is edited (drag/resize/rotate). */
   onShapeUpdate?: (shape: MapShape) => void;
   /** Notified after a shape is deleted. */

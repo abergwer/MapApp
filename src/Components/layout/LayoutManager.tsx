@@ -9,7 +9,7 @@ import Panel from '../common/Panel';
 import FloatingPanelWindow from '../common/FloatingPanelWindow';
 import { useStores } from '../../stores/StoreContext';
 import type { WorkspacePanelId } from '../../stores/UIVisibilityStore';
-import * as layout from '../../styles/system-ui/layout.styles';
+import * as layout from './styles/layout.styles';
 
 /** A panel that can be injected into the right WORKSPACE dock. */
 export interface PanelDef {
@@ -27,7 +27,6 @@ export interface PanelDef {
 
 interface LayoutManagerProps {
   topBar: ReactNode;
-  statusBar: ReactNode;
   /** Left tabbed panel (see LeftPanel). */
   leftNav: ReactNode;
   rightPanels: PanelDef[];
@@ -117,7 +116,6 @@ const WorkspaceDock = observer(WorkspaceDockImpl);
  */
 function LayoutManagerImpl({
   topBar,
-  statusBar,
   leftNav,
   rightPanels,
   showFloatingWindows = true,
@@ -145,7 +143,6 @@ function LayoutManagerImpl({
             ))}
       </Box>
       <WorkspaceDock panels={rightPanels} />
-      {statusBar}
     </Box>
   );
 }

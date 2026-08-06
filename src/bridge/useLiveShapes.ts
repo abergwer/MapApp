@@ -3,10 +3,13 @@ import { liveDataApi } from './liveDataApi'
 import type { LiveDataStore } from './LiveDataStore'
 import type { MapShape } from '../stores/DrawingToolStore'
 
-/** One staged outbound write: a declared endpoint name + its vars. */
+/** One staged outbound write: a declared endpoint name + its vars. Creates
+ *  carry a resolver so the server's response (with its assigned id) can be
+ *  handed back to the caller. */
 type ShapeWrite =
-  | { name: 'createShape' | 'updateShape'; vars: MapShape }
-  | { name: 'deleteShape'; vars: string }
+  | { name: 'createShape'; vars: MapShape; resolve: (shape: MapShape | undefined) => void }
+  | { name: 'updateShape'; vars: MapShape; resolve?: never }
+  | { name: 'deleteShape'; vars: string; resolve?: never }
 
 /**
  * Connects the map's shape lifecycle to the demo server.
@@ -37,9 +40,15 @@ export function useLiveShapes(store: LiveDataStore) {
 
   // Fire the staged write. Runs after render, so the hook already sees the
   // new endpoint; each `setWrite` stores a fresh object, so repeat writes
-  // (e.g. two edits of the same shape) still re-trigger.
+  // (e.g. two edits of the same shape) still re-trigger. Creates resolve
+  // their promise with the server's response (undefined on failure or when
+  // superseded — the single-slot channel aborts an in-flight request, so
+  // the map then keeps its temp id).
   useEffect(() => {
-    if (write) void refetch()
+    if (!write) return
+    void refetch().then((data) => {
+      write.resolve?.(data as MapShape | undefined)
+    })
   }, [write, refetch])
 
   useEffect(() => {
@@ -49,7 +58,12 @@ export function useLiveShapes(store: LiveDataStore) {
   return {
     /** Server snapshot for `MapWrapper`'s `shapes` prop. */
     shapes: store.shapes,
-    onShapeCreate: (shape: MapShape) => setWrite({ name: 'createShape', vars: shape }),
+    /** Resolves with the created shape as stored by the server — the server
+     *  assigns the real id, so the map re-keys its optimistic copy to it. */
+    onShapeCreate: (shape: MapShape) =>
+      new Promise<MapShape | undefined>((resolve) =>
+        setWrite({ name: 'createShape', vars: shape, resolve }),
+      ),
     onShapeUpdate: (shape: MapShape) => setWrite({ name: 'updateShape', vars: shape }),
     onShapeDelete: (id: string) => setWrite({ name: 'deleteShape', vars: id }),
   }

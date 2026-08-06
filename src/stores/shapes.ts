@@ -1,20 +1,12 @@
-/**
- * Domain data attached to a drawn shape when it represents a configurable
- * entity (see `map/entities/entityTypes.ts`). Shapes without `entity` are
- * plain graphics (measurements, ad-hoc drawings).
- */
-export interface EntityData {
-  /** Registry id of the entity type (e.g. 'targetZone'). */
-  typeId: string;
-  /** User-editable display name. */
-  name: string;
-  /** Free-form attributes. */
-  attributes: Record<string, string>;
-}
-
 interface ShapeBase {
   id: string;
-  entity?: EntityData;
+  /** Entity-definition id from the `Components/features/entities/entityDefinitions` tree.
+   *  Absent on plain graphics (measurements, ad-hoc drawings). */
+  defId?: string;
+  /** User-editable display name. */
+  name?: string;
+  /** Id of the parent entity this shape is attached to, if any. */
+  parentId?: string;
 }
 
 /**

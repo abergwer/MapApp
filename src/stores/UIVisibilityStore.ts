@@ -35,10 +35,10 @@ export class UIVisibilityStore {
   };
 
   /** Brightness card under the map toolbar. */
-  brightnessCardVisible = true;
+  brightnessCardVisible = false;
 
   /** The tool clusters overlaid on the map (draw/measure/style strip). */
-  toolbarVisible = true;
+  toolbarVisible = false;
 
   /** Right WORKSPACE dock width in px (user-resizable by dragging its edge). */
   rightDockWidth = 620;
@@ -46,8 +46,10 @@ export class UIVisibilityStore {
   /** Active view in the left panel tabs. */
   activeLeftView: LeftViewId = 'entities';
 
-  /** Rails collapse to a narrow icon strip so the map gets wider. */
-  railCollapsed: Record<RailSide, boolean> = { left: false, right: false };
+  /** Rails collapse to a narrow icon strip so the map gets wider.
+   *  Everything starts collapsed — the map opens at maximum size and the
+   *  rail arrows / top-bar toggles reveal each panel on demand. */
+  railCollapsed: Record<RailSide, boolean> = { left: true, right: true };
 
   /**
    * Visibility of the map layers by free-form id. The base project does NOT

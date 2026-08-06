@@ -6,7 +6,7 @@ import { observer } from 'mobx-react-lite';
 import { useMapContext } from '../../map/MapContext';
 import { useStores } from '../../stores/StoreContext';
 import type { MapShape } from '../../stores/DrawingToolStore';
-import { DRAWN_SHAPE_LAYER_IDS } from '../Layers/DrawnShapeLayers';
+import { DRAWN_SHAPE_LAYER_IDS } from '../../mocks/Layers/DrawnShapeLayers';
 
 interface LayerManagerProps {
   /** Deck.gl layer array to render on top of the map. */

@@ -11,7 +11,7 @@ import PictureInPictureIcon from '@mui/icons-material/PictureInPicture';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../stores/StoreContext';
 import type { WorkspacePanelId } from '../../stores/UIVisibilityStore';
-import * as styles from '../../styles/features/video.styles';
+import * as styles from '../features/mini-video/styles/video.styles';
 
 const MIN_W = 240;
 const MIN_H = 190;

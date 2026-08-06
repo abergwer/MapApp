@@ -2,12 +2,16 @@
  * Demo data server for testing the `network` package against the map package.
  *
  * Client -> server: REST (JSON, CORS enabled)
- *   POST   /api/shapes     -> MapShape    create (client supplies the id)
- *   PUT    /api/shapes/:id -> MapShape    update
- *   DELETE /api/shapes/:id -> { ok }      remove
+ *   POST   /api/shapes          -> MapShape           create (SERVER assigns the id; response carries it)
+ *   PUT    /api/shapes/:id      -> MapShape           update
+ *   DELETE /api/shapes/:id      -> { ok }             remove
+ *   POST   /api/definitions     -> EntityDefinition   create (client supplies the id)
+ *   PUT    /api/definitions/:id -> EntityDefinition   update
+ *   DELETE /api/definitions/:id -> { ok }             remove
  *
  * Server -> client: WebSocket (ws://localhost:4000/ws)
  *   Sends on connect:
+ *     { type: 'definitionSnapshot', definitions: EntityDefinition[] }  entity types
  *     { type: 'shapeSnapshot', shapes: MapShape[] }  editable drawn shapes
  *   Broadcasts:
  *     { type: 'targetUpdate', drones: Target[], aircraft: Target[] }  every TARGET_TICK_MS
@@ -16,6 +20,7 @@
  * All coordinates are GeoJSON-compatible [lng, lat].
  */
 import { createServer } from 'node:http'
+import { randomUUID } from 'node:crypto'
 import { WebSocketServer } from 'ws'
 
 const PORT = 4000
@@ -24,8 +29,8 @@ const PORT = 4000
 // Simulation config — tweak these to change the demo feed.
 // ---------------------------------------------------------------------------
 
-const NUM_DRONES = 400
-const NUM_AIRCRAFT = 400
+const NUM_DRONES = 55
+const NUM_AIRCRAFT = 55
 const NUM_MISSILES = 40
 /** Drones + aircraft move (and are broadcast) at this interval. */
 const TARGET_TICK_MS = 200
@@ -72,6 +77,53 @@ const shapes = [
       [35.9, 32.1],
       [35.78, 32.1],
     ],
+  },
+]
+
+/**
+ * Entity-type definitions (`EntityDefinition` from the app's
+ * EntityDefinitionStore), managed via the /api/definitions REST routes and
+ * snapshot to every client on connect. The seed mirrors the app's built-in
+ * defaults (same ids), so a fresh server and a fresh client agree.
+ */
+const svgIcon = (body) =>
+  `data:image/svg+xml;charset=utf-8,${encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24">${body}</svg>`,
+  )}`
+
+const definitions = [
+  {
+    id: 'def-target',
+    name: 'Target',
+    geometry: 'point',
+    icon: svgIcon(
+      '<circle cx="12" cy="12" r="7" fill="none" stroke="white" stroke-width="2"/>' +
+        '<circle cx="12" cy="12" r="2.5" fill="white"/>' +
+        '<path d="M12 1v4M12 19v4M1 12h4M19 12h4" stroke="white" stroke-width="2"/>',
+    ),
+    iconMask: true,
+    color: '#ff5252',
+  },
+  {
+    id: 'def-attack-point',
+    name: 'Attack Point',
+    geometry: 'point',
+    icon: svgIcon(
+      '<path d="M4 4l16 16M20 4L4 20" stroke="white" stroke-width="3"/>' +
+        '<circle cx="12" cy="12" r="3.2" fill="white"/>',
+    ),
+    iconMask: true,
+    color: '#ffb300',
+  },
+  {
+    id: 'def-attack-zone',
+    name: 'Attack Zone',
+    geometry: 'polygon',
+    icon: svgIcon(
+      '<path fill="white" fill-rule="evenodd" d="M12 2l11 19H1L12 2zm-1 7h2v6h-2V9zm0 7h2v2h-2v-2z"/>',
+    ),
+    iconMask: true,
+    color: '#ff6d00',
   },
 ]
 
@@ -239,9 +291,11 @@ const server = createServer(async (req, res) => {
   if (url.pathname === '/api/shapes' && req.method === 'POST') {
     const body = await readJsonBody(req)
     if (!isValidShape(body)) return json(400, { error: 'Invalid shape' })
-    shapes.push(body)
-    console.log(`[rest] shape created: ${body.id} (${body.kind})`)
-    return json(201, body)
+    // Server is the id authority — the client's id is a temp placeholder.
+    const shape = { ...body, id: randomUUID() }
+    shapes.push(shape)
+    console.log(`[rest] shape created: ${shape.id} (${shape.kind}) [was ${body.id}]`)
+    return json(201, shape)
   }
 
   const shapeMatch = url.pathname.match(/^\/api\/shapes\/([^/]+)$/)
@@ -259,6 +313,33 @@ const server = createServer(async (req, res) => {
     if (req.method === 'DELETE') {
       const [removed] = shapes.splice(index, 1)
       console.log(`[rest] shape deleted: ${removed.id}`)
+      return json(200, { ok: true })
+    }
+  }
+
+  if (url.pathname === '/api/definitions' && req.method === 'POST') {
+    const body = await readJsonBody(req)
+    if (!isValidDefinition(body)) return json(400, { error: 'Invalid definition' })
+    definitions.push(body)
+    console.log(`[rest] definition created: ${body.id} (${body.name})`)
+    return json(201, body)
+  }
+
+  const defMatch = url.pathname.match(/^\/api\/definitions\/([^/]+)$/)
+  if (defMatch) {
+    const index = definitions.findIndex((d) => d.id === defMatch[1])
+    if (index === -1) return json(404, { error: 'Definition not found' })
+
+    if (req.method === 'PUT') {
+      const body = await readJsonBody(req)
+      if (!isValidDefinition(body)) return json(400, { error: 'Invalid definition' })
+      definitions[index] = { ...body, id: definitions[index].id }
+      console.log(`[rest] definition updated: ${definitions[index].id} (${definitions[index].name})`)
+      return json(200, definitions[index])
+    }
+    if (req.method === 'DELETE') {
+      const [removed] = definitions.splice(index, 1)
+      console.log(`[rest] definition deleted: ${removed.id}`)
       return json(200, { ok: true })
     }
   }
@@ -285,6 +366,16 @@ function isValidShape(body) {
   return body && typeof body.id === 'string' && typeof body.kind === 'string'
 }
 
+function isValidDefinition(body) {
+  return (
+    body &&
+    typeof body.id === 'string' &&
+    typeof body.name === 'string' &&
+    typeof body.geometry === 'string' &&
+    typeof body.icon === 'string'
+  )
+}
+
 // ---------------------------------------------------------------------------
 // WebSocket: server -> client broadcasts
 // ---------------------------------------------------------------------------
@@ -303,24 +394,17 @@ function missileFrame() {
   return JSON.stringify({ type: 'missileUpdate', missiles: missiles.map(wireMissile) })
 }
 
-/** Backpressure cap: frames are full snapshots, so skipping a slow client is
- *  lossless — without this, a stalled client (backgrounded tab, dead TCP)
- *  buffers every frame on the heap until the process OOMs. */
-const MAX_BUFFERED_BYTES = 1_000_000
-
 function broadcast(frame) {
   for (const client of wss.clients) {
-    if (client.readyState === client.OPEN && client.bufferedAmount < MAX_BUFFERED_BYTES) {
-      client.send(frame)
-    }
+    if (client.readyState === client.OPEN) client.send(frame)
   }
 }
 
 wss.on('connection', (socket) => {
   console.log(`[ws] client connected (${wss.clients.size} total)`)
-  socket.isAlive = true
-  socket.on('pong', () => (socket.isAlive = true))
-  // Shape snapshot + immediate frames so a new client doesn't wait a tick.
+  // Definition + shape snapshots + immediate frames so a new client doesn't
+  // wait a tick. Definitions go first: shapes reference them by defId.
+  socket.send(JSON.stringify({ type: 'definitionSnapshot', definitions }))
   socket.send(JSON.stringify({ type: 'shapeSnapshot', shapes }))
   socket.send(targetFrame())
   socket.send(missileFrame())
@@ -328,20 +412,6 @@ wss.on('connection', (socket) => {
     console.log(`[ws] client disconnected (${wss.clients.size} total)`),
   )
 })
-
-// Reap connections that stopped answering pings (their send buffers never
-// drain and they'd otherwise linger as OPEN zombies).
-setInterval(() => {
-  for (const client of wss.clients) {
-    if (!client.isAlive) {
-      console.log('[ws] terminating unresponsive client')
-      client.terminate()
-      continue
-    }
-    client.isAlive = false
-    client.ping()
-  }
-}, 30_000)
 
 setInterval(() => {
   tickTargets()

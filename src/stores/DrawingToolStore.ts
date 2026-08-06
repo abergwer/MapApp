@@ -27,8 +27,8 @@ export interface Measurement {
 
 export class DrawingToolStore {
   activeDrawTool: DrawTool | null = null;
-  /** Registry id of the entity type being drawn, set via `armEntityDraw`. */
-  activeEntityTypeId: string | null = null;
+  /** Entity-definition id being drawn (see `toolDefs.toggleDrawEntity`). */
+  activeDefId: string | null = null;
   activeMeasureTool: MeasureTool | null = null;
   /**
    * The id of the shape currently selected for editing, or null. This is the
@@ -54,20 +54,14 @@ export class DrawingToolStore {
     makeAutoObservable(this);
   }
 
-  setActiveDrawTool(tool: DrawTool | null) {
+  setActiveDrawTool(tool: DrawTool | null, defId: string | null = null) {
     // Activating a draw tool must clear any pending edit selection. Otherwise
     // the first click on the map (starting the new draw) is treated as a
     // background click by the engine's edit-mode click handler, which
     // deselects the old shape and calls `endEdit`, aborting the new draw.
     if (tool !== null) this.selectedId = null;
     this.activeDrawTool = tool;
-    this.activeEntityTypeId = null;
-  }
-
-  /** Arm a draw for a specific entity type (toolbar / panel buttons). */
-  armEntityDraw(typeId: string, tool: DrawTool) {
-    this.setActiveDrawTool(tool);
-    this.activeEntityTypeId = typeId;
+    this.activeDefId = tool === null ? null : defId;
   }
 
   setActiveMeasureTool(tool: MeasureTool | null) {
@@ -126,6 +120,23 @@ export class DrawingToolStore {
     const idx = this.completedShapes.findIndex((s) => s.id === id);
     if (idx === -1) return;
     this.completedShapes.splice(idx, 1);
+  }
+
+  /** Re-key a shape after the host assigns its authoritative id (e.g. a
+   *  server-generated id returned by the create ack). Also rewrites the
+   *  undo/redo snapshots so time-travel never resurrects the temp id. */
+  replaceShapeId(oldId: string, newId: string) {
+    const swap = (arr: MapShape[]) =>
+      arr.map((s) => {
+        if (s.id === oldId) return { ...s, id: newId };
+        // Children keep pointing at the re-keyed parent.
+        if (s.parentId === oldId) return { ...s, parentId: newId };
+        return s;
+      });
+    this.completedShapes = swap(this.completedShapes);
+    this.past = this.past.map(swap);
+    this.future = this.future.map(swap);
+    if (this.selectedId === oldId) this.selectedId = newId;
   }
 
   clearShapes() {
