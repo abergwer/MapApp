@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { observer } from 'mobx-react-lite';
 import Button from '@mui/material/Button';
 import Menu from '@mui/material/Menu';
@@ -20,14 +21,14 @@ import { useStores } from '../../stores/StoreContext';
 import type { DrawTool } from '../../stores/DrawingToolStore';
 import type { EntityService } from '../../stores/EntityService';
 
-const DRAW_TOOLS: { id: DrawTool; label: string; Icon: typeof FiberManualRecordIcon; enabled: boolean }[] = [
-  { id: 'point', label: 'Point', Icon: FiberManualRecordIcon, enabled: true },
-  { id: 'line', label: 'Line', Icon: TimelineIcon, enabled: true },
-  { id: 'polygon', label: 'Polygon', Icon: PentagonOutlinedIcon, enabled: true },
-  { id: 'circle', label: 'Circle', Icon: RadioButtonUncheckedIcon, enabled: true },
-  { id: 'ellipse', label: 'Ellipse', Icon: PanoramaFishEyeIcon, enabled: true },
-  { id: 'sector', label: 'Sector', Icon: PieChartOutlinedIcon, enabled: true },
-  { id: 'route', label: 'Route', Icon: RouteIcon, enabled: true },
+const DRAW_TOOLS: { id: DrawTool; Icon: typeof FiberManualRecordIcon; enabled: boolean }[] = [
+  { id: 'point', Icon: FiberManualRecordIcon, enabled: true },
+  { id: 'line', Icon: TimelineIcon, enabled: true },
+  { id: 'polygon', Icon: PentagonOutlinedIcon, enabled: true },
+  { id: 'circle', Icon: RadioButtonUncheckedIcon, enabled: true },
+  { id: 'ellipse', Icon: PanoramaFishEyeIcon, enabled: true },
+  { id: 'sector', Icon: PieChartOutlinedIcon, enabled: true },
+  { id: 'route', Icon: RouteIcon, enabled: true },
 ];
 
 /**
@@ -69,6 +70,7 @@ function startDraw(engine: MapEngine, tool: DrawTool, entities: EntityService) {
 }
 
 function ToolBarImpl() {
+  const { t } = useTranslation();
   const { mapEngineStore, drawingToolStore, entityService } = useStores();
   const engine = mapEngineStore.engine;
   const activeTool = drawingToolStore.activeDrawTool;
@@ -93,8 +95,8 @@ function ToolBarImpl() {
     closeMenu();
   };
 
-  const activeLabel = DRAW_TOOLS.find((t) => t.id === activeTool)?.label;
-  const triggerLabel = activeLabel ? `Draw: ${activeLabel}` : 'Draw';
+  const activeLabel = activeTool ? t(`toolbar.tools.${activeTool}`) : undefined;
+  const triggerLabel = activeLabel ? `${t('toolbar.draw')}: ${activeLabel}` : t('toolbar.draw');
 
   return (
     <>
@@ -117,7 +119,7 @@ function ToolBarImpl() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        {DRAW_TOOLS.map(({ id, label, Icon, enabled }) => (
+        {DRAW_TOOLS.map(({ id, Icon, enabled }) => (
           <MenuItem
             key={id}
             selected={activeTool === id}
@@ -127,7 +129,7 @@ function ToolBarImpl() {
             <ListItemIcon>
               <Icon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>{label}</ListItemText>
+            <ListItemText>{t(`toolbar.tools.${id}`)}</ListItemText>
           </MenuItem>
         ))}
 
@@ -137,7 +139,7 @@ function ToolBarImpl() {
           disabled
           sx={{ opacity: 0.8, fontSize: 12, whiteSpace: 'normal', maxWidth: 220 }}
         >
-          Click a shape to edit, then Esc to deselect
+          {t('toolbar.editHint')}
         </MenuItem>
 
         <Divider />
@@ -150,7 +152,7 @@ function ToolBarImpl() {
           <ListItemIcon>
             <CloseIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Cancel</ListItemText>
+          <ListItemText>{t('toolbar.cancel')}</ListItemText>
         </MenuItem>
       </Menu>
     </>

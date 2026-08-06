@@ -1,10 +1,12 @@
 import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import Box from '@mui/material/Box'
 import Typography from '@mui/material/Typography'
 import { observer } from 'mobx-react-lite'
 import LayerManager from './Components/layerManager/LayerManager'
 import MapWrapper from './map/mapWrapper/MapWrapper'
 import { mapEngineLabel } from './map/mapConfig'
+import { LanguageSwitcher } from './i18n'
 import { useStores } from './stores/StoreContext'
 import { createLayerBuilder } from './Components/layerManager'
 import { DEMO_SERVER_SHAPES } from './stores/DrawingToolStore'
@@ -12,6 +14,7 @@ import type { MapShape } from './stores/shapes'
 
 function App() {
   const stores = useStores()
+  const { t } = useTranslation()
 
 
   // Built once. Layer updates flow through a MobX reaction inside
@@ -29,15 +32,16 @@ function App() {
         p: { xs: 2, md: 4 },
       }}
     >
-      <Typography variant="h3" component="h1">
-        Map Engine Orchestrator
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+        <Typography variant="h3" component="h1">
+          {t('app.title')}
+        </Typography>
+        <LanguageSwitcher />
+      </Box>
       <Typography color="text.secondary">
-        This app uses{' '}
-        <Box component="strong" sx={{ color: 'primary.light' }}>
-          {mapEngineLabel[stores.mapEngineStore.selectedEngine]}
-        </Box>{' '}
-        as the selected map engine.
+        {t('app.subtitle', {
+          engine: mapEngineLabel[stores.mapEngineStore.selectedEngine],
+        })}
       </Typography>
 
       {/*

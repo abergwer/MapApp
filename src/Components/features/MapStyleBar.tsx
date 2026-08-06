@@ -13,6 +13,7 @@ import VideocamIcon from '@mui/icons-material/Videocam';
 import { useMapContext } from '../../map/MapContext';
 import { useStores } from '../../stores/StoreContext';
 import config from '../../../config.json';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Map style controls bar. Reads brightness/baseMap from MapStyleStore and
@@ -20,6 +21,7 @@ import config from '../../../config.json';
  * can now be driven by other components (or devtools) without prop drilling.
  */
 function MapStyleBarImpl() {
+  const { t } = useTranslation();
   const { containerRef } = useMapContext();
   const { mapEngineStore, mapStyleStore, uiVisibilityStore } = useStores();
   const engine = mapEngineStore.engine;
@@ -111,7 +113,7 @@ function MapStyleBarImpl() {
           >
             <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
               <MapIcon fontSize="small" />
-              <span>Minimap</span>
+              <span>{t('MapStyleBar.minimap')}</span>
             </Stack>
           </ToggleButton>
         </Tooltip>
@@ -125,7 +127,7 @@ function MapStyleBarImpl() {
             onChange={() => uiVisibilityStore.toggleVideo()}
             aria-label={videoVisible ? 'Hide video' : 'Show video'}
           >
-            <span>Video</span>
+            <span>{t('MapStyleBar.video')}</span>
             <VideocamIcon fontSize="small" />
           </ToggleButton>
         </Tooltip>

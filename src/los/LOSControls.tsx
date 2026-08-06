@@ -12,6 +12,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import { useStores } from '../stores/StoreContext';
 import type { LOSStatus } from './LOSStore';
 import LOSHeightsPanel from './LOSHeightsPanel';
+import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 interface ButtonState {
   label: string;
@@ -20,10 +22,22 @@ interface ButtonState {
   icon: ReactNode;
 }
 
-/**
- * Build the props for a LOS button. `placingText` (when set) overrides the
- * status-driven text while the user is picking points on the map.
- */
+function statusLabels(
+  t: TFunction,
+  prefix: string,
+): Record<LOSStatus, { label: string; tooltip: string }> {
+  const entry = (status: LOSStatus) => ({
+    label: t(`LOS.${prefix}.${status}.label`),
+    tooltip: t(`LOS.${prefix}.${status}.tooltip`),
+  });
+  return {
+    idle: entry('idle'),
+    computing: entry('computing'),
+    ready: entry('ready'),
+    error: entry('error'),
+  };
+}
+
 function buttonState(
   status: LOSStatus,
   idleIcon: ReactNode,
@@ -47,16 +61,10 @@ function buttonState(
   };
 }
 
-/**
- * LOS buttons + heights popover. Toggling `losStore.placing` arms the
- * engine's point-draw tool for two clicks (observer, then target);
- * `areaLOSStore.placing` arms it for one observer click followed by a
- * polygon draw that computes a viewshed inside it.
- */
 function LOSControlsImpl() {
+  const { t } = useTranslation();
   const { losStore, areaLOSStore, mapEngineStore } = useStores();
 
-  // Arm/disarm the engine's point-draw tool while placing the sightline.
   useEffect(() => {
     return reaction(
       () => ({ placing: losStore.placing, engine: mapEngineStore.engine }),
@@ -68,8 +76,6 @@ function LOSControlsImpl() {
         }
         engine.startDrawPoint((_id, observerPos) => {
           losStore.placeObserver({ lng: observerPos[0], lat: observerPos[1] });
-          // Defer the second click: MapboxDraw resets its mode right after
-          // firing draw-complete, so an immediate changeMode is clobbered.
           setTimeout(() => {
             engine.startDrawPoint((_id2, targetPos) => {
               losStore.completePlacement({ lng: targetPos[0], lat: targetPos[1] });
@@ -80,7 +86,6 @@ function LOSControlsImpl() {
     );
   }, [losStore, mapEngineStore]);
 
-  // Arm the engine for the area flow: the observer click, then the polygon.
   useEffect(() => {
     return reaction(
       () => ({
@@ -100,7 +105,6 @@ function LOSControlsImpl() {
           });
           return;
         }
-        // Defer arming the polygon draw for the same reason as above.
         setTimeout(() => {
           engine.startDrawPolygon((_id, positions) => {
             areaLOSStore.setPolygon(positions);
@@ -110,7 +114,6 @@ function LOSControlsImpl() {
     );
   }, [areaLOSStore, mapEngineStore]);
 
-  // Esc cancels any in-progress placement.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
@@ -124,16 +127,13 @@ function LOSControlsImpl() {
   const line = buttonState(
     losStore.status,
     <VisibilityOutlinedIcon />,
-    {
-      idle: { label: 'LOS', tooltip: 'Line of sight: click, then pick observer + target on the map' },
-      computing: { label: 'LOS · computing…', tooltip: 'Computing line of sight' },
-      ready: { label: 'LOS · clear', tooltip: 'Click to clear the line' },
-      error: { label: 'LOS · error', tooltip: 'Computation failed — click to clear' },
-    },
+    statusLabels(t, 'lineButton'),
     losStore.placing
       ? {
-          label: losStore.observer ? 'LOS · click target…' : 'LOS · click observer…',
-          tooltip: 'Click on the map (Esc to cancel)',
+          label: losStore.observer
+            ? t('LOS.lineButton.clickTarget')
+            : t('LOS.lineButton.clickObserver'),
+          tooltip: t('LOS.lineButton.clickHint'),
         }
       : null,
   );
@@ -143,25 +143,20 @@ function LOSControlsImpl() {
       losStore.clear();
       return;
     }
-    areaLOSStore.cancelPlacement(); // one placement flow at a time
+    areaLOSStore.cancelPlacement();
     losStore.beginPlacement();
   };
 
   const area = buttonState(
     areaLOSStore.status,
     <RadarIcon />,
-    {
-      idle: { label: 'Area', tooltip: 'Area line of sight: place the observer, then draw a polygon around it' },
-      computing: { label: 'Area · computing…', tooltip: 'Computing viewshed' },
-      ready: { label: 'Area · clear', tooltip: 'Click to clear the coverage' },
-      error: { label: 'Area · error', tooltip: 'Computation failed — click to clear' },
-    },
+    statusLabels(t, 'areaButton'),
     areaLOSStore.placing
-      ? { label: 'Area · click observer…', tooltip: 'Click on the map (Esc to cancel)' }
+      ? { label: t('LOS.areaButton.clickObserver'), tooltip: t('LOS.areaButton.clickHint') }
       : areaLOSStore.drawingPolygon
         ? {
-            label: 'Area · draw polygon…',
-            tooltip: 'Click vertices around the observer, double-click to finish (Esc to cancel)',
+            label: t('LOS.areaButton.drawPolygon'),
+            tooltip: t('LOS.areaButton.drawHint'),
           }
         : null,
   );
@@ -172,7 +167,7 @@ function LOSControlsImpl() {
       areaLOSStore.clear();
       return;
     }
-    losStore.cancelPlacement(); // one placement flow at a time
+    losStore.cancelPlacement();
     areaLOSStore.beginPlacement();
   };
 

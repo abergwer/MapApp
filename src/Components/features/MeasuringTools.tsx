@@ -14,10 +14,11 @@ import CloseIcon from '@mui/icons-material/Close';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
 import type { DrawingToolStore, MeasureTool } from '../../stores/DrawingToolStore';
+import { useTranslation } from 'react-i18next';
 
-const MEASURE_TOOLS: { id: MeasureTool; label: string; Icon: typeof StraightenIcon }[] = [
-  { id: 'distance', label: 'Measure Distance', Icon: StraightenIcon },
-  { id: 'area', label: 'Measure Area', Icon: SquareFootIcon },
+const MEASURE_TOOLS: { id: MeasureTool; Icon: typeof StraightenIcon }[] = [
+  { id: 'distance', Icon: StraightenIcon },
+  { id: 'area', Icon: SquareFootIcon },
 ];
 
 function startMeasure(engine: MapEngine, tool: MeasureTool, store: DrawingToolStore) {
@@ -38,6 +39,7 @@ function startMeasure(engine: MapEngine, tool: MeasureTool, store: DrawingToolSt
  * active map engine implements the full measurement API on `MapEngine`.
  */
 function MeasuringToolsImpl() {
+  const {t} = useTranslation();
   const { mapEngineStore, drawingToolStore } = useStores();
   const engine = mapEngineStore.engine;
   const activeTool = drawingToolStore.activeMeasureTool;
@@ -79,8 +81,10 @@ function MeasuringToolsImpl() {
     closeMenu();
   };
 
-  const activeLabel = MEASURE_TOOLS.find((t) => t.id === activeTool)?.label;
-  const triggerLabel = activeLabel ? `Measure: ${activeLabel}` : 'Measure';
+  const activeLabel = activeTool ? t(`toolbar.measure.${activeTool}`) : undefined;
+  const triggerLabel = activeLabel
+    ? `${t('toolbar.measure.measure')}: ${activeLabel}`
+    : t('toolbar.measure.measure');
 
   return (
     <>
@@ -103,7 +107,7 @@ function MeasuringToolsImpl() {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
         transformOrigin={{ vertical: 'top', horizontal: 'left' }}
       >
-        {MEASURE_TOOLS.map(({ id, label, Icon }) => (
+        {MEASURE_TOOLS.map(({ id, Icon }) => (
           <MenuItem
             key={id}
             selected={activeTool === id}
@@ -112,7 +116,7 @@ function MeasuringToolsImpl() {
             <ListItemIcon>
               <Icon fontSize="small" />
             </ListItemIcon>
-            <ListItemText>{label}</ListItemText>
+            <ListItemText>{t(`toolbar.measure.${id}`)}</ListItemText>
           </MenuItem>
         ))}
 
@@ -122,7 +126,7 @@ function MeasuringToolsImpl() {
           <ListItemIcon>
             <DeleteOutlinedIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Remove Measurements</ListItemText>
+          <ListItemText>{t('toolbar.measure.remove')}</ListItemText>
         </MenuItem>
 
         <MenuItem
@@ -133,7 +137,7 @@ function MeasuringToolsImpl() {
           <ListItemIcon>
             <CloseIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText>Cancel</ListItemText>
+          <ListItemText>{t('toolbar.cancel')}</ListItemText>
         </MenuItem>
       </Menu>
     </>
