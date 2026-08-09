@@ -1,6 +1,5 @@
 import type { LayerGroupDef } from '../Components/layerManager';
 import { DRAWN_SHAPES_GROUP } from '../Components/layerManager';
-import { createPolygonLayer } from './Layers/PolygonLayer';
 import { createMissilesLayer } from './Layers/MissileLayer';
 import { createDroneLayer } from './Layers/DroneLayer';
 import { createAirCraftLayer } from './Layers/AirCraftLayer';
@@ -15,12 +14,6 @@ import { palette } from '../Components/layout/styles/tokens';
  */
 export const DEMO_LAYERS: LayerGroupDef[] = [
   DRAWN_SHAPES_GROUP,
-  {
-    id: 'polygons',
-    label: 'Polygons',
-    color: palette.area,
-    build: (stores) => [createPolygonLayer(stores.polygonStore.polygons)],
-  },
   {
     id: 'droneGroup',
     label: 'Drones + Rings',

@@ -68,10 +68,6 @@ export class UIVisibilityStore {
     return this.layerVisibility[id] ?? true;
   }
 
-  toggleLayer(id: string) {
-    this.layerVisibility[id] = !this.isLayerVisible(id);
-  }
-
   setLayerVisible(id: string, value: boolean) {
     this.layerVisibility[id] = value;
   }

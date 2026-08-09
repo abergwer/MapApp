@@ -90,25 +90,20 @@ function LayersPanelImpl({ layers = [] }: LayersPanelProps) {
 
     if (!show(def.label, ...children.map((c) => c.label))) return null;
     const onCount = children.filter((c) => vis.isLayerVisible(c.id)).length;
-    const open = Boolean(openGroups[def.id]);
-    // A group with its own `build` owns its visibility key (children are
-    // filter rows); a pure group's switch fans out to its children.
-    const ownKey = Boolean(def.build);
+    // Groups default open so dynamic rows (e.g. a just-drawn entity type)
+    // are visible immediately; the chevron state remembers a collapse.
+    const open = openGroups[def.id] ?? true;
     return (
       <Box key={def.id}>
         <Row
           color={def.color}
           label={def.label}
           count={count !== undefined ? `${count}` : `${onCount}/${children.length}`}
-          checked={ownKey ? vis.isLayerVisible(def.id) : onCount === children.length}
-          onToggle={(v) =>
-            ownKey
-              ? vis.setLayerVisible(def.id, v)
-              : children.forEach((c) => vis.setLayerVisible(c.id, v))
-          }
+          checked={vis.isLayerVisible(def.id)}
+          onToggle={(v) => vis.setLayerVisible(def.id, v)}
           expandable
           expanded={open}
-          onExpand={() => setOpenGroups((prev) => ({ ...prev, [def.id]: !prev[def.id] }))}
+          onExpand={() => setOpenGroups((prev) => ({ ...prev, [def.id]: !open }))}
         />
         <Collapse in={open}>
           {children.map((c) => {
