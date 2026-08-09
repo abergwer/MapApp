@@ -21,6 +21,9 @@ export interface PanelDef {
   floatContent?: ReactNode;
   /** Optional element rendered on the right side of the panel header. */
   headerAction?: ReactNode;
+  /** Extra buttons for the floating/maximized window header, rendered
+   *  before the standard window actions (full view / dock / close). */
+  floatHeaderAction?: ReactNode;
   /** When true the panel is not rendered. */
   hidden?: boolean;
 }
@@ -137,7 +140,7 @@ function LayoutManagerImpl({
           rightPanels
             .filter((p) => ui.isPanelVisible(p.id) && ui.panels[p.id].mode !== 'docked')
             .map((p) => (
-              <FloatingPanelWindow key={p.id} id={p.id} title={p.title}>
+              <FloatingPanelWindow key={p.id} id={p.id} title={p.title} headerAction={p.floatHeaderAction}>
                 {p.floatContent ?? p.content}
               </FloatingPanelWindow>
             ))}

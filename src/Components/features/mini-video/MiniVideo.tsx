@@ -1,13 +1,41 @@
 import { useEffect, useRef, useState } from 'react';
+import { observable, action } from 'mobx';
+import { observer } from 'mobx-react-lite';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Paper from '@mui/material/Paper';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { alpha } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
 import { createWebrtcViewer } from '../../../api/webrtcViewer';
 import * as styles from './styles/video.styles';
 import config from '../../../../config.json';
+
+// Module-level so the tile and the window-header button (different React
+// trees) share it without routing state through App. Starts muted —
+// browsers block unmuted autoplay.
+const videoMuted = observable.box(true);
+const toggleVideoMuted = action(() => videoMuted.set(!videoMuted.get()));
+
+/** Mute/unmute toggle for the video window header (see App's
+ *  `floatHeaderAction`). Re-renders only itself and the video tile. */
+export const VideoMuteButton = observer(function VideoMuteButton() {
+  const muted = videoMuted.get();
+  return (
+    <Tooltip title={muted ? 'Unmute' : 'Mute'} arrow>
+      <IconButton
+        size="small"
+        onClick={toggleVideoMuted}
+        aria-label={muted ? 'Unmute video' : 'Mute video'}
+      >
+        {muted ? <VolumeOffIcon fontSize="inherit" /> : <VolumeUpIcon fontSize="inherit" />}
+      </IconButton>
+    </Tooltip>
+  );
+});
 
 // --- Component ------------------------------------------------------------
 
@@ -26,7 +54,7 @@ interface MiniVideoProps {
  * attaches the produced stream to a `<video>` element and renders status /
  * error overlays.
  */
-export default function MiniVideo({
+export default observer(function MiniVideo({
   onClose,
   fill = false,
   signalingUrl = config.VideoSignalingURL,
@@ -58,7 +86,7 @@ export default function MiniVideo({
         ref={videoRef}
         autoPlay
         playsInline
-        muted
+        muted={videoMuted.get()}
         sx={styles.videoElement}
       />
 
@@ -94,4 +122,4 @@ export default function MiniVideo({
       )}
     </Paper>
   );
-}
+});

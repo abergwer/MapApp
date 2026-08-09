@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
@@ -15,11 +15,84 @@ import * as layout from '../../layout/styles/layout.styles';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** Top command bar: brand block + system status + theme switch + clock. */
-function TopBarImpl() {
-  const { mapEngineStore, themeStore, uiVisibilityStore: ui } = useStores();
+/** One top-bar entry. The host declares the full item list (see App.tsx);
+ *  the bar itself renders whatever it's given, in order. */
+export interface TopBarItem {
+  id: string;
+  /** 'start' renders before the flexible spacer; default 'end'. */
+  align?: 'start' | 'end';
+  node: ReactNode;
+}
+
+interface TopBarProps {
+  items: TopBarItem[];
+}
+
+// ── Ready-made items (compose these into the `items` prop) ─────────────────
+
+/** Brand block: logo mark + product title/subtitle. */
+export function TopBarBrand({ title, subtitle }: { title: string; subtitle: string }) {
+  return (
+    <>
+      <Box sx={layout.brandMark}>
+        <RadarIcon fontSize="small" />
+      </Box>
+      <Box>
+        <Typography sx={layout.brandTitle}>{title}</Typography>
+        <Typography sx={layout.brandSubtitle}>{subtitle}</Typography>
+      </Box>
+    </>
+  );
+}
+
+/** Engine-readiness chip. */
+export const SystemStatusChip = observer(function SystemStatusChip() {
+  const { mapEngineStore } = useStores();
   const engineReady = Boolean(mapEngineStore.engine);
+  return (
+    <Box sx={{ ...layout.topChip, color: engineReady ? palette.ok : palette.warn, border: 'none', bgcolor: 'transparent' }}>
+      <Box sx={layout.statusDot(engineReady ? palette.ok : palette.warn)} />
+      {engineReady ? 'System Operational' : 'Initializing'}
+    </Box>
+  );
+});
+
+/** Shows/hides the map's floating tool strip. */
+export const ToolbarToggleButton = observer(function ToolbarToggleButton() {
+  const { uiVisibilityStore: ui } = useStores();
+  return (
+    <Tooltip title={ui.toolbarVisible ? 'Hide map toolbar' : 'Show map toolbar'} arrow>
+      <IconButton
+        size="small"
+        onClick={() => ui.toggleToolbar()}
+        aria-label={ui.toolbarVisible ? 'Hide map toolbar' : 'Show map toolbar'}
+        sx={{ color: ui.toolbarVisible ? palette.accentBright : 'text.secondary' }}
+      >
+        <HandymanOutlinedIcon fontSize="small" />
+      </IconButton>
+    </Tooltip>
+  );
+});
+
+/** Dark/light theme switch. */
+export const ThemeToggleButton = observer(function ThemeToggleButton() {
+  const { themeStore } = useStores();
   const isDark = themeStore.theme === 'dark';
+  return (
+    <Tooltip title={isDark ? 'Switch to light theme' : 'Switch to dark theme'} arrow>
+      <IconButton
+        size="small"
+        onClick={() => themeStore.toggle()}
+        aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
+      >
+        {isDark ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
+      </IconButton>
+    </Tooltip>
+  );
+});
+
+/** Local + UTC clock chip (owns its own 1 s tick). */
+export function TopBarClock() {
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -31,50 +104,29 @@ function TopBarImpl() {
   const utc = `${pad(now.getUTCHours())}:${pad(now.getUTCMinutes())}`;
 
   return (
-    <Box component="header" sx={layout.topBar}>
-      <Box sx={layout.brandMark}>
-        <RadarIcon fontSize="small" />
-      </Box>
-      <Box>
-        <Typography sx={layout.brandTitle}>Map Engine Orchestrator</Typography>
-        <Typography sx={layout.brandSubtitle}>INTEGRATED OPERATIONS SYSTEM</Typography>
-      </Box>
-
-      <Box sx={{ flex: 1 }} />
-
-      <Box sx={{ ...layout.topChip, color: engineReady ? palette.ok : palette.warn, border: 'none', bgcolor: 'transparent' }}>
-        <Box sx={layout.statusDot(engineReady ? palette.ok : palette.warn)} />
-        {engineReady ? 'System Operational' : 'Initializing'}
-      </Box>
-
-      <Tooltip title={ui.toolbarVisible ? 'Hide map toolbar' : 'Show map toolbar'} arrow>
-        <IconButton
-          size="small"
-          onClick={() => ui.toggleToolbar()}
-          aria-label={ui.toolbarVisible ? 'Hide map toolbar' : 'Show map toolbar'}
-          sx={{ color: ui.toolbarVisible ? palette.accentBright : 'text.secondary' }}
-        >
-          <HandymanOutlinedIcon fontSize="small" />
-        </IconButton>
-      </Tooltip>
-
-      <Tooltip title={isDark ? 'Switch to light theme' : 'Switch to dark theme'} arrow>
-        <IconButton
-          size="small"
-          onClick={() => themeStore.toggle()}
-          aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-        >
-          {isDark ? <LightModeIcon fontSize="small" /> : <DarkModeIcon fontSize="small" />}
-        </IconButton>
-      </Tooltip>
-
-      <Box sx={layout.clockChip}>
-        <AccessTimeIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
-        <Typography sx={layout.clockTime}>{local}</Typography>
-        <Typography sx={layout.clockUtc}>{utc} UTC</Typography>
-      </Box>
+    <Box sx={layout.clockChip}>
+      <AccessTimeIcon sx={{ fontSize: 16, color: 'text.secondary' }} />
+      <Typography sx={layout.clockTime}>{local}</Typography>
+      <Typography sx={layout.clockUtc}>{utc} UTC</Typography>
     </Box>
   );
 }
 
-export default observer(TopBarImpl);
+/** Top command bar: renders the host-declared items around a spacer. */
+function TopBarImpl({ items }: TopBarProps) {
+  const start = items.filter((i) => i.align === 'start');
+  const end = items.filter((i) => i.align !== 'start');
+  return (
+    <Box component="header" sx={layout.topBar}>
+      {start.map((i) => (
+        <Fragment key={i.id}>{i.node}</Fragment>
+      ))}
+      <Box sx={{ flex: 1 }} />
+      {end.map((i) => (
+        <Fragment key={i.id}>{i.node}</Fragment>
+      ))}
+    </Box>
+  );
+}
+
+export default TopBarImpl;
