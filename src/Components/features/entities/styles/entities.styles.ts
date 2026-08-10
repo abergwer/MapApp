@@ -228,6 +228,9 @@ export const dialogSectionLabel: SxProps<Theme> = {
 export const defRow = (active: boolean): SxProps<Theme> => ({
   display: 'flex',
   alignItems: 'center',
+  // Rows with many geometries (e.g. the plain-graphic row) exceed the
+  // ~300px panel column — let the draw buttons wrap instead of clipping.
+  flexWrap: 'wrap',
   gap: 1,
   px: 1,
   py: 0.5,

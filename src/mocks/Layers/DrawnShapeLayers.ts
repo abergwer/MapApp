@@ -57,7 +57,7 @@ export function createDrawnShapeLayers(
   getDef: GetEntityDefinition = () => undefined,
 ): Layer[] {
   const points: Extract<MapShape, { kind: 'point' }>[] = [];
-  const lines: Extract<MapShape, { kind: 'line' | 'route' }>[] = [];
+  const lines: Extract<MapShape, { kind: 'line' }>[] = [];
   const polygons: Extract<MapShape, { kind: 'polygon' }>[] = [];
   const areas: Extract<MapShape, { kind: 'circle' | 'ellipse' | 'sector' }>[] = [];
 
@@ -68,7 +68,6 @@ export function createDrawnShapeLayers(
         points.push(s);
         break;
       case 'line':
-      case 'route':
         lines.push(s);
         break;
       case 'polygon':

@@ -9,7 +9,6 @@ import {
 } from 'maplibre-gl-draw-circle';
 import { DragEllipseMode } from '../../utils/MaplibreEllipseMath';
 import { DragSectorMode } from '../../utils/MaplibreSectorMath';
-import { startMaplibreRouteDraw } from '../../utils/MaplibreRouteTool';
 import { drawStyles } from '../../drawStyles';
 import { ellipseRing, sectorRing } from '../../utils/geo';
 import type { MapShape } from '../../../stores/DrawingToolStore';
@@ -24,7 +23,7 @@ const KIND_PROP = 'shapeKind';
 /**
  * Owns every drawing concern for the MapLibre engine: the MapboxDraw
  * instance, all draw modes (built-in + custom ellipse/sector/circle),
- * route tool, the `addShape` pipeline for external shapes, and the
+ * the `addShape` pipeline for external shapes, and the
  * `draw.update` / `draw.delete` round-trip back to the engine.
  *
  * Exposes a `getDraw()` accessor so the engine's measurement manager
@@ -33,7 +32,6 @@ const KIND_PROP = 'shapeKind';
 export class MapLibreDrawingManager {
   private readonly map: maplibregl.Map;
   private readonly draw: MapboxDraw;
-  private cancelCurrentDraw?: () => void;
   private onShapeEdited?: (shape: MapShape) => void;
   private onShapeDeleted?: (id: string) => void;
   private onDeselect?: () => void;
@@ -91,11 +89,9 @@ export class MapLibreDrawingManager {
     // Persistent delete handler. MapboxDraw's own keybindings listen on the
     // (unfocused) map canvas, so Delete/Backspace never reaches them and
     // selected shapes can't be removed. Listen on `document` instead so a
-    // selected feature trashes regardless of focus. Skip while a route draw
-    // owns its own delete handler to avoid double-trash.
+    // selected feature trashes regardless of focus.
     this.onKeyDown = (ev: KeyboardEvent) => {
       if (ev.key !== 'Delete' && ev.key !== 'Backspace') return;
-      if (this.cancelCurrentDraw) return;
       const el = ev.target as HTMLElement | null;
       if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
       const mode = this.draw.getMode();
@@ -204,23 +200,7 @@ export class MapLibreDrawingManager {
     });
   }
 
-  startDrawRoute(onComplete: (id: string, positions: [number, number][]) => void): void {
-    // Tear down any prior route draw first — otherwise its document keydown
-    // listener lingers and every route stacks another `draw.trash()` on
-    // Delete, firing `draw.update` once per route still alive.
-    this.cancelCurrentDraw?.();
-    this.cancelCurrentDraw = startMaplibreRouteDraw(this.map, this.draw, (id, positions) => {
-      this.draw.setFeatureProperty(id, KIND_PROP, 'route');
-      // The route flow is finished — clear the flag, otherwise the
-      // delete-key handler above stays disabled forever.
-      this.cancelCurrentDraw = undefined;
-      onComplete(id, positions);
-    });
-  }
-
   cancelDrawing(): void {
-    this.cancelCurrentDraw?.();
-    this.cancelCurrentDraw = undefined;
     if (this.currentCreateHandler) {
     this.map.off('draw.create', this.currentCreateHandler);
     this.currentCreateHandler = undefined;
@@ -360,7 +340,6 @@ function shapeToFeature(shape: MapShape): GeoJSON.Feature | null {
       };
 
     case 'line':
-    case 'route':
       return {
         type: 'Feature',
         properties: {},
@@ -448,7 +427,6 @@ function featureToShape(feature: any): MapShape | null {
     case 'point':
       return { id, kind, position: feature.geometry.coordinates };
     case 'line':
-    case 'route':
       return { id, kind, positions: feature.geometry.coordinates };
     case 'polygon':
       return { id, kind, positions: feature.geometry.coordinates[0] };

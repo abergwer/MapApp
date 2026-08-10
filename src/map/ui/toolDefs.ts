@@ -4,7 +4,6 @@ import PentagonOutlinedIcon from '@mui/icons-material/PentagonOutlined';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import PanoramaFishEyeIcon from '@mui/icons-material/PanoramaFishEye';
 import PieChartOutlinedIcon from '@mui/icons-material/PieChartOutlined';
-import RouteIcon from '@mui/icons-material/Route';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import SquareFootIcon from '@mui/icons-material/SquareFoot';
 import type { MapEngine } from '../mapEngine/MapEngine';
@@ -25,7 +24,6 @@ export const DRAW_TOOLS: { id: DrawTool; label: string; Icon: typeof FiberManual
   { id: 'circle', label: 'Draw circle', Icon: RadioButtonUncheckedIcon },
   { id: 'ellipse', label: 'Draw ellipse', Icon: PanoramaFishEyeIcon },
   { id: 'sector', label: 'Draw sector', Icon: PieChartOutlinedIcon },
-  { id: 'route', label: 'Draw route', Icon: RouteIcon },
 ];
 
 export const MEASURE_TOOLS: { id: MeasureTool; label: string; Icon: typeof StraightenIcon }[] = [
@@ -73,10 +71,6 @@ export function startDraw(
       return engine.startDrawSector?.((id, center, radius, startBearing, endBearing) =>
         entities.create({ ...data, id, kind: 'sector', center, radius, startBearing, endBearing }),
       );
-    case 'route':
-      return engine.startDrawRoute?.((id, positions) =>
-        entities.create({ ...data, id, kind: 'route', positions }),
-      );
   }
 }
 
@@ -100,6 +94,27 @@ export function toggleDrawEntity(
   }
   store.setActiveDrawTool(geometry, def.id);
   startDraw(engine, geometry, entities, def);
+}
+
+/**
+ * Arm (or, when already armed with the same tool, cancel) drawing a plain
+ * graphic — a shape with no entity identity (no defId). Shared by the
+ * toolbar and the Entities panel, mirroring `toggleDrawEntity`.
+ */
+export function toggleDrawGraphic(
+  engine: MapEngine,
+  tool: DrawTool,
+  store: DrawingToolStore,
+  entities: EntityService,
+) {
+  if (store.activeDefId === null && store.activeDrawTool === tool) {
+    engine.cancelDrawing();
+    store.setActiveDrawTool(null);
+    store.setSelectedId(null);
+    return;
+  }
+  store.setActiveDrawTool(tool);
+  startDraw(engine, tool, entities);
 }
 
 export function startMeasure(engine: MapEngine, tool: MeasureTool, store: DrawingToolStore) {

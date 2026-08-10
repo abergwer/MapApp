@@ -2,7 +2,7 @@ import type { Layer } from '@deck.gl/core';
 import { createDrawnShapeLayers } from '../../mocks/Layers/DrawnShapeLayers';
 import { getEntityDef } from '../features/entities/entityDefinitions';
 import type { RootStore } from '../../stores/RootStore';
-import type { MapShape } from '../../stores/shapes';
+import { isEntity, type MapShape } from '../../stores/shapes';
 import { palette } from '../layout/styles/tokens';
 
 /**
@@ -59,7 +59,7 @@ const kindLabel = (kind: string) => kind.charAt(0).toUpperCase() + kind.slice(1)
  *  shape carries a known defId, per raw geometry kind otherwise. Shared by
  *  the layer filter and the panel rows so the two can never disagree. */
 export const shapeLayerKey = (s: MapShape): string =>
-  s.defId && getEntityDef(s.defId) ? `drawnShapes:def:${s.defId}` : `drawnShapes:${s.kind}`;
+  isEntity(s) && getEntityDef(s.defId) ? `drawnShapes:def:${s.defId}` : `drawnShapes:${s.kind}`;
 
 /**
  * Built-in group for user-drawn shapes (the core draw/edit feature).

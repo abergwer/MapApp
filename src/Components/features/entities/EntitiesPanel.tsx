@@ -10,10 +10,11 @@ import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import { observer } from 'mobx-react-lite';
 import SectionCard from '../../common/SectionCard';
-import { DRAW_TOOLS, toggleDrawEntity } from '../../../map/ui/toolDefs';
+import DrawIcon from '@mui/icons-material/Draw';
+import { DRAW_TOOLS, toggleDrawEntity, toggleDrawGraphic } from '../../../map/ui/toolDefs';
 import { useStores } from '../../../stores/StoreContext';
 import { ENTITY_DEFINITIONS, getEntityDef, type EntityDefinition } from './entityDefinitions';
-import type { MapShape } from '../../../stores/shapes';
+import { isEntity, type MapShape } from '../../../stores/shapes';
 import EntityIcon from './EntityIcon';
 import * as common from '../../common/styles/panel.styles';
 import * as styles from './styles/entities.styles';
@@ -39,7 +40,7 @@ function EntitiesPanelImpl() {
   // Group instances by definition; untyped shapes group by geometry kind.
   const groups = new Map<string, MapShape[]>();
   for (const s of drawingToolStore.completedShapes) {
-    const key = s.defId && getEntityDef(s.defId) ? s.defId : `kind:${s.kind}`;
+    const key = isEntity(s) && getEntityDef(s.defId) ? s.defId : `kind:${s.kind}`;
     const list = groups.get(key) ?? [];
     list.push(s);
     groups.set(key, list);
@@ -146,6 +147,31 @@ function EntitiesPanelImpl() {
     <>
       <SectionCard title="Entity Types">
         {ENTITY_DEFINITIONS.map((def) => renderDef(def, 0))}
+        {/* Plain graphics: same row layout as a type, but no entity identity. */}
+        <Box sx={styles.defRow(drawingToolStore.activeDrawTool !== null && activeDefId === null)}>
+          <DrawIcon sx={{ fontSize: 18, color: 'text.primary' }} />
+          <Typography sx={styles.defName}>Graphic</Typography>
+          {DRAW_TOOLS.map(({ id, Icon }) => {
+            const armed = activeDefId === null && drawingToolStore.activeDrawTool === id;
+            return (
+              <Tooltip key={id} title={armed ? 'Cancel drawing' : `Draw ${kindLabel(id)}`} arrow>
+                <span>
+                  <IconButton
+                    size="small"
+                    disabled={!engine}
+                    onClick={() =>
+                      engine && toggleDrawGraphic(engine, id, drawingToolStore, entityService)
+                    }
+                    aria-label={`Draw ${kindLabel(id)} graphic`}
+                    sx={{ p: 0.25, ...(armed && { color: 'primary.main' }) }}
+                  >
+                    <Icon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </span>
+              </Tooltip>
+            );
+          })}
+        </Box>
       </SectionCard>
 
       <SectionCard title="Existing Entities">

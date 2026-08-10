@@ -79,8 +79,6 @@ export interface MapEngine {
     ) => void
   ): void;
 
-  startDrawRoute?(onComplete: (id: string, positions: [number, number][]) => void): void;
-
   cancelDrawing(): void;
 
   /**

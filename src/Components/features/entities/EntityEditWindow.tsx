@@ -13,7 +13,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../../stores/StoreContext';
 import { getEntityDef, getParentEntityDef } from './entityDefinitions';
-import type { MapShape } from '../../../stores/shapes';
+import { isEntity, type Entity, type MapShape } from '../../../stores/shapes';
 import EntityIcon from './EntityIcon';
 import * as styles from './styles/entities.styles';
 
@@ -95,7 +95,7 @@ function EntityEditWindowImpl() {
   const parentDef = getParentEntityDef(def?.id);
   const parentOptions = parentDef
     ? drawingToolStore.completedShapes.filter(
-        (s) => s.defId === parentDef.id && s.id !== shape.id,
+        (s): s is Entity => isEntity(s) && s.defId === parentDef.id && s.id !== shape.id,
       )
     : [];
 
@@ -124,8 +124,8 @@ function EntityEditWindowImpl() {
     window.addEventListener('pointerup', onUp);
   };
 
-  /** Vertex list editor for line / route / polygon. */
-  const renderVertices = (s: Extract<MapShape, { kind: 'line' | 'polygon' | 'route' }>) => {
+  /** Vertex list editor for line / polygon. */
+  const renderVertices = (s: Extract<MapShape, { kind: 'line' | 'polygon' }>) => {
     const min = s.kind === 'polygon' ? 3 : 2;
     const setAt = (i: number, p: [number, number]) =>
       commit({ ...s, positions: s.positions.map((v, j) => (j === i ? p : v)) });
@@ -205,7 +205,6 @@ function EntityEditWindowImpl() {
         );
       case 'line':
       case 'polygon':
-      case 'route':
         return renderVertices(shape);
     }
   };

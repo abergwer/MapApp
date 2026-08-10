@@ -174,11 +174,6 @@ export class MapLibreEngine implements MapEngine {
     this.drawing?.startDrawSector(onComplete);
   }
 
-  startDrawRoute(onUpdate: (id: string, positions: [number, number][]) => void): void {
-    this.measure?.cancel();
-    this.drawing?.startDrawRoute(onUpdate);
-  }
-
   cancelDrawing(): void {
     this.drawing?.cancelDrawing();
     this.measure?.cancel();

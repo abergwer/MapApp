@@ -1,11 +1,13 @@
 interface ShapeBase {
   id: string;
-  /** Entity-definition id from the `Components/features/entities/entityDefinitions` tree.
+  /** Entity-definition id from the `stores/entityDefinitions` tree.
    *  Absent on plain graphics (measurements, ad-hoc drawings). */
   defId?: string;
   /** User-editable display name. */
   name?: string;
-  /** Id of the parent entity this shape is attached to, if any. */
+  /** Id of the parent entity INSTANCE this sub-entity belongs to. Only
+   *  meaningful when this shape's def is a child in the definitions tree;
+   *  the parent must be an instance of that child's parent definition. */
   parentId?: string;
 }
 
@@ -32,8 +34,13 @@ export type MapShape =
       radius: number;
       startBearing: number;
       endBearing: number;
-    })
-  | (ShapeBase & { kind: 'route'; positions: [number, number][] });
+    });
+
+/** A MapShape carrying entity identity. Same object at runtime — a type
+ *  refinement, not a wrapper. Plain graphics (no defId) stay plain MapShapes. */
+export type Entity = MapShape & { defId: string };
+
+export const isEntity = (s: MapShape): s is Entity => s.defId !== undefined;
 
 /** Generate a unique id for a shape. Uses native UUID if available. */
 export const newShapeId = (): string =>

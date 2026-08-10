@@ -23,6 +23,23 @@ const defaultOptions = {
   zoom: 8,
 };
 
+/**
+ * Leaf observer for the coordinate readout. `viewState` ticks on every
+ * drag/zoom frame — reading it inside MapWrapper's render would re-render
+ * the entire map subtree per frame and freeze dragging.
+ */
+const CoordinateChip = observer(() => {
+  const { mapEngineStore } = useStores();
+  const click = mapEngineStore.lastClick;
+  const vs = mapEngineStore.viewState;
+  const c = click ?? (vs ? { lat: vs.latitude, lng: vs.longitude } : null);
+  return (
+    <Typography sx={mapStyles.coordChip}>
+      {c ? `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}` : '—'}
+    </Typography>
+  );
+});
+
 interface MapWrapperProps {
   children?: ReactNode;
   /**
@@ -127,7 +144,15 @@ function MapWrapperImpl({
 
       // Round-trip user edits/deletes back through the entity service —
       // the single writer that also fans out to any hook subscribers.
-      eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(shape));
+      // Engines rebuild shapes from feature geometry only, so re-attach the
+      // entity metadata (defId/name/parentId) or edits demote entities to
+      // raw shapes.
+      eng.setOnShapeEdited?.((shape: MapShape) => {
+        const prev = entityService.get(shape.id);
+        entityService.update(
+          prev ? { ...shape, defId: prev.defId, name: prev.name, parentId: prev.parentId } : shape,
+        );
+      });
       eng.setOnShapeDeleted?.((id: string) => entityService.remove(id));
 
       // Clicking empty map background (Leaflet) exits edit mode by clearing
@@ -244,6 +269,9 @@ function MapWrapperImpl({
 
         {/* Compass + zoom/3D/fullscreen stack (top-right, reference design). */}
         <MapControls />
+
+        {/* Live coordinate readout: last map click, else the view center. */}
+        <CoordinateChip />
 
         {/* Floating inspector for the selected entity (name / attributes). */}
         <EntityEditWindow />

@@ -20,7 +20,6 @@ const KM_TO_M = 1000;
 const DRAGGABLE_KINDS: ReadonlySet<MapShape['kind']> = new Set([
   'polygon',
   'line',
-  'route',
 ]);
 
 /** Tags we stamp on every drawn layer so edit events can rebuild the shape. */
@@ -194,16 +193,6 @@ export class LeafletDrawingManager {
       // Hand off to Deck.gl: the shape is in the store now, so drop the
       // engine's native copy to avoid a double-render (see onceCreate).
       layer.remove();
-    });
-  }
-
-  startDrawRoute(onComplete: (id: string, positions: [number, number][]) => void): void {
-    // Alias for line drawing with a different `MapShape.kind` tag.
-    this.cancelDrawing();
-    this.map.pm.enableDraw('Line', { hideMiddleMarkers: true });
-    this.onceCreate((layer) => {
-      const id = this.tag(layer, 'route');
-      onComplete(id, latLngsToCoords(layer as L.Polyline));
     });
   }
 
@@ -462,7 +451,6 @@ export class LeafletDrawingManager {
         return { id, kind, position: [lng, lat] };
       }
       case 'line':
-      case 'route':
         return { id, kind, positions: latLngsToCoords(layer as L.Polyline) };
       case 'polygon':
         return { id, kind, positions: polygonRingToCoords(layer as L.Polygon) };
@@ -506,7 +494,6 @@ export class LeafletDrawingManager {
         return L.marker([shape.position[1], shape.position[0]]);
 
       case 'line':
-      case 'route':
         return L.polyline(shape.positions.map(([lng, lat]) => [lat, lng]));
 
       case 'polygon':

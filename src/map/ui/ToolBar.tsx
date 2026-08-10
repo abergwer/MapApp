@@ -6,7 +6,8 @@ import ListItemIcon from '@mui/material/ListItemIcon';
 import Menu from '@mui/material/Menu';
 import MenuItem from '@mui/material/MenuItem';
 import Tooltip from '@mui/material/Tooltip';
-import { DRAW_TOOLS, toggleDrawEntity } from './toolDefs';
+import DrawIcon from '@mui/icons-material/Draw';
+import { DRAW_TOOLS, toggleDrawEntity, toggleDrawGraphic } from './toolDefs';
 import { useStores } from '../../stores/StoreContext';
 import {
   ENTITY_DEFINITIONS,
@@ -29,6 +30,10 @@ function ToolBarImpl() {
   const { mapEngineStore, drawingToolStore, entityService } = useStores();
   const engine = mapEngineStore.engine;
   const [menu, setMenu] = useState<{ anchor: HTMLElement; def: EntityDefinition } | null>(null);
+  const [graphicMenu, setGraphicMenu] = useState<HTMLElement | null>(null);
+  // Drawing with no defId = a plain graphic (free drawing).
+  const graphicActive =
+    drawingToolStore.activeDrawTool !== null && drawingToolStore.activeDefId === null;
 
   const handleClick = (root: EntityDefinition, active: boolean, anchor: HTMLElement) => {
     if (!engine) return;
@@ -73,6 +78,54 @@ function ToolBarImpl() {
           </Tooltip>
         );
       })}
+
+      <Tooltip
+        title={graphicActive ? 'Drawing graphic (click to cancel)' : 'Draw graphic'}
+        arrow
+      >
+        <span>
+          <IconButton
+            size="small"
+            disabled={!engine}
+            onClick={(e) => {
+              if (!engine) return;
+              if (graphicActive) {
+                engine.cancelDrawing();
+                drawingToolStore.setActiveDrawTool(null);
+                drawingToolStore.setSelectedId(null);
+                return;
+              }
+              setGraphicMenu(e.currentTarget);
+            }}
+            sx={toolButton(graphicActive)}
+            aria-label="Draw graphic"
+          >
+            <DrawIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </span>
+      </Tooltip>
+
+      <Menu
+        open={graphicMenu !== null}
+        anchorEl={graphicMenu}
+        onClose={() => setGraphicMenu(null)}
+      >
+        {DRAW_TOOLS.map(({ id, Icon }) => (
+          <MenuItem
+            key={id}
+            onClick={() => {
+              setGraphicMenu(null);
+              if (engine) toggleDrawGraphic(engine, id, drawingToolStore, entityService);
+            }}
+            aria-label={`Draw ${kindLabel(id)} graphic`}
+          >
+            <ListItemIcon sx={{ minWidth: 28 }}>
+              <Icon sx={{ fontSize: 16 }} />
+            </ListItemIcon>
+            <Box sx={{ fontSize: 13 }}>{kindLabel(id)}</Box>
+          </MenuItem>
+        ))}
+      </Menu>
 
       <Menu open={menu !== null} anchorEl={menu?.anchor ?? null} onClose={() => setMenu(null)}>
         {menu &&
