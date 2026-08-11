@@ -84,12 +84,12 @@ export const layerRow: SxProps<Theme> = {
   '&:hover': { borderColor: palette.borderBright },
 };
 
-/** Indented sub-row inside an expanded group. */
-export const layerSubRow: SxProps<Theme> = {
+/** Indented sub-row inside an expanded group; indent grows per depth. */
+export const layerSubRow = (depth: number): SxProps<Theme> => ({
   display: 'flex',
   alignItems: 'center',
   gap: 0.75,
-  ml: 3,
+  ml: 3 * depth,
   pl: 0.75,
   pr: 0.5,
   py: 0.125,
@@ -97,7 +97,7 @@ export const layerSubRow: SxProps<Theme> = {
   borderRadius: 1,
   bgcolor: `color-mix(in srgb, ${palette.panel} 55%, transparent)`,
   border: `1px solid ${palette.border}`,
-};
+});
 
 /** Dot colored per layer (reference design shows a round blue dot). */
 export const layerSwatch = (color: string): SxProps<Theme> => ({

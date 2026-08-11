@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import Box from '@mui/material/Box';
 import Collapse from '@mui/material/Collapse';
 import IconButton from '@mui/material/IconButton';
@@ -16,19 +16,32 @@ import * as styles from './styles/layers.styles';
 interface RowProps {
   color: string;
   label: string;
-  count?: string;
+  /** Read inside a leaf observer — see `CountBadge`. */
+  count?: () => string | undefined;
   checked: boolean;
   onToggle: (value: boolean) => void;
   /** Renders an expand chevron and makes the row a group header. */
   expandable?: boolean;
   expanded?: boolean;
   onExpand?: () => void;
-  sub?: boolean;
+  depth?: number;
 }
 
-function Row({ color, label, count, checked, onToggle, expandable, expanded, onExpand, sub }: RowProps) {
+/**
+ * Leaf observer around the count badge: live-feed stores replace whole
+ * arrays every animation tick, so reading them in the panel render would
+ * re-render every row + switch per frame. Reading here confines that
+ * churn to this one Typography.
+ */
+const CountBadge = observer(({ get }: { get: () => string | undefined }) => {
+  const count = get();
+  if (count === undefined) return null;
+  return <Typography sx={styles.layerCount}>{count}</Typography>;
+});
+
+function Row({ color, label, count, checked, onToggle, expandable, expanded, onExpand, depth }: RowProps) {
   return (
-    <Box sx={sub ? styles.layerSubRow : styles.layerRow}>
+    <Box sx={depth ? styles.layerSubRow(depth) : styles.layerRow}>
       <Box sx={styles.expandSlot}>
         {expandable && (
           <IconButton size="small" onClick={onExpand} aria-label={`${expanded ? 'Collapse' : 'Expand'} ${label}`}>
@@ -42,7 +55,7 @@ function Row({ color, label, count, checked, onToggle, expandable, expanded, onE
       </Box>
       <Box sx={styles.layerSwatch(color)} />
       <Typography sx={styles.layerLabel}>{label}</Typography>
-      {count && <Typography sx={styles.layerCount}>{count}</Typography>}
+      {count && <CountBadge get={count} />}
       <Switch
         size="small"
         checked={checked}
@@ -66,39 +79,48 @@ function LayersPanelImpl({ layers = [] }: LayersPanelProps) {
   const [search, setSearch] = useState('');
 
   const q = search.trim().toLowerCase();
-  const show = (...labels: string[]) =>
-    !q || labels.some((l) => l.toLowerCase().includes(q));
+  const hit = (label: string) => label.toLowerCase().includes(q);
+  /** True when the def's own label or any descendant's matches the search. */
+  const subtreeHit = (def: LayerGroupDef): boolean =>
+    hit(def.label) || (def.children?.(stores) ?? []).some(subtreeHit);
 
-  /** Render one layer-group def (leaf row or expandable group). */
-  const renderDef = (def: LayerGroupDef) => {
+  /**
+   * Render one layer-group def, recursing into children at any depth.
+   * `forceShow` keeps a subtree visible once an ancestor's label matched.
+   */
+  const renderDef = (def: LayerGroupDef, depth = 0, forceShow = false): ReactNode => {
+    if (q && !forceShow && !subtreeHit(def)) return null;
     const children = def.children?.(stores) ?? [];
-    const count = def.count?.(stores);
 
     if (children.length === 0) {
-      if (!show(def.label)) return null;
       return (
         <Row
           key={def.id}
+          depth={depth}
           color={def.color}
           label={def.label}
-          count={count !== undefined ? `${count}` : undefined}
+          count={def.count && (() => `${def.count!(stores)}`)}
           checked={vis.isLayerVisible(def.id)}
           onToggle={(v) => vis.setLayerVisible(def.id, v)}
         />
       );
     }
 
-    if (!show(def.label, ...children.map((c) => c.label))) return null;
-    const onCount = children.filter((c) => vis.isLayerVisible(c.id)).length;
     // Groups default open so dynamic rows (e.g. a just-drawn entity type)
-    // are visible immediately; the chevron state remembers a collapse.
-    const open = openGroups[def.id] ?? true;
+    // are visible immediately; searching force-opens so matches show.
+    const open = q ? true : (openGroups[def.id] ?? true);
     return (
       <Box key={def.id}>
         <Row
+          depth={depth}
           color={def.color}
           label={def.label}
-          count={count !== undefined ? `${count}` : `${onCount}/${children.length}`}
+          count={() => {
+            const c = def.count?.(stores);
+            if (c !== undefined) return `${c}`;
+            const on = children.filter((ch) => vis.isLayerVisible(ch.id)).length;
+            return `${on}/${children.length}`;
+          }}
           checked={vis.isLayerVisible(def.id)}
           onToggle={(v) => vis.setLayerVisible(def.id, v)}
           expandable
@@ -106,20 +128,7 @@ function LayersPanelImpl({ layers = [] }: LayersPanelProps) {
           onExpand={() => setOpenGroups((prev) => ({ ...prev, [def.id]: !open }))}
         />
         <Collapse in={open}>
-          {children.map((c) => {
-            const cCount = c.count?.(stores);
-            return (
-              <Row
-                key={c.id}
-                sub
-                color={c.color}
-                label={c.label}
-                count={cCount !== undefined ? `${cCount}` : undefined}
-                checked={vis.isLayerVisible(c.id)}
-                onToggle={(v) => vis.setLayerVisible(c.id, v)}
-              />
-            );
-          })}
+          {children.map((c) => renderDef(c, depth + 1, forceShow || hit(def.label)))}
         </Collapse>
       </Box>
     );
@@ -138,7 +147,7 @@ function LayersPanelImpl({ layers = [] }: LayersPanelProps) {
         />
       </Box>
 
-      <SectionCard title="Visibility">{layers.map(renderDef)}</SectionCard>
+      <SectionCard title="Visibility">{layers.map((d) => renderDef(d))}</SectionCard>
     </>
   );
 }

@@ -90,7 +90,7 @@ function App() {
     { id: 'entities', title: 'Entities', Icon: FmdGoodOutlinedIcon, content: <EntitiesPanel /> },
     {
       id: 'layers',
-      title: 'Layers',
+      title: 'Filter',
       Icon: LayersOutlinedIcon,
       content: <LayersPanel layers={DEMO_LAYERS} />,
     },

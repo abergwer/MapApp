@@ -61,6 +61,9 @@ const kindLabel = (kind: string) => kind.charAt(0).toUpperCase() + kind.slice(1)
 export const shapeLayerKey = (s: MapShape): string =>
   isEntity(s) && getEntityDef(s.defId) ? `drawnShapes:def:${s.defId}` : `drawnShapes:${s.kind}`;
 
+/** Visibility key of one individual drawn shape (per-instance panel row). */
+export const shapeInstanceKey = (s: MapShape): string => `drawnShapes:shape:${s.id}`;
+
 /**
  * Built-in group for user-drawn shapes (the core draw/edit feature).
  * Children are dynamic filter rows — one per `shapeLayerKey` present in
@@ -74,28 +77,38 @@ export const DRAWN_SHAPES_GROUP: LayerGroupDef = {
   count: (stores) => stores.drawingToolStore.completedShapes.length,
   build: (stores) => {
     const { drawingToolStore, uiVisibilityStore: vis } = stores;
-    const visibleShapes = drawingToolStore.completedShapes.filter((s) =>
-      vis.isLayerVisible(shapeLayerKey(s)),
+    const visibleShapes = drawingToolStore.completedShapes.filter(
+      (s) => vis.isLayerVisible(shapeLayerKey(s)) && vis.isLayerVisible(shapeInstanceKey(s)),
     );
     return createDrawnShapeLayers(visibleShapes, drawingToolStore.selectedId, getEntityDef);
   },
   children: (stores) => {
-    // One row per key present; the key's first shape supplies label/color
-    // (a shape with a known defId always maps to a def row).
-    const rows = new Map<string, { n: number; shape: MapShape }>();
+    // One row per key present; the key's shapes become per-instance
+    // sub-rows so the panel can list and search entities by name.
+    const rows = new Map<string, MapShape[]>();
     for (const s of stores.drawingToolStore.completedShapes) {
       const key = shapeLayerKey(s);
-      const row = rows.get(key);
-      if (row) row.n += 1;
-      else rows.set(key, { n: 1, shape: s });
+      const list = rows.get(key);
+      if (list) list.push(s);
+      else rows.set(key, [s]);
     }
-    return [...rows.entries()].map(([key, { n, shape }]) => {
-      const def = getEntityDef(shape.defId);
+    return [...rows.entries()].map(([key, shapes]) => {
+      const def = getEntityDef(shapes[0].defId);
+      const label = def?.name ?? kindLabel(shapes[0].kind);
+      const color = def?.color ?? palette.accent;
       return {
         id: key,
-        label: def?.name ?? kindLabel(shape.kind),
-        color: def?.color ?? palette.accent,
-        count: () => n,
+        label,
+        color,
+        count: () => shapes.length,
+        children: () =>
+          shapes.map((s, i) => ({
+            // Unnamed shapes fall back to the same "<Type> <n>" label the
+            // Entities panel shows, so the two panels agree.
+            id: shapeInstanceKey(s),
+            label: s.name ?? `${label} ${i + 1}`,
+            color,
+          })),
       };
     });
   },
