@@ -9,9 +9,9 @@ import LightModeIcon from '@mui/icons-material/LightMode';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import HandymanOutlinedIcon from '@mui/icons-material/HandymanOutlined';
 import { observer } from 'mobx-react-lite';
-import { useStores } from '../../../stores/StoreContext';
-import { palette } from '../../layout/styles/tokens';
-import * as layout from '../../layout/styles/layout.styles';
+import { useStores } from '../../stores/StoreContext';
+import { palette } from './styles/tokens';
+import * as layout from './styles/layout.styles';
 
 const pad = (n: number) => String(n).padStart(2, '0');
 

@@ -16,7 +16,7 @@ import MapStyleBar from '../ui/MapStyleBar';
 import MapControls from '../ui/MapControls';
 import EntityEditWindow from '../../Components/features/entities/EntityEditWindow';
 import * as mapStyles from '../ui/styles/map.styles';
-import type { MapShape } from '../../stores/shapes';
+import type { MapShape } from '../../types/shapes';
 
 const defaultOptions = {
   center: [32.2, 34.95] as [number, number],

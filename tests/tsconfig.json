@@ -24,7 +24,7 @@
     "../src/stores/MissileStore.ts",
     "../src/stores/AirCraftStore.ts",
     "../src/stores/DroneStore.ts",
-    "../src/stores/shapes.ts",
+    "../src/types/shapes.ts",
     "../src/map/mapConfig.ts"
   ]
 }

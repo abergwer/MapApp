@@ -7,7 +7,7 @@ import {
   getEntityDef,
   getParentEntityDef,
 } from '../src/Components/features/entities/entityDefinitions';
-import type { MapShape } from '../src/stores/shapes';
+import type { MapShape } from '../src/types/shapes';
 
 const makeEntityPoint = (id: string, defId = 'target', name = `Target ${id}`): MapShape => ({
   id,

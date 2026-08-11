@@ -235,7 +235,8 @@ export class LeafletDrawingManager {
     if (!layer) return;
 
     this.selectedLayer = layer;
-    this.map.scrollWheelZoom.disable();
+    // Wheel zoom stays on — handles are lat/lng-anchored and reposition fine.
+    // Double-click zoom would fire on rapid vertex-handle clicks, so park it.
     this.map.doubleClickZoom.disable();
 
     if (shape.kind === 'ellipse') {
@@ -254,7 +255,6 @@ export class LeafletDrawingManager {
     this.disarmBackgroundClickDeselect();
     this.ellipseTool.disableEdit();
     this.sectorTool.disableEdit();
-    this.map.scrollWheelZoom.enable();
     this.map.doubleClickZoom.enable();
 
     this.dragCleanup?.();

@@ -13,7 +13,7 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../../stores/StoreContext';
 import { getEntityDef, getParentEntityDef } from './entityDefinitions';
-import { isEntity, type Entity, type MapShape } from '../../../stores/shapes';
+import { isEntity, type Entity, type MapShape } from '../../../types/shapes';
 import EntityIcon from './EntityIcon';
 import * as styles from './styles/entities.styles';
 

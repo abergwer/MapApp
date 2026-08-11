@@ -1,5 +1,5 @@
 import { makeAutoObservable } from 'mobx';
-import { newShapeId, type MapShape } from './shapes';
+import { newShapeId, type MapShape } from '../types/shapes';
 
 // Re-exported so existing consumers can keep importing `MapShape` /
 // `newShapeId` from `DrawingToolStore` without churn. New code should

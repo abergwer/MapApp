@@ -2,7 +2,7 @@ import type { Layer } from '@deck.gl/core';
 import { createDrawnShapeLayers } from '../../mocks/Layers/DrawnShapeLayers';
 import { getEntityDef } from '../features/entities/entityDefinitions';
 import type { RootStore } from '../../stores/RootStore';
-import { isEntity, type MapShape } from '../../stores/shapes';
+import { isEntity, type MapShape } from '../../types/shapes';
 import { palette } from '../layout/styles/tokens';
 
 /**

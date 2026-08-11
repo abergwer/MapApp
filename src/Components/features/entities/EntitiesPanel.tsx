@@ -14,7 +14,7 @@ import DrawIcon from '@mui/icons-material/Draw';
 import { DRAW_TOOLS, toggleDrawEntity, toggleDrawGraphic } from '../../../map/ui/toolDefs';
 import { useStores } from '../../../stores/StoreContext';
 import { ENTITY_DEFINITIONS, getEntityDef, type EntityDefinition } from './entityDefinitions';
-import { isEntity, type MapShape } from '../../../stores/shapes';
+import { isEntity, type MapShape } from '../../../types/shapes';
 import EntityIcon from './EntityIcon';
 import * as common from '../../common/styles/panel.styles';
 import * as styles from './styles/entities.styles';

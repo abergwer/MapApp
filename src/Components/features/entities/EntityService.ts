@@ -1,5 +1,5 @@
 import type { DrawingToolStore } from '../../../stores/DrawingToolStore';
-import type { MapShape } from '../../../stores/shapes';
+import type { MapShape } from '../../../types/shapes';
 
 /**
  * Optional callbacks fired *after* a successful local write.

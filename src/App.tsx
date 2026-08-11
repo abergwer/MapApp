@@ -19,7 +19,7 @@ import TopBar, {
   TopBarBrand,
   TopBarClock,
   type TopBarItem,
-} from './Components/systemUI/map/TopBar'
+} from './Components/layout/TopBar'
 import LayoutManager, { type PanelDef } from './Components/layout/LayoutManager'
 import LeftPanel, { type LeftPanelView } from './Components/layout/LeftPanel'
 import LayersPanel from './Components/systemUI/layers/LayersPanel'

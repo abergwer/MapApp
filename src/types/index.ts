@@ -12,7 +12,7 @@
  */
 
 // ── Domain: editable map entities ──────────────────────────────────────
-export type { MapShape } from '../stores/shapes';
+export type { MapShape } from './shapes';
 
 // ── Domain: live-feed targets ─────────────────────────────────────────
 export type { AirCraftTarget } from '../stores/AirCraftStore';
