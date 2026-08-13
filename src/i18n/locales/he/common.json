@@ -21,7 +21,9 @@
             "circle": "מעגל",
             "ellipse": "אליפסה",
             "sector": "מקטע",
-            "route": "מסלול"
+            "route": "מסלול",
+            "curvedRoute": "מסלול מעוקל",
+            "splineRoute": "מסלול חלק"
         },
         "measure": {
             "measure": "מדידה",

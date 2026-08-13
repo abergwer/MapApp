@@ -21,7 +21,9 @@
       "circle": "Circle",
       "ellipse": "Ellipse",
       "sector": "Sector",
-      "route": "Route"
+      "route": "Route",
+      "curvedRoute": "Curved Route",
+      "splineRoute": "Smooth Route"
     },
     "measure": {
       "measure": "Measure",

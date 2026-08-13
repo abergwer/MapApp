@@ -358,6 +358,8 @@ function shapeToFeature(shape: MapShape): GeoJSON.Feature | null {
 
     case 'line':
     case 'route':
+    case 'curvedRoute':
+    case 'splineRoute':
       return {
         type: 'Feature',
         properties: {},
@@ -446,6 +448,8 @@ function featureToShape(feature: any): MapShape | null {
       return { id, kind, position: feature.geometry.coordinates };
     case 'line':
     case 'route':
+    case 'curvedRoute':
+    case 'splineRoute':
       return { id, kind, positions: feature.geometry.coordinates };
     case 'polygon':
       return { id, kind, positions: feature.geometry.coordinates[0] };
