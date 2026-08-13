@@ -224,9 +224,9 @@ export const dockHeader: SxProps<Theme> = {
   color: 'text.secondary',
 };
 
-/** Panel grid like the reference workspace: 2 columns normally, a single
- *  column when only one panel is docked (the dock also shrinks — see
- *  LayoutManager's effective width). */
+/** Panel grid like the reference workspace: single column with ≤2 docked
+ *  panels (2 panels stack half height each; the dock also shrinks — see
+ *  LayoutManager's effective width), 2 columns for 3+. */
 export const dockGrid = (singleColumn: boolean): SxProps<Theme> => ({
   flex: 1,
   minHeight: 0,
