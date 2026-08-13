@@ -13,6 +13,8 @@ export class LOSStore {
   observer: LOSPoint | null = null;
   target: LOSPoint | null = null;
   status: LOSStatus = 'idle';
+  /** Server/network explanation when `status === 'error'`. */
+  errorMessage: string | null = null;
   visibleGeoJSON: FeatureCollection | null = null;
   shadowGeoJSON: FeatureCollection | null = null;
   /** Elevation samples along the sightline (empty until server sends them). */
@@ -74,6 +76,7 @@ export class LOSStore {
     this.observer = null;
     this.target = null;
     this.status = 'idle';
+    this.errorMessage = null;
     this.visibleGeoJSON = null;
     this.shadowGeoJSON = null;
     this.profile = [];
@@ -95,12 +98,14 @@ export class LOSStore {
         this.shadowGeoJSON = result.shadowGeoJSON;
         this.profile = result.profile ?? [];
         this.status = 'ready';
+        this.errorMessage = null;
       });
     } catch (err) {
       console.error('[LOS] compute failed:', err);
       runInAction(() => {
         if (seq !== this.requestSeq) return;
         this.status = 'error';
+        this.errorMessage = err instanceof Error ? err.message : String(err);
       });
     }
   }

@@ -15,6 +15,8 @@ export class AreaLOSStore {
   /** [lng, lat] ring the user drew around the observer. */
   polygon: [number, number][] | null = null;
   status: LOSStatus = 'idle';
+  /** Server/network explanation when `status === 'error'`. */
+  errorMessage: string | null = null;
   visibleGeoJSON: FeatureCollection | null = null;
   shadowGeoJSON: FeatureCollection | null = null;
 
@@ -79,6 +81,7 @@ export class AreaLOSStore {
     this.observer = null;
     this.polygon = null;
     this.status = 'idle';
+    this.errorMessage = null;
     this.visibleGeoJSON = null;
     this.shadowGeoJSON = null;
   }
@@ -102,12 +105,14 @@ export class AreaLOSStore {
         this.visibleGeoJSON = result.visibleGeoJSON;
         this.shadowGeoJSON = result.shadowGeoJSON;
         this.status = 'ready';
+        this.errorMessage = null;
       });
     } catch (err) {
       console.error('[AreaLOS] compute failed:', err);
       runInAction(() => {
         if (seq !== this.requestSeq) return;
         this.status = 'error';
+        this.errorMessage = err instanceof Error ? err.message : String(err);
       });
     }
   }

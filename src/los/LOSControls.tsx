@@ -43,6 +43,7 @@ function buttonState(
   idleIcon: ReactNode,
   byStatus: Record<LOSStatus, { label: string; tooltip: string }>,
   placingText: { label: string; tooltip: string } | null,
+  errorMessage: string | null = null,
 ): ButtonState {
   const { label, tooltip } = placingText ?? byStatus[status];
   const icon =
@@ -55,7 +56,7 @@ function buttonState(
     );
   return {
     label,
-    tooltip,
+    tooltip: status === 'error' && errorMessage ? `${tooltip}: ${errorMessage}` : tooltip,
     active: placingText !== null || status === 'computing' || status === 'ready',
     icon,
   };
@@ -136,6 +137,7 @@ function LOSControlsImpl() {
           tooltip: t('LOS.lineButton.clickHint'),
         }
       : null,
+    losStore.errorMessage,
   );
 
   const handleLineClick = () => {
@@ -159,6 +161,7 @@ function LOSControlsImpl() {
             tooltip: t('LOS.areaButton.drawHint'),
           }
         : null,
+    areaLOSStore.errorMessage,
   );
 
   const handleAreaClick = () => {

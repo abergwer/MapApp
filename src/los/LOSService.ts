@@ -8,7 +8,11 @@ async function post(url: string, body: unknown): Promise<LOSResponse> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`LOS server error: ${res.status}`);
+  if (!res.ok) {
+    // The server explains rejections as { error: string } — surface that.
+    const detail = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(detail?.error ?? `LOS server error: ${res.status}`);
+  }
   const result = await res.json();
   console.log(`[LOS] ${url} round trip: ${Math.round(performance.now() - started)} ms`);
   return result;
