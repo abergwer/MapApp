@@ -12,7 +12,7 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../../stores/StoreContext';
-import { getEntityDef, getParentEntityDef } from './entityDefinitions';
+import { getEntityDef, getParentEntityDef, type CustomFieldDef } from './entityDefinitions';
 import { isEntity, type Entity, type MapShape } from '../../../types/shapes';
 import EntityIcon from './EntityIcon';
 import * as styles from './styles/entities.styles';
@@ -50,6 +50,48 @@ function NumField({
       onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
       sx={styles.editorField}
       slotProps={{ htmlInput: { inputMode: 'decimal', 'aria-label': label } }}
+    />
+  );
+}
+
+/**
+ * One definition-declared custom field. Validates on blur: an invalid value
+ * stays in the box with an error mark and is NOT saved.
+ */
+function CustomField({
+  field,
+  value,
+  onCommit,
+}: {
+  field: CustomFieldDef;
+  value: string;
+  onCommit: (next: string) => void;
+}) {
+  const [text, setText] = useState(value);
+  const [invalid, setInvalid] = useState(false);
+  useEffect(() => {
+    setText(value);
+    setInvalid(false);
+  }, [value]);
+
+  const commit = () => {
+    const next = text.trim();
+    const ok = next === '' || !field.validator || field.validator(next);
+    setInvalid(!ok);
+    if (ok && next !== value) onCommit(next);
+  };
+
+  return (
+    <TextField
+      label={field.title}
+      size="small"
+      value={text}
+      error={invalid}
+      helperText={invalid ? 'Invalid value' : undefined}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+      slotProps={{ htmlInput: { 'aria-label': field.title } }}
     />
   );
 }
@@ -281,6 +323,19 @@ function EntityEditWindowImpl() {
             ))}
           </TextField>
         )}
+        {def?.customFields?.map((field) => (
+          <CustomField
+            key={`${shape.id}-${field.title}`}
+            field={field}
+            value={shape.customValues?.[field.title] ?? ''}
+            onCommit={(next) =>
+              entityService.update({
+                ...shape,
+                customValues: { ...shape.customValues, [field.title]: next },
+              })
+            }
+          />
+        ))}
 
         <Typography sx={styles.dialogSectionLabel}>Geometry — {shape.kind}</Typography>
         <Box sx={styles.editorGeometry}>{renderGeometry()}</Box>

@@ -9,6 +9,8 @@ interface ShapeBase {
    *  meaningful when this shape's def is a child in the definitions tree;
    *  the parent must be an instance of that child's parent definition. */
   parentId?: string;
+  /** Values of the definition's `customFields`, keyed by field title. */
+  customValues?: Record<string, string>;
 }
 
 /**

@@ -9,6 +9,15 @@ import type { DrawTool } from '../../../stores/DrawingToolStore';
 /** An entity icon: an image URL (data URL / asset) or a MUI icon component. */
 export type EntityIconSource = string | ComponentType<SvgIconProps>;
 
+/** An extra per-instance text field declared by a definition. Shown in the
+ *  edit window as a labelled textbox; values live in `shape.customValues`
+ *  keyed by `title`. */
+export interface CustomFieldDef {
+  title: string;
+  /** Runs on blur; return false to reject the value and show an error. */
+  validator?: (value: string) => boolean;
+}
+
 /**
  * Code-declared entity-definition TREE.
  *
@@ -34,6 +43,8 @@ export interface EntityDefinition {
   iconMask?: boolean;
   /** Graphic presentations this type may be drawn as. */
   geometries: DrawTool[];
+  /** Extra per-instance fields (title + validator) editable in the edit window. */
+  customFields?: CustomFieldDef[];
   /** Sub-entity types nested under this one. */
   children?: EntityDefinition[];
 }
@@ -74,6 +85,9 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     color: '#ffaa00',
     icon: GpsFixedIcon,
     geometries: ['point', 'circle'],
+    customFields: [
+      { title: 'Priority (1-5)', validator: (v) => /^[1-5]$/.test(v) },
+    ],
     children: [
       {
         id: 'radarSite',
