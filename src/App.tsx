@@ -32,6 +32,7 @@ import MiniVideo, { VideoMuteButton } from './Components/features/mini-video/Min
 import { useStores } from './stores/StoreContext'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
 import { LiveDataSocketProvider, liveDataStore, useLiveShapes } from './bridge'
+import { NetworkProvider } from './network'
 import { DEMO_LAYERS } from './mocks/demoLayers'
 import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
 import airCraftIcon from './assets/aircraft.png'
@@ -201,8 +202,10 @@ const ObservedApp = observer(App)
 /** Mounts the bridge's WS connection above the app (server → UI live feed). */
 export default function AppWithLiveData() {
   return (
-    <LiveDataSocketProvider>
-      <ObservedApp />
-    </LiveDataSocketProvider>
+    <NetworkProvider>
+      <LiveDataSocketProvider>
+        <ObservedApp />
+      </LiveDataSocketProvider>
+    </NetworkProvider>
   )
 }

@@ -1,52 +1,35 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type {
-  IncomingMap,
-  OutgoingMap,
+  OutgoingMessage,
   UseWebSocketOptions,
   WebSocketService,
   WebSocketStatus,
 } from './types'
 
 /**
- * Connects to a WebSocket and routes incoming JSON messages to typed handlers
- * by their `name`. Handles auto-connect, reconnect and cleanup for you.
- *
- * Incoming and outgoing messages are declared as two separate maps; both the
- * `incoming` handler payloads and the `send` payloads are then fully typed.
+ * Connects to a WebSocket, keeps it alive (auto-reconnect) and routes each
+ * incoming JSON message to the `incoming` handler matching its `type` field.
  *
  * @example
- * const { send } = useWebSocket({
+ * type Outgoing = { type: 'chat'; text: string } | { type: 'ping' }
+ *
+ * const { send, status } = useWebSocket<Outgoing>({
  *   url: 'wss://example.com/socket',
  *   incoming: {
  *     chat: (msg: { text: string; user: string }) => console.log(msg.user),
  *   },
- *   outgoing: {
- *     chat: message<{ text: string }>(),
- *     typing: message<{ on: boolean }>(),
- *   },
  * })
- * send('chat', { text: 'hi' })
+ * send({ type: 'chat', text: 'hi' })
  */
-export function useWebSocket<
-  TIncoming extends IncomingMap = IncomingMap,
-  TOutgoing extends OutgoingMap = OutgoingMap,
->(
-  options: UseWebSocketOptions<TIncoming, TOutgoing>,
+export function useWebSocket<TOutgoing extends OutgoingMessage = OutgoingMessage>(
+  options: UseWebSocketOptions,
 ): WebSocketService<TOutgoing> {
   const {
     url,
-    incoming,
-    outgoing,
-    protocols,
-    messageKey = 'type',
     autoConnect = true,
     reconnect = true,
     reconnectInterval = 3000,
     maxReconnectAttempts = Infinity,
-    onOpen,
-    onClose,
-    onError,
-    onMessage,
   } = options
 
   const [status, setStatus] = useState<WebSocketStatus>('closed')
@@ -56,15 +39,10 @@ export function useWebSocket<
   const attemptsRef = useRef(0)
   const manualCloseRef = useRef(false)
 
-  // Keep maps/protocols fresh without re-running connect().
-  const incomingRef = useRef(incoming)
-  incomingRef.current = incoming
-  const outgoingRef = useRef(outgoing)
-  outgoingRef.current = outgoing
-  const protocolsRef = useRef(protocols)
-  protocolsRef.current = protocols
-  const callbacksRef = useRef({ onOpen, onClose, onError, onMessage })
-  callbacksRef.current = { onOpen, onClose, onError, onMessage }
+  // The latest options live in a ref so handlers stay fresh without
+  // reconnecting the socket on every render.
+  const optionsRef = useRef(options)
+  optionsRef.current = options
 
   const connect = useCallback(() => {
     const existing = socketRef.current
@@ -78,44 +56,38 @@ export function useWebSocket<
 
     manualCloseRef.current = false
     setStatus('connecting')
-    const ws = new WebSocket(url, protocolsRef.current)
+    const ws = new WebSocket(url, optionsRef.current.protocols)
     socketRef.current = ws
 
     ws.onopen = (event) => {
       attemptsRef.current = 0
       setStatus('open')
-      callbacksRef.current.onOpen?.(event)
+      optionsRef.current.onOpen?.(event)
     }
 
     ws.onmessage = (event) => {
-      // Opt-in: storing every frame in state re-renders the consumer per
-      // message, which is pure overhead on high-frequency streams.
-      //if (trackLastMessage) setLastMessage(event)
-      callbacksRef.current.onMessage?.(event)
+      optionsRef.current.onMessage?.(event)
 
       let data: unknown
       try {
         data = JSON.parse(event.data)
       } catch {
-        return // Non-JSON frames are exposed via onMessage/lastMessage only.
+        return // non-JSON frames only reach onMessage above
       }
       if (data === null || typeof data !== 'object') return
 
-      const record = data as Record<string, unknown>
-      const name = record[messageKey]
-      if (typeof name !== 'string') return
-      const handler = incomingRef.current?.[name]
-      if (handler) {
-        ;(handler as (p: unknown, e: MessageEvent) => void)(record, event)
-      }
+      const type = (data as { type?: unknown }).type
+      if (typeof type !== 'string') return
+      const handler = optionsRef.current.incoming?.[type]
+      if (handler) (handler as (payload: unknown, raw: MessageEvent) => void)(data, event)
     }
 
-    ws.onerror = (event) => callbacksRef.current.onError?.(event)
+    ws.onerror = (event) => optionsRef.current.onError?.(event)
 
     ws.onclose = (event) => {
       socketRef.current = null
       setStatus('closed')
-      callbacksRef.current.onClose?.(event)
+      optionsRef.current.onClose?.(event)
 
       if (
         !manualCloseRef.current &&
@@ -126,7 +98,7 @@ export function useWebSocket<
         reconnectTimerRef.current = setTimeout(connect, reconnectInterval)
       }
     }
-  }, [url, messageKey, reconnect, reconnectInterval, maxReconnectAttempts])
+  }, [url, reconnect, reconnectInterval, maxReconnectAttempts])
 
   const disconnect = useCallback(() => {
     manualCloseRef.current = true
@@ -138,30 +110,12 @@ export function useWebSocket<
     }
   }, [])
 
-  const sendRaw = useCallback<WebSocketService<TOutgoing>['sendRaw']>((data) => {
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(data)
-      return true
-    }
-    return false
+  const send = useCallback((message: TOutgoing): boolean => {
+    const ws = socketRef.current
+    if (ws?.readyState !== WebSocket.OPEN) return false
+    ws.send(JSON.stringify(message))
+    return true
   }, [])
-
-  const send = useCallback<WebSocketService<TOutgoing>['send']>(
-    (name, ...args) => {
-      const declared = outgoingRef.current
-      if (declared && !(name in declared)) {
-        console.warn(
-          `[useWebSocket] "${String(name)}" is not a declared outgoing message.`,
-        )
-        return false
-      }
-      const payload = args[0] as Record<string, unknown> | undefined
-      // Flat wire format, symmetric with incoming routing:
-      // { [messageKey]: name, ...payload }
-      return sendRaw(JSON.stringify({ ...payload, [messageKey]: name }))
-    },
-    [sendRaw, messageKey],
-  )
 
   useEffect(() => {
     if (autoConnect) connect()
@@ -175,7 +129,6 @@ export function useWebSocket<
   return {
     status,
     send,
-    sendRaw,
     connect,
     disconnect,
     getSocket: () => socketRef.current,

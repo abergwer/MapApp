@@ -2,6 +2,7 @@
  * Demo data server for testing the `network` package against the map package.
  *
  * Client -> server: REST (JSON, CORS enabled)
+ *   GET    /api/shapes          -> MapShape[]         one-time hydration read
  *   POST   /api/shapes          -> MapShape           create (SERVER assigns the id; response carries it)
  *   PUT    /api/shapes/:id      -> MapShape           update
  *   DELETE /api/shapes/:id      -> { ok }             remove
@@ -12,10 +13,10 @@
  * Server -> client: WebSocket (ws://localhost:4000/ws)
  *   Sends on connect:
  *     { type: 'definitionSnapshot', definitions: EntityDefinition[] }  entity types
- *     { type: 'shapeSnapshot', shapes: MapShape[] }  editable drawn shapes
  *   Broadcasts:
  *     { type: 'targetUpdate', drones: Target[], aircraft: Target[] }  every TARGET_TICK_MS
  *     { type: 'missileUpdate', missiles: Missile[] }                  every MISSILE_TICK_MS
+ *   Client -> server: { type: 'ping' } -> replies { type: 'pong', time }
  *
  * All coordinates are GeoJSON-compatible [lng, lat].
  */
@@ -29,8 +30,8 @@ const PORT = 4000
 // Simulation config — tweak these to change the demo feed.
 // ---------------------------------------------------------------------------
 
-const NUM_DRONES = 55
-const NUM_AIRCRAFT = 55
+const NUM_DRONES = 5000
+const NUM_AIRCRAFT = 5000
 const NUM_MISSILES = 40
 /** Drones + aircraft move (and are broadcast) at this interval. */
 const TARGET_TICK_MS = 200
@@ -205,6 +206,17 @@ function wireTarget({ id, position, heading, speedKts, altitudeFt }) {
   return { id, position, heading, speedKts, altitudeFt }
 }
 
+/** Static intel details, derived from the id so they are stable per target. */
+function targetDetails(id) {
+  const n = [...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
+  return {
+    id,
+    callsign: `${id.startsWith('drone') ? 'UAV' : 'ACFT'}-${(n % 900) + 100}`,
+    operator: ['Alpha Squadron', 'Bravo Wing', 'Charlie Group'][n % 3],
+    status: ['On patrol', 'Returning to base', 'In transit'][n % 3],
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Missile simulation: each missile is a sliding window over a precomputed
 // straight trajectory; the window advances every MISSILE_TICK_MS and loops.
@@ -287,6 +299,18 @@ const server = createServer(async (req, res) => {
   }
 
   const url = new URL(req.url, `http://${req.headers.host}`)
+
+  const targetMatch = url.pathname.match(/^\/api\/targets\/([^/]+)$/)
+  if (targetMatch && req.method === 'GET') {
+    const id = decodeURIComponent(targetMatch[1])
+    const known = drones.some((t) => t.id === id) || aircraft.some((t) => t.id === id)
+    if (!known) return json(404, { error: `Unknown target ${id}` })
+    return json(200, targetDetails(id))
+  }
+
+  if (url.pathname === '/api/shapes' && req.method === 'GET') {
+    return json(200, shapes)
+  }
 
   if (url.pathname === '/api/shapes' && req.method === 'POST') {
     const body = await readJsonBody(req)
@@ -402,12 +426,21 @@ function broadcast(frame) {
 
 wss.on('connection', (socket) => {
   console.log(`[ws] client connected (${wss.clients.size} total)`)
-  // Definition + shape snapshots + immediate frames so a new client doesn't
-  // wait a tick. Definitions go first: shapes reference them by defId.
+  // Definition snapshot + immediate frames so a new client doesn't wait a
+  // tick. Shapes are read via GET /api/shapes instead.
   socket.send(JSON.stringify({ type: 'definitionSnapshot', definitions }))
-  socket.send(JSON.stringify({ type: 'shapeSnapshot', shapes }))
   socket.send(targetFrame())
   socket.send(missileFrame())
+  // Only client -> server WS message: ping -> pong (for the outgoing-send example).
+  socket.on('message', (raw) => {
+    try {
+      const msg = JSON.parse(raw)
+      if (msg.type === 'ping')
+        socket.send(JSON.stringify({ type: 'pong', time: new Date().toISOString() }))
+    } catch {
+      /* ignore non-JSON frames */
+    }
+  })
   socket.on('close', () =>
     console.log(`[ws] client disconnected (${wss.clients.size} total)`),
   )
@@ -425,9 +458,9 @@ setInterval(() => {
 
 server.listen(PORT, () => {
   console.log(`Demo server listening on http://localhost:${PORT}`)
-  console.log(`  REST: POST /api/shapes | PUT/DELETE /api/shapes/:id`)
+  console.log(`  REST: GET/POST /api/shapes | PUT/DELETE /api/shapes/:id`)
   console.log(
-    `  WS:   ws://localhost:${PORT}/ws (shapeSnapshot on connect | ` +
+    `  WS:   ws://localhost:${PORT}/ws (` +
       `${NUM_DRONES} drones + ${NUM_AIRCRAFT} aircraft every ${TARGET_TICK_MS}ms | ` +
       `${NUM_MISSILES} missiles every ${MISSILE_TICK_MS}ms)`,
   )
