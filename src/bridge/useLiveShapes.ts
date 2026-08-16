@@ -13,9 +13,10 @@ const logError = (err: unknown) =>
  *           to `MapWrapper`'s `shapes` prop. The array reference then stays
  *           stable so the map hydrates exactly once; after that the map is
  *           authoritative.
- * Outbound: each callback fires the matching `liveDataApi` endpoint through
- *           a mutation. No re-hydration on success — the map already holds
- *           the change.
+ * Outbound: the map is draft-until-save — `onShapeSave` fires when the user
+ *           saves (POST for a first save, PUT for a re-save); deletes go
+ *           out immediately. No re-hydration on success — the map already
+ *           holds the change.
  */
 export function useLiveShapes(store: LiveDataStore) {
   // One-time hydration read; the store ignores later refetches.
@@ -30,16 +31,14 @@ export function useLiveShapes(store: LiveDataStore) {
   return {
     /** Server snapshot for `MapWrapper`'s `shapes` prop. */
     shapes: store.shapes,
-    /** Resolves with the shape as stored by the server (it assigns the real
-     *  id) — or undefined on failure, so the map keeps its temp id. */
-    onShapeCreate: (shape: MapShape): Promise<MapShape | undefined> =>
-      create.mutateAsync(shape).catch((err) => {
+    /** First save POSTs (server assigns the real id — resolves with the
+     *  stored shape so the map re-keys), re-saves PUT. Resolves undefined
+     *  on failure so the shape stays a draft. */
+    onShapeSave: (shape: MapShape, isNew: boolean): Promise<MapShape | undefined> =>
+      (isNew ? create : update).mutateAsync(shape).catch((err) => {
         logError(err)
         return undefined
       }),
-    onShapeUpdate: (shape: MapShape) => {
-      update.mutateAsync(shape).catch(logError)
-    },
     // Plain call — no request state needed, so no hook.
     onShapeDelete: (id: string) => {
       liveDataApi.deleteShape(id).catch(logError)

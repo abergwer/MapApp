@@ -8,6 +8,7 @@ import Typography from '@mui/material/Typography';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowRightIcon from '@mui/icons-material/KeyboardArrowRight';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { observer } from 'mobx-react-lite';
 import SectionCard from '../../common/SectionCard';
 import DrawIcon from '@mui/icons-material/Draw';
@@ -121,6 +122,11 @@ function EntitiesPanelImpl() {
             >
               <Typography sx={styles.entityLabel}>{s.name ?? `${label} ${i + 1}`}</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                {drawingToolStore.isUnsaved(s.id) && (
+                  <Tooltip title="Unsaved changes" arrow>
+                    <Box sx={styles.unsavedDot} />
+                  </Tooltip>
+                )}
                 <Typography sx={styles.entityId}>{s.id.slice(0, 8)}</Typography>
                 <Tooltip title="Delete entity" arrow>
                   <IconButton
@@ -181,6 +187,15 @@ function EntitiesPanelImpl() {
         {groups.size === 0 && (
           <Typography sx={styles.emptyText}>No entities yet — add one from the types above</Typography>
         )}
+        <ButtonBase
+          sx={common.accentButton}
+          onClick={() => entityService.saveAll()}
+          disabled={drawingToolStore.unsavedIds.size === 0}
+          aria-label="Save all unsaved entities"
+        >
+          <SaveOutlinedIcon fontSize="small" />
+          Save All{drawingToolStore.unsavedIds.size > 0 ? ` (${drawingToolStore.unsavedIds.size})` : ''}
+        </ButtonBase>
         <ButtonBase
           sx={common.dangerButton}
           onClick={handleClearAll}

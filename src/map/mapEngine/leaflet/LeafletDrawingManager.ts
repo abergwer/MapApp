@@ -170,10 +170,10 @@ export class LeafletDrawingManager {
     // stamp our id/kind tags on it before releasing it to Deck.gl.
     this.ellipseTool.startDraw(({ center, radiusX, radiusY }, layer) => {
       const id = this.tag(layer, 'ellipse');
-      onComplete(id, center, radiusX / KM_TO_M, radiusY / KM_TO_M);
-      // Hand off to Deck.gl: the shape is in the store now, so drop the
-      // engine's native copy to avoid a double-render (see onceCreate).
+      // Drop the native copy before the handoff — the auto-select re-adds
+      // its own editable layer with the same id (see onceCreate).
       layer.remove();
+      queueMicrotask(() => onComplete(id, center, radiusX / KM_TO_M, radiusY / KM_TO_M));
     });
   }
 
@@ -189,10 +189,10 @@ export class LeafletDrawingManager {
     this.cancelDrawing();
     this.sectorTool.startDraw(({ center, radius, startBearing, endBearing }, layer) => {
       const id = this.tag(layer, 'sector');
-      onComplete(id, center, radius / KM_TO_M, startBearing, endBearing);
-      // Hand off to Deck.gl: the shape is in the store now, so drop the
-      // engine's native copy to avoid a double-render (see onceCreate).
+      // Drop the native copy before the handoff — the auto-select re-adds
+      // its own editable layer with the same id (see onceCreate).
       layer.remove();
+      queueMicrotask(() => onComplete(id, center, radius / KM_TO_M, startBearing, endBearing));
     });
   }
 
@@ -381,13 +381,14 @@ export class LeafletDrawingManager {
     const wrapped = (e: { layer: L.Layer }) => {
       const layer = e.layer;
       this.pendingCreate = undefined;
-      handler(layer);
       this.map.off('pm:create', wrapped);
-      // In the deck-render-only model the engine keeps no native copy of a
-      // finished shape — it now lives in the store and is painted by Deck.gl.
-      // Remove Geoman's layer, or the shape is drawn twice and edit/delete
-      // act on a stale duplicate.
+      // Remove Geoman's native copy BEFORE the handoff — the handler's
+      // auto-select re-adds the shape as an editable layer with the same id,
+      // and removing after would act on / strand a stale duplicate. The
+      // detached layer object still serves geometry reads (getLatLng etc.).
       layer.remove();
+      // Defer past Geoman's own draw-mode teardown before entering edit mode.
+      queueMicrotask(() => handler(layer));
     };
     this.pendingCreate = wrapped;
     this.map.on('pm:create', wrapped);

@@ -149,6 +149,24 @@ export const dangerButton: SxProps<Theme> = {
   '&:hover': { bgcolor: `color-mix(in srgb, ${palette.danger} 16%, transparent)` },
 };
 
+/** Full-width accent action (Save buttons) — dangerButton's calm sibling. */
+export const accentButton: SxProps<Theme> = {
+  width: 1,
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 0.75,
+  py: 0.75,
+  borderRadius: 1.5,
+  textTransform: 'none',
+  fontSize: 13,
+  color: palette.accent,
+  bgcolor: `color-mix(in srgb, ${palette.accent} 8%, transparent)`,
+  border: `1px solid color-mix(in srgb, ${palette.accent} 45%, transparent)`,
+  '&:hover': { bgcolor: `color-mix(in srgb, ${palette.accent} 16%, transparent)` },
+  '&.Mui-disabled': { opacity: 0.4 },
+};
+
 /** Label + control row (switch rows, slider rows). */
 export const controlRow: SxProps<Theme> = {
   display: 'flex',

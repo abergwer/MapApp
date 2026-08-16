@@ -77,6 +77,15 @@ export const entityId: SxProps<Theme> = {
   color: 'text.secondary',
 };
 
+/** Small amber dot marking a shape with unsaved changes. */
+export const unsavedDot: SxProps<Theme> = {
+  width: 7,
+  height: 7,
+  borderRadius: '50%',
+  bgcolor: 'warning.main',
+  flexShrink: 0,
+};
+
 export const emptyText: SxProps<Theme> = {
   fontSize: 12,
   color: 'text.disabled',

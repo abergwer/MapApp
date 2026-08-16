@@ -300,16 +300,21 @@ export class MapLibreDrawingManager {
   }
     const wrapped = (e: any) => {
       const feature = e.features[0];
-      handler(feature);
+      // Detach BEFORE the handoff: the handler selects the new shape, and the
+      // resulting beginEdit changeMode can make MapboxDraw fire `draw.create`
+      // again re-entrantly — with the listener still attached the shape would
+      // be created twice in the store.
       this.map.off('draw.create', wrapped);
       this.currentCreateHandler = undefined;
-      // In the deck-render-only model the engine keeps no native copy of a
-      // finished shape — it now lives in the store and is painted by Deck.gl.
-      // Remove MapboxDraw's copy, or the shape is drawn twice (native +
-      // Deck.gl) and dragging it shows an "original" ghost at the pre-drag
-      // position because the store only catches up on `draw.update` (mouseup).
+      // Remove MapboxDraw's native copy BEFORE the handoff too — the handler's
+      // auto-select re-adds the shape as an editable feature (same id), and
+      // the old delete-after order was wiping that fresh feature, leaving the
+      // shape invisible (Deck.gl hides the selected id).
       // `draw.delete(id)` is silent (no round-trip), so no onShapeDeleted fires.
       if (feature?.id != null) this.draw.delete(String(feature.id));
+      // Defer past MapboxDraw's own post-create mode transition so beginEdit's
+      // `direct_select` isn't stomped by the draw mode's teardown.
+      queueMicrotask(() => handler(feature));
     };
       this.currentCreateHandler = wrapped;
     this.map.on('draw.create', wrapped);
@@ -318,7 +323,9 @@ export class MapLibreDrawingManager {
   /** Stamp a freshly-drawn feature with its `shapeKind`. Returns the id. */
   private tag(feature: any, kind: MapShape['kind']): string {
     const id = String(feature.id);
-    this.draw.setFeatureProperty(id, KIND_PROP, kind);
+    // The drawn feature may already be deleted (onceCreate drops the native
+    // copy before the handoff); setFeatureProperty on a missing id throws.
+    if (this.draw.get(id)) this.draw.setFeatureProperty(id, KIND_PROP, kind);
     return id;
   }
 }

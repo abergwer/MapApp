@@ -2,17 +2,21 @@ import type { DrawingToolStore } from '../../../stores/DrawingToolStore';
 import type { MapShape } from '../../../types/shapes';
 
 /**
- * Optional callbacks fired *after* a successful local write.
+ * Optional callbacks that connect the map to a host backend.
  *
  * External consumers (e.g. a host app that owns the "real" collection on a
- * server) subscribe here so they get told about every create / edit / delete
- * that happens on the map — without ever touching the internal store.
+ * server) subscribe here. Writes are draft-until-save: nothing is sent
+ * automatically — `onSave` fires only when the user saves (editor save
+ * button / panel Save All). `onDelete` fires when a server-known shape is
+ * removed. The hooks never write back into the internal store.
  */
 export interface EntityHooks {
-  /** May return (a promise of) the authoritative shape — e.g. carrying a
-   *  server-assigned id. The service then re-keys the local shape to it. */
-  onCreate?: (shape: MapShape) => void | Promise<MapShape | undefined>;
-  onUpdate?: (shape: MapShape) => void;
+  /** Persist one entity. `isNew` distinguishes first save (e.g. POST) from
+   *  re-save of a changed entity (e.g. PUT). May return (a promise of) the
+   *  authoritative shape — e.g. carrying a server-assigned id — and the
+   *  service re-keys the local shape to it. Resolving `undefined` marks the
+   *  save as failed (the shape stays a draft). */
+  onSave?: (shape: MapShape, isNew: boolean) => void | Promise<MapShape | undefined>;
   onDelete?: (id: string) => void;
 }
 
@@ -26,17 +30,19 @@ export interface EntityHooks {
  *  - the user pressing Delete on a selected shape (engine round-trip → `remove`)
  *
  * `DrawingToolStore` stays the single source of truth; this service is the
- * single *mutator* of it. After each successful write we fire the matching
- * `hooks.*` callback so external code (registered via `setHooks(...)`) can
- * mirror the change into its own state / send it to a server / log it — the
- * hooks are strictly outbound notifications, they never write back.
+ * single *mutator* of it. Creates and edits stay LOCAL (marked unsaved in
+ * the store) until `save`/`saveAll` pushes them through `hooks.onSave`.
  */
 export class EntityService {
   private readonly store: DrawingToolStore;
   private hooks: EntityHooks;
-  /** Temp id → resolves to the authoritative id once the create is acked.
-   *  Outbound updates/deletes for a still-pending shape wait on this so
-   *  they never hit the host with an id it doesn't know yet. */
+  /** Ids the server already knows (hydrated or successfully saved).
+   *  Decides save() POST-vs-PUT (`isNew`) and whether remove() must
+   *  notify the host at all. */
+  private savedIds = new Set<string>();
+  /** Temp id → resolves to the authoritative id once a first save is acked.
+   *  Outbound deletes for a still-pending shape wait on this so they never
+   *  hit the host with an id it doesn't know yet. */
   private pendingIds = new Map<string, Promise<string>>();
 
   constructor(store: DrawingToolStore, hooks: EntityHooks = {}) {
@@ -49,34 +55,22 @@ export class EntityService {
     this.hooks = hooks;
   }
 
-  /** Persist a freshly drawn entity. Completing a draw disarms the one-shot
-   *  tool so UI buttons don't stay lit after the shape lands. The shape is
-   *  recorded optimistically under its temp id; if the create ack returns a
-   *  different (server-assigned) id, the local shape is re-keyed to it. */
+  /** Record a freshly drawn entity as a local DRAFT (no network) and select
+   *  it so the editor window opens. Completing a draw disarms the one-shot
+   *  tool so UI buttons don't stay lit after the shape lands. */
   create(shape: MapShape): void {
+    // Engines can mis-fire a create twice (re-entrant draw events); a second
+    // copy with the same id corrupts every id-keyed lookup downstream.
+    if (this.get(shape.id)) return;
     this.store.commit();
     this.store.recordShape(shape);
     this.store.setActiveDrawTool(null);
-    const ack = this.hooks.onCreate?.(shape);
-    if (!(ack instanceof Promise)) return;
-    const tempId = shape.id;
-    const settled = ack
-      .then((saved) => {
-        if (saved && saved.id !== tempId) {
-          this.store.replaceShapeId(tempId, saved.id);
-          return saved.id;
-        }
-        return tempId;
-      })
-      .catch((err) => {
-        console.error('[entities] create ack failed; keeping temp id', err);
-        return tempId;
-      })
-      .finally(() => this.pendingIds.delete(tempId));
-    this.pendingIds.set(tempId, settled);
+    this.store.markUnsaved(shape.id);
+    this.store.setSelectedId(shape.id);
   }
 
-  /** Persist an edit to an existing entity (vertex drag, resize, rotate…). */
+  /** Apply an edit locally (vertex drag, resize, field change…) and mark
+   *  the shape dirty — it goes to the server on the next save. */
   update(shape: MapShape): void {
     this.store.commit();
     // Engine edit round-trips rebuild the shape from geometry only — merge
@@ -84,13 +78,52 @@ export class EntityService {
     const prev = this.get(shape.id);
     const merged = prev ? ({ ...prev, ...shape } as MapShape) : shape;
     this.store.updateShape(merged);
-    const pending = this.pendingIds.get(merged.id);
-    if (pending) void pending.then((id) => this.hooks.onUpdate?.({ ...merged, id }));
-    else this.hooks.onUpdate?.(merged);
+    this.store.markUnsaved(merged.id);
+  }
+
+  /** Push one unsaved shape to the host. First save may return a
+   *  server-assigned id — the local shape is re-keyed to it. On failure the
+   *  shape stays marked unsaved. No-op if the shape is clean or mid-save. */
+  save(id: string): void {
+    const shape = this.get(id);
+    if (!shape || !this.store.isUnsaved(id) || this.pendingIds.has(id)) return;
+    const isNew = !this.savedIds.has(id);
+    // Optimistic: cleared now so the UI disarms; failure re-marks below.
+    this.store.markSaved(id);
+    const ack = this.hooks.onSave?.(shape, isNew);
+    if (!(ack instanceof Promise)) {
+      this.savedIds.add(id);
+      return;
+    }
+    const tempId = id;
+    const settled = ack
+      .then((saved) => {
+        if (!saved) {
+          this.store.markUnsaved(tempId);
+          return tempId;
+        }
+        if (saved.id !== tempId) this.store.replaceShapeId(tempId, saved.id);
+        this.savedIds.add(saved.id);
+        return saved.id;
+      })
+      .catch((err) => {
+        console.error('[entities] save failed; keeping draft', err);
+        this.store.markUnsaved(tempId);
+        return tempId;
+      })
+      .finally(() => this.pendingIds.delete(tempId));
+    this.pendingIds.set(tempId, settled);
+  }
+
+  /** Save every unsaved shape (new → first save, dirty → re-save). */
+  saveAll(): void {
+    for (const id of [...this.store.unsavedIds]) this.save(id);
   }
 
   /** Delete an entity by id. Clears the selection first so the engine
-   *  releases the editable feature before it disappears from the store. */
+   *  releases the editable feature before it disappears from the store.
+   *  Never-saved drafts are removed locally only; server-known shapes also
+   *  notify the host. */
   remove(id: string): void {
     this.store.commit();
     if (this.store.selectedId === id) this.store.setSelectedId(null);
@@ -99,14 +132,19 @@ export class EntityService {
     // history snapshot, so one undo restores both parent and links).
     for (const s of this.store.completedShapes.slice()) {
       if (s.parentId === id) {
-        const detached = { ...s, parentId: undefined };
-        this.store.updateShape(detached);
-        this.hooks.onUpdate?.(detached);
+        this.store.updateShape({ ...s, parentId: undefined });
+        this.store.markUnsaved(s.id);
       }
     }
     const pending = this.pendingIds.get(id);
-    if (pending) void pending.then((finalId) => this.hooks.onDelete?.(finalId));
-    else this.hooks.onDelete?.(id);
+    if (pending) {
+      // A first save is in flight — delete on the server only if it lands.
+      void pending.then((finalId) => {
+        if (this.savedIds.delete(finalId)) this.hooks.onDelete?.(finalId);
+      });
+    } else if (this.savedIds.delete(id)) {
+      this.hooks.onDelete?.(id);
+    }
   }
 
   /** Look up a single entity by id, or `undefined` if it isn't present. */
@@ -121,8 +159,9 @@ export class EntityService {
   // local user timeline).
 
   /** Replace the entire shape set. Used for the startup server payload
-   *  or a bulk resync. */
+   *  or a bulk resync. Everything hydrated is server-known, i.e. saved. */
   hydrate(shapes: MapShape[]): void {
     this.store.setShapes(shapes);
+    this.savedIds = new Set(shapes.map((s) => s.id));
   }
 }

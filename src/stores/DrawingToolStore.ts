@@ -38,6 +38,10 @@ export class DrawingToolStore {
   selectedId: string | null = null;
   completedShapes: MapShape[] = [];
   measurements: Measurement[] = [];
+  /** Ids with local changes the server hasn't been sent yet (drafts and
+   *  dirty edits). Marked by EntityService; cleared on save. Deliberately
+   *  NOT part of undo/redo snapshots. */
+  unsavedIds = new Set<string>();
 
   /**
    * Undo/redo as whole-array snapshots. Shapes are treated as immutable
@@ -69,6 +73,18 @@ export class DrawingToolStore {
 
   setSelectedId(id: string | null) {
     this.selectedId = id;
+  }
+
+  markUnsaved(id: string) {
+    this.unsavedIds.add(id);
+  }
+
+  markSaved(id: string) {
+    this.unsavedIds.delete(id);
+  }
+
+  isUnsaved(id: string): boolean {
+    return this.unsavedIds.has(id);
   }
 
   /** The shape currently selected for editing, if any. */
@@ -119,6 +135,7 @@ export class DrawingToolStore {
     const idx = this.completedShapes.findIndex((s) => s.id === id);
     if (idx === -1) return;
     this.completedShapes.splice(idx, 1);
+    this.unsavedIds.delete(id);
   }
 
   /** Re-key a shape after the host assigns its authoritative id (e.g. a
@@ -136,10 +153,12 @@ export class DrawingToolStore {
     this.past = this.past.map(swap);
     this.future = this.future.map(swap);
     if (this.selectedId === oldId) this.selectedId = newId;
+    if (this.unsavedIds.delete(oldId)) this.unsavedIds.add(newId);
   }
 
   clearShapes() {
     this.completedShapes = [];
+    this.unsavedIds.clear();
   }
 
     /**
@@ -153,6 +172,7 @@ export class DrawingToolStore {
     this.selectedId = null;
     this.past = [];
     this.future = [];
+    this.unsavedIds.clear();
   }
 
   recordMeasurement(measurement: Omit<Measurement, 'timestamp'>) {

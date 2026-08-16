@@ -69,9 +69,9 @@ function App() {
     return () => disposers.forEach((dispose) => dispose())
   }, [stores])
 
-  // Drawn shapes: hydrated once from the server's WS snapshot; user edits
-  // are pushed back over REST. (Entity types are code-declared — see
-  // Components/features/entities/entityDefinitions.ts — so nothing to sync for them.)
+  // Drawn shapes: hydrated once from the server; user drawings/edits stay
+  // local drafts until saved (editor save button / Entities panel Save All),
+  // then go to the server over REST (see src/bridge/useLiveShapes.ts).
   const liveShapes = useLiveShapes(liveDataStore)
 
   // The top bar renders whatever the host declares — swap/extend freely.
@@ -179,8 +179,7 @@ function App() {
       */}
       <MapWrapper
         shapes={liveShapes.shapes}
-        onShapeCreate={liveShapes.onShapeCreate}
-        onShapeUpdate={liveShapes.onShapeUpdate}
+        onShapeSave={liveShapes.onShapeSave}
         onShapeDelete={liveShapes.onShapeDelete}
       >
         {/*

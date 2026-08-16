@@ -51,21 +51,19 @@ interface MapWrapperProps {
    * when the server actually sent one.
    */
   shapes?: MapShape[];
-  /** Notified after a new shape is drawn by the user. May return (a promise
-   *  of) the authoritative shape — e.g. with a server-assigned id — and the
-   *  map re-keys the local shape to it. */
-  onShapeCreate?: (shape: MapShape) => void | Promise<MapShape | undefined>;
-  /** Notified after an existing shape is edited (drag/resize/rotate). */
-  onShapeUpdate?: (shape: MapShape) => void;
-  /** Notified after a shape is deleted. */
+  /** Called when the user saves an entity (editor save button / Save All).
+   *  `isNew` is true for a first save. May return (a promise of) the
+   *  authoritative shape — e.g. with a server-assigned id — and the map
+   *  re-keys the local shape to it; resolving undefined keeps it a draft. */
+  onShapeSave?: (shape: MapShape, isNew: boolean) => void | Promise<MapShape | undefined>;
+  /** Notified after a server-known shape is deleted. */
   onShapeDelete?: (id: string) => void;
 }
 
 function MapWrapperImpl({
   children,
   shapes,
-  onShapeCreate,
-  onShapeUpdate,
+  onShapeSave,
   onShapeDelete,
 }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -90,19 +88,17 @@ function MapWrapperImpl({
     };
   }, [brightness]);
 
-  // Register outbound notification callbacks. `EntityService` fires these
-  // *after* every successful create / update / delete so the host app can
-  // mirror the change (persist, log, sync to a server, …) without touching
-  // the internal store. Hooks are strictly outbound — nothing here writes
-  // back into the map.
+  // Register the host's persistence callbacks. Writes are draft-until-save:
+  // `EntityService` fires `onSave` only when the user saves, `onDelete` when
+  // a server-known shape is removed. Hooks are strictly outbound — nothing
+  // here writes back into the map.
   useEffect(() => {
     entityService.setHooks({
-      onCreate: onShapeCreate,
-      onUpdate: onShapeUpdate,
+      onSave: onShapeSave,
       onDelete: onShapeDelete,
     });
     return () => entityService.setHooks({});
-  }, [entityService, onShapeCreate, onShapeUpdate, onShapeDelete]);
+  }, [entityService, onShapeSave, onShapeDelete]);
 
   // Hydrate from the host-provided shape array. Uses the silent inbound
   // path so it doesn't fire `onShape*` back at the host. Re-runs whenever

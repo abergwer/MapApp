@@ -10,6 +10,7 @@ import AddIcon from '@mui/icons-material/Add';
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import RemoveIcon from '@mui/icons-material/Remove';
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../../stores/StoreContext';
 import { getEntityDef, getParentEntityDef, type CustomFieldDef } from './entityDefinitions';
@@ -259,6 +260,19 @@ function EntityEditWindowImpl() {
           {shape.name ?? def?.name ?? shape.kind.toUpperCase()}
         </Typography>
         <Typography sx={styles.entityId}>{shape.id.slice(0, 8)}</Typography>
+        <Tooltip title={drawingToolStore.isUnsaved(shape.id) ? 'Save entity' : 'Saved'} arrow>
+          <span>
+            <IconButton
+              size="small"
+              disabled={!drawingToolStore.isUnsaved(shape.id)}
+              onClick={() => entityService.save(shape.id)}
+              aria-label="Save entity"
+              sx={{ p: 0.25 }}
+            >
+              <SaveOutlinedIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </span>
+        </Tooltip>
         <Tooltip title="Delete entity" arrow>
           <IconButton
             size="small"
