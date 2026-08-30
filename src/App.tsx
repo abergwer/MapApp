@@ -60,6 +60,7 @@ function App() {
       >
         <LayerManager buildLayers={buildLayers} />
       </MapWrapper>
+      <MessageDialog />
     </Box>
   )
 }
