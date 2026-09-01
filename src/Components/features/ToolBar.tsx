@@ -17,11 +17,14 @@ import PieChartOutlinedIcon from '@mui/icons-material/PieChartOutlined';
 import RouteIcon from '@mui/icons-material/Route';
 import RoundedCornerIcon from '@mui/icons-material/RoundedCorner';
 import GestureIcon from '@mui/icons-material/Gesture';
+import TurnSlightRightIcon from '@mui/icons-material/TurnSlightRight';
 import CloseIcon from '@mui/icons-material/Close';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
-import type { DrawTool } from '../../stores/DrawingToolStore';
+import type { DrawTool, MapShape } from '../../stores/DrawingToolStore';
 import type { EntityService } from '../../stores/EntityService';
+import { DrawingToolStore} from '../../stores/DrawingToolStore';
+
 
 const DRAW_TOOLS: { id: DrawTool; Icon: typeof FiberManualRecordIcon; enabled: boolean }[] = [
   { id: 'point', Icon: FiberManualRecordIcon, enabled: true },
@@ -33,6 +36,7 @@ const DRAW_TOOLS: { id: DrawTool; Icon: typeof FiberManualRecordIcon; enabled: b
   { id: 'route', Icon: RouteIcon, enabled: true },
   { id: 'curvedRoute', Icon: RoundedCornerIcon, enabled: true },
   { id: 'splineRoute', Icon: GestureIcon, enabled: true },
+  { id: 'exitCurveRoute', Icon: TurnSlightRightIcon, enabled: true },
 ];
 
 /**
@@ -40,49 +44,60 @@ const DRAW_TOOLS: { id: DrawTool; Icon: typeof FiberManualRecordIcon; enabled: b
  * are created through the single CRUD writer (and, in future, persisted to
  * the server) instead of being dropped to console.log.
  */
-function startDraw(engine: MapEngine, tool: DrawTool, entities: EntityService) {
+function startDraw(engine: MapEngine, tool: DrawTool, entities: EntityService, drawingToolStore: DrawingToolStore) {
+  const done = (shape: MapShape) => {
+    entities.create(shape);
+    drawingToolStore.setActiveDrawTool(null);
+  };
   switch (tool) {
     case 'point':
       return engine.startDrawPoint((id, position) =>
-        entities.create({ id, kind: 'point', position }),
+        done({ id, kind: 'point', position })
       );
     case 'line':
       return engine.startDrawLine((id, positions) =>
-        entities.create({ id, kind: 'line', positions }),
+        done({ id, kind: 'line', positions }),
       );
     case 'polygon':
       return engine.startDrawPolygon((id, positions) =>
-        entities.create({ id, kind: 'polygon', positions }),
+        done({ id, kind: 'polygon', positions }),
       );
     case 'circle':
       return engine.startDrawCircle((id, center, radius) =>
-        entities.create({ id, kind: 'circle', center, radius }),
+        done({ id, kind: 'circle', center, radius }),
       );
     case 'ellipse':
       return engine.startDrawEllipse?.((id, center, radiusX, radiusY) =>
-        entities.create({ id, kind: 'ellipse', center, radiusX, radiusY }),
+        done({ id, kind: 'ellipse', center, radiusX, radiusY }),
       );
     case 'sector':
       return engine.startDrawSector?.((id, center, radius, startBearing, endBearing) =>
-        entities.create({ id, kind: 'sector', center, radius, startBearing, endBearing }),
+        done({ id, kind: 'sector', center, radius, startBearing, endBearing }),
       );
     case 'route':
       return engine.startDrawRoute?.((id, positions) =>
-        entities.create({ id, kind: 'route', positions }),
+        done({ id, kind: 'route', positions }),
       );
     case 'curvedRoute':
       // Draw straight waypoints and store them as-is. The rounded curve is
       // generated at render time, so editing shows only the waypoints (like
       // ellipse handles) instead of every sampled curve point.
       return engine.startDrawLine((id, positions) =>
-        entities.create({ id, kind: 'curvedRoute', positions }),
+        done({ id, kind: 'curvedRoute', positions }),
       );
     case 'splineRoute':
       // Like curvedRoute, but the rendered spline passes *through* each
       // waypoint (curving on the approach) instead of cutting the corner.
       // Waypoints are stored as-is; the curve is generated at render time.
       return engine.startDrawLine((id, positions) =>
-        entities.create({ id, kind: 'splineRoute', positions }),
+        done({ id, kind: 'splineRoute', positions }),
+      );
+    case 'exitCurveRoute':
+      // Straight into each waypoint, then curve *after* it until aligned with
+      // the next leg. Waypoints are stored as-is; the curve is generated at
+      // render time.
+      return engine.startDrawLine((id, positions) =>
+        done({ id, kind: 'exitCurveRoute', positions }),
       );
   }
 }
@@ -102,7 +117,7 @@ function ToolBarImpl() {
   const handleSelect = (tool: DrawTool) => {
     if (!engine) return;
     drawingToolStore.setActiveDrawTool(tool);
-    startDraw(engine, tool, entityService);
+    startDraw(engine, tool, entityService, drawingToolStore);
     closeMenu();
   };
 

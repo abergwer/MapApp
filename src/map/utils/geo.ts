@@ -88,6 +88,23 @@ function lerpLngLat(a: LngLat, b: LngLat, fraction: number): LngLat {
 }
 
 /**
+ * Planar unit direction from `a` to `b` in degree space, plus the raw length.
+ * Returns `null` when the two points coincide (no meaningful direction). Kept
+ * planar (not great-circle) because it is only used for short local curve
+ * shaping where the difference is negligible.
+ */
+function unitDirection(
+  a: LngLat,
+  b: LngLat,
+): { x: number; y: number; length: number } | null {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const length = Math.hypot(dx, dy);
+  if (length <= 1e-12) return null;
+  return { x: dx / length, y: dy / length, length };
+}
+
+/**
  * Point at parameter `t` (0..1) on the quadratic Bézier curve that starts at
  * `start`, is pulled toward `control`, and ends at `end`.
  */
@@ -99,6 +116,22 @@ function quadBezier(start: LngLat, control: LngLat, end: LngLat, t: number): Lng
   return [
     startWeight * start[0] + controlWeight * control[0] + endWeight * end[0],
     startWeight * start[1] + controlWeight * control[1] + endWeight * end[1],
+  ];
+}
+
+/**
+ * Point at parameter `t` (0..1) on the cubic Bézier curve with endpoints
+ * `start`/`end` and control points `c1`/`c2`.
+ */
+function cubicBezier(start: LngLat, c1: LngLat, c2: LngLat, end: LngLat, t: number): LngLat {
+  const inv = 1 - t;
+  const w0 = inv * inv * inv; //     (1 - t)^3
+  const w1 = 3 * inv * inv * t; //   3(1 - t)^2 t
+  const w2 = 3 * inv * t * t; //     3(1 - t) t^2
+  const w3 = t * t * t; //           t^3
+  return [
+    w0 * start[0] + w1 * c1[0] + w2 * c2[0] + w3 * end[0],
+    w0 * start[1] + w1 * c1[1] + w2 * c2[1] + w3 * end[1],
   ];
 }
 
@@ -239,6 +272,82 @@ export function splineThroughPath(
           endWeight * segEnd[1] +
           endTangentWeight * endTangent[1],
       ]);
+    }
+  }
+  return curve;
+}
+
+/**
+ * Route that stays perfectly straight *into* every waypoint, then curves only
+ * *after* it. The curve starts at the waypoint continuing the arrival heading
+ * (so there is no kink on the way in), then eases until it lines up with the
+ * leg toward the next waypoint, from where the path runs straight again. The
+ * incoming leg is never curved and every waypoint is hit exactly.
+ *
+ * `fraction` is how far along the outgoing leg the curve takes to straighten
+ * out (0 = no curve, 1 = the whole leg). `steps` is samples per curve. Lines
+ * with fewer than 3 points are returned unchanged.
+ */
+export function exitCurvePath(
+  positions: LngLat[],
+  opts?: { fraction?: number; steps?: number },
+): LngLat[] {
+  const fraction = Math.min(1, Math.max(0, opts?.fraction ?? 0.3));
+  const steps = Math.max(2, opts?.steps ?? 16);
+  const lastIndex = positions.length - 1;
+  if (positions.length < 3 || fraction === 0) return positions.slice();
+
+  // The first waypoint is never moved.
+  const curve: LngLat[] = [positions[0]];
+
+  for (let i = 1; i <= lastIndex; i++) {
+    const corner = positions[i];
+
+    // The final waypoint has no next leg to curve toward: arrive straight.
+    if (i === lastIndex) {
+      curve.push(corner);
+      continue;
+    }
+
+    const prev = positions[i - 1];
+    const next = positions[i + 1];
+
+    // Unit headings of the two legs meeting at this corner.
+    const arrival = unitDirection(prev, corner); //   coming into the corner
+    const departure = unitDirection(corner, next); // leaving the corner
+
+    // A zero-length leg has no heading: keep the sharp corner unchanged.
+    if (arrival === null || departure === null) {
+      curve.push(corner);
+      continue;
+    }
+
+    // Where the curve rejoins the outgoing leg: `fraction` of the way to the
+    // next waypoint. A larger fraction meets the next line deeper and widens
+    // the turn instead of bulging further out.
+    const curveEnd = lerpLngLat(corner, next, fraction);
+
+    // Bézier handle length. Half the exit distance keeps the arc gentle so the
+    // curve does not arc higher as the turn is widened.
+    const handleLen = 0.5 * fraction * departure.length;
+
+    // Cubic Bézier from `corner` to `curveEnd`:
+    //  • the entry handle continues the arrival heading, so the curve leaves
+    //    the corner exactly straight (no kink on the way in);
+    //  • the exit handle sits back along the outgoing heading, so the curve
+    //    eases onto the next leg tangentially instead of pinching.
+    const entryHandle: LngLat = [
+      corner[0] + handleLen * arrival.x,
+      corner[1] + handleLen * arrival.y,
+    ];
+    const exitHandle: LngLat = [
+      curveEnd[0] - handleLen * departure.x,
+      curveEnd[1] - handleLen * departure.y,
+    ];
+
+    curve.push(corner);
+    for (let s = 1; s <= steps; s++) {
+      curve.push(cubicBezier(corner, entryHandle, exitHandle, curveEnd, s / steps));
     }
   }
   return curve;

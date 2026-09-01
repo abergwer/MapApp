@@ -23,7 +23,8 @@
       "sector": "Sector",
       "route": "Route",
       "curvedRoute": "Curved Route",
-      "splineRoute": "Smooth Route"
+      "splineRoute": "Smooth Route",
+      "exitCurveRoute": "Exit Curve Route"
     },
     "measure": {
       "measure": "Measure",

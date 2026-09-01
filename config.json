@@ -10,5 +10,6 @@
   },
   "VideoSignalingURL": "http://localhost:3000",
   "RouteCurveRadiusFraction": 0.25,
-  "SmoothRouteCurviness": 1.5
+  "SmoothRouteCurviness": 1.5,
+  "RouteExitCurveFraction": 0.7
 }

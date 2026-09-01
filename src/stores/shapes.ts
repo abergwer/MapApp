@@ -26,7 +26,8 @@ export type MapShape =
     }
   | { id: string; kind: 'route'; positions: [number, number][] }
   | { id: string; kind: 'curvedRoute'; positions: [number, number][] }
-  | { id: string; kind: 'splineRoute'; positions: [number, number][] };
+  | { id: string; kind: 'splineRoute'; positions: [number, number][] }
+  | { id: string; kind: 'exitCurveRoute'; positions: [number, number][] };
 
 /** Generate a unique id for a shape. Uses native UUID if available. */
 export const newShapeId = (): string =>
