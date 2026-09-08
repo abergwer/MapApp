@@ -1,0 +1,19 @@
+%% 11 - Engine creation flow (high level)
+%%{init: {"flowchart": {"wrappingWidth": 620}}}%%
+flowchart TD
+    APP[App] --> MW[MapWrapper]
+    MW -->|createMapEngine - dynamic import| EF[EngineFactory]
+    EF --> ENG[MapEngine<br/>MapLibre / Leaflet / Cesium]
+    MW -->|initialize container| ENG
+    MW -->|setEngine + setViewState| MES[MapEngineStore]
+    ENG -->|onViewChange| MES
+    MES -->|engine ready| LM[LayerManager]
+    LM -->|new Deck + reactions| DECK[Deck.gl overlay]
+    STORES[MobX stores] -->|buildLayers| DECK
+    MES -->|viewState sync| DECK
+
+    DESC["MapWrapper mounts and asks EngineFactory for the configured engine, loaded via dynamic import so heavy engines stay out of the main bundle.<br/>The engine is initialized into the map container and published on MapEngineStore together with its view state.<br/>LayerManager wakes up when the engine appears, creates a Deck.gl canvas overlay, and keeps it in sync via two MobX reactions:<br/>store changes rebuild the layers and engine pan/zoom updates the viewport - with zero React re-renders."]
+
+    DECK ~~~ DESC
+    classDef caption fill:none,stroke:none,font-size:13px,text-align:left,color:#444
+    class DESC caption
