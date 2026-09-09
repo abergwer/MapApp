@@ -26,7 +26,6 @@ export type MapShape =
     }
   | { id: string; kind: 'route'; positions: [number, number][] }
   | { id: string; kind: 'curvedRoute'; positions: [number, number][] }
-  | { id: string; kind: 'splineRoute'; positions: [number, number][] }
   | { id: string; kind: 'exitCurveRoute'; positions: [number, number][] }
   | { id: string; kind: 'entryCurveRoute'; positions: [number, number][] };
 

@@ -16,7 +16,6 @@ import PanoramaFishEyeIcon from '@mui/icons-material/PanoramaFishEye';
 import PieChartOutlinedIcon from '@mui/icons-material/PieChartOutlined';
 import RouteIcon from '@mui/icons-material/Route';
 import RoundedCornerIcon from '@mui/icons-material/RoundedCorner';
-import GestureIcon from '@mui/icons-material/Gesture';
 import TurnSlightRightIcon from '@mui/icons-material/TurnSlightRight';
 import TurnSlightLeftIcon from '@mui/icons-material/TurnSlightLeft';
 import CloseIcon from '@mui/icons-material/Close';
@@ -36,7 +35,6 @@ const DRAW_TOOLS: { id: DrawTool; Icon: typeof FiberManualRecordIcon; enabled: b
   { id: 'sector', Icon: PieChartOutlinedIcon, enabled: true },
   { id: 'route', Icon: RouteIcon, enabled: true },
   { id: 'curvedRoute', Icon: RoundedCornerIcon, enabled: true },
-  { id: 'splineRoute', Icon: GestureIcon, enabled: true },
   { id: 'exitCurveRoute', Icon: TurnSlightRightIcon, enabled: true },
   { id: 'entryCurveRoute', Icon: TurnSlightLeftIcon, enabled: true },
 ];
@@ -86,13 +84,6 @@ function startDraw(engine: MapEngine, tool: DrawTool, entities: EntityService, d
       // ellipse handles) instead of every sampled curve point.
       return engine.startDrawLine((id, positions) =>
         done({ id, kind: 'curvedRoute', positions }),
-      );
-    case 'splineRoute':
-      // Like curvedRoute, but the rendered spline passes *through* each
-      // waypoint (curving on the approach) instead of cutting the corner.
-      // Waypoints are stored as-is; the curve is generated at render time.
-      return engine.startDrawLine((id, positions) =>
-        done({ id, kind: 'splineRoute', positions }),
       );
     case 'exitCurveRoute':
       // Straight into each waypoint, then curve *after* it until aligned with

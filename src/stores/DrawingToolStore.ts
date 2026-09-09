@@ -16,7 +16,6 @@ export type DrawTool =
   | 'sector'
   | 'route'
   | 'curvedRoute'
-  | 'splineRoute'
   | 'exitCurveRoute'
   | 'entryCurveRoute';
 

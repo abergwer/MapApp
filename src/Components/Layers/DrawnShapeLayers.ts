@@ -1,7 +1,7 @@
 import { IconLayer, PathLayer, PolygonLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import type { MapShape } from '../../stores/DrawingToolStore';
-import { ellipseRing, sectorRing, roundedCornerPath, splineThroughPath, exitCurvePath, entryCurvePath } from '../../map/utils/geo';
+import { ellipseRing, sectorRing, roundedCornerPath, exitCurvePath, entryCurvePath } from '../../map/utils/geo';
 import config from '../../../config.json';
 
 /**
@@ -15,20 +15,6 @@ const CURVE_RADIUS_FRACTION = (() => {
   return typeof raw === 'number' && Number.isFinite(raw)
     ? Math.min(0.5, Math.max(0, raw))
     : 0.25;
-})();
-
-/**
- * How pronounced the Smooth Route curve is. Multiplies the standard
- * Catmull-Rom tangent (so 1 = standard, 0 = straight, >1 = rounder / more
- * visible bends). Configurable via `SmoothRouteCurviness` in config.json;
- * clamped to a safe range with a sensible fallback.
- */
-const SMOOTH_ROUTE_TENSION = (() => {
-  const raw = (config as { SmoothRouteCurviness?: number }).SmoothRouteCurviness;
-  const curviness =
-    typeof raw === 'number' && Number.isFinite(raw) ? Math.min(3, Math.max(0, raw)) : 1.5;
-  // Standard Catmull-Rom tangent scale is 0.5; `curviness` scales it.
-  return 0.5 * curviness;
 })();
 
 /**
@@ -83,7 +69,7 @@ export function createDrawnShapeLayers(
   selectedId: string | null,
 ): Layer[] {
   const points: Extract<MapShape, { kind: 'point' }>[] = [];
-  const lines: Extract<MapShape, { kind: 'line' | 'route' | 'curvedRoute' | 'splineRoute' | 'exitCurveRoute' | 'entryCurveRoute' }>[] = [];
+  const lines: Extract<MapShape, { kind: 'line' | 'route' | 'curvedRoute' | 'exitCurveRoute' | 'entryCurveRoute' }>[] = [];
   const polygons: Extract<MapShape, { kind: 'polygon' }>[] = [];
   const areas: Extract<MapShape, { kind: 'circle' | 'ellipse' | 'sector' }>[] = [];
 
@@ -96,7 +82,6 @@ export function createDrawnShapeLayers(
       case 'line':
       case 'route':
       case 'curvedRoute':
-      case 'splineRoute':
       case 'exitCurveRoute':
       case 'entryCurveRoute':
         lines.push(s);
@@ -148,13 +133,11 @@ export function createDrawnShapeLayers(
       getPath: (s) =>
         s.kind === 'curvedRoute'
           ? roundedCornerPath(s.positions, { radiusFraction: CURVE_RADIUS_FRACTION })
-          : s.kind === 'splineRoute'
-            ? splineThroughPath(s.positions, { tension: SMOOTH_ROUTE_TENSION })
-            : s.kind === 'exitCurveRoute'
-              ? exitCurvePath(s.positions, { fraction: EXIT_CURVE_FRACTION })
-              : s.kind === 'entryCurveRoute'
-                ? entryCurvePath(s.positions, { fraction: ENTRY_CURVE_FRACTION })
-                : s.positions,
+          : s.kind === 'exitCurveRoute'
+            ? exitCurvePath(s.positions, { fraction: EXIT_CURVE_FRACTION })
+            : s.kind === 'entryCurveRoute'
+              ? entryCurvePath(s.positions, { fraction: ENTRY_CURVE_FRACTION })
+              : s.positions,
       getColor: [0, 200, 140, 230],
       getWidth: 3,
       widthUnits: 'pixels',

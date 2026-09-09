@@ -22,7 +22,6 @@ const DRAGGABLE_KINDS: ReadonlySet<MapShape['kind']> = new Set([
   'line',
   'route',
   'curvedRoute',
-  'splineRoute',
   'exitCurveRoute',
   'entryCurveRoute',
 ]);
@@ -468,7 +467,6 @@ export class LeafletDrawingManager {
       case 'line':
       case 'route':
       case 'curvedRoute':
-      case 'splineRoute':
       case 'exitCurveRoute':
       case 'entryCurveRoute':
         return { id, kind, positions: latLngsToCoords(layer as L.Polyline) };
@@ -516,7 +514,6 @@ export class LeafletDrawingManager {
       case 'line':
       case 'route':
       case 'curvedRoute':
-      case 'splineRoute':
       case 'exitCurveRoute':
       case 'entryCurveRoute':
         return L.polyline(shape.positions.map(([lng, lat]) => [lat, lng]));
