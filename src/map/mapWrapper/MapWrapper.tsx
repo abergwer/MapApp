@@ -14,11 +14,13 @@ import './MapWrapper.css';
 import ToolBar from '../../Components/features/ToolBar';
 import MeasuringTools from '../../Components/features/MeasuringTools';
 import MapStyleBar from '../../Components/features/MapStyleBar';
+import RouteTurnsPanel from '../../Components/features/RouteTurnsPanel';
 import LOSControls from '../../los/LOSControls';
 import LOSProfileChart from '../../los/LOSProfileChart';
 import MiniMap from '../../Components/features/MiniMap';
 import MiniVideo from '../../Components/features/MiniVideo';
 import type { MapShape } from '../../stores/shapes';
+import { fitTurns } from '../utils/geo';
 
 const defaultOptions = {
   center: [32.0853, 34.7818] as [number, number],
@@ -53,7 +55,7 @@ function MapWrapperImpl({
 }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const { mapEngineStore, uiVisibilityStore, drawingToolStore, entityService } = useStores();
-  const { minimapVisible, videoVisible } = uiVisibilityStore;
+  const { minimapVisible, videoVisible, view3dVisible } = uiVisibilityStore;
 
   // Register outbound notification callbacks. `EntityService` fires these
   // *after* every successful create / update / delete so the host app can
@@ -106,7 +108,18 @@ function MapWrapperImpl({
 
       // Round-trip user edits/deletes back through the entity service —
       // the single writer that also fans out to any hook subscribers.
-      eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(shape));
+      //
+      // Engines only know geometry. A mixed route's per-waypoint `turns` live
+      // in the store (edited via RouteTurnsPanel), so re-apply the stored
+      // turns to whatever the engine hands back — otherwise a vertex drag
+      // would overwrite them with the copy the engine got at selection time.
+      const withStoredTurns = (shape: MapShape): MapShape => {
+        if (shape.kind !== 'mixedRoute') return shape;
+        const stored = entityService.get(shape.id);
+        const turns = stored?.kind === 'mixedRoute' ? stored.turns : undefined;
+        return { ...shape, turns: fitTurns(turns, shape.positions.length) };
+      };
+      eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(withStoredTurns(shape)));
       eng.setOnShapeDeleted?.((id: string) => entityService.remove(id));
 
       // Clicking empty map background (Leaflet) exits edit mode by clearing
@@ -209,6 +222,11 @@ function MapWrapperImpl({
             <MapStyleBar />
             <LOSControls />
           </Stack>
+
+          {/* Under the toolbar: per-waypoint turn editor for a selected mixed route. */}
+          <Box sx={{ position: 'absolute', top: 64, left: 12, zIndex: 1100 }}>
+            <RouteTurnsPanel />
+          </Box>
 
           <Box sx={{ position: 'absolute', bottom: 12, left: 12, zIndex: 1100 }}>
             <CoordinatesBar />

@@ -1,3 +1,5 @@
+import type { TurnStyle } from '../map/utils/geo';
+
 /**
  * Shared entity geometry. Any store that wants to render into deck.gl's
  * drawn-shape layers and be edited via the map engine's native draw/edit
@@ -27,7 +29,9 @@ export type MapShape =
   | { id: string; kind: 'route'; positions: [number, number][] }
   | { id: string; kind: 'curvedRoute'; positions: [number, number][] }
   | { id: string; kind: 'exitCurveRoute'; positions: [number, number][] }
-  | { id: string; kind: 'entryCurveRoute'; positions: [number, number][] };
+  | { id: string; kind: 'entryCurveRoute'; positions: [number, number][] }
+  /** Route with a per-waypoint turn style; `turns[i]` belongs to `positions[i]`. */
+  | { id: string; kind: 'mixedRoute'; positions: [number, number][]; turns: TurnStyle[] };
 
 /** Generate a unique id for a shape. Uses native UUID if available. */
 export const newShapeId = (): string =>

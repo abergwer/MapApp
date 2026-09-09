@@ -1,7 +1,7 @@
 import { IconLayer, PathLayer, PolygonLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import type { MapShape } from '../../stores/DrawingToolStore';
-import { ellipseRing, sectorRing, roundedCornerPath, exitCurvePath, entryCurvePath } from '../../map/utils/geo';
+import { ellipseRing, sectorRing, roundedCornerPath, exitCurvePath, entryCurvePath, mixedRoutePath } from '../../map/utils/geo';
 import config from '../../../config.json';
 
 /**
@@ -69,7 +69,7 @@ export function createDrawnShapeLayers(
   selectedId: string | null,
 ): Layer[] {
   const points: Extract<MapShape, { kind: 'point' }>[] = [];
-  const lines: Extract<MapShape, { kind: 'line' | 'route' | 'curvedRoute' | 'exitCurveRoute' | 'entryCurveRoute' }>[] = [];
+  const lines: Extract<MapShape, { kind: 'line' | 'route' | 'curvedRoute' | 'exitCurveRoute' | 'entryCurveRoute' | 'mixedRoute' }>[] = [];
   const polygons: Extract<MapShape, { kind: 'polygon' }>[] = [];
   const areas: Extract<MapShape, { kind: 'circle' | 'ellipse' | 'sector' }>[] = [];
 
@@ -84,6 +84,7 @@ export function createDrawnShapeLayers(
       case 'curvedRoute':
       case 'exitCurveRoute':
       case 'entryCurveRoute':
+      case 'mixedRoute':
         lines.push(s);
         break;
       case 'polygon':
@@ -130,14 +131,24 @@ export function createDrawnShapeLayers(
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 255, 120],
-      getPath: (s) =>
-        s.kind === 'curvedRoute'
-          ? roundedCornerPath(s.positions, { radiusFraction: CURVE_RADIUS_FRACTION })
-          : s.kind === 'exitCurveRoute'
-            ? exitCurvePath(s.positions, { fraction: EXIT_CURVE_FRACTION })
-            : s.kind === 'entryCurveRoute'
-              ? entryCurvePath(s.positions, { fraction: ENTRY_CURVE_FRACTION })
-              : s.positions,
+      getPath: (s) => {
+        switch (s.kind) {
+          case 'curvedRoute':
+            return roundedCornerPath(s.positions, { radiusFraction: CURVE_RADIUS_FRACTION });
+          case 'exitCurveRoute':
+            return exitCurvePath(s.positions, { fraction: EXIT_CURVE_FRACTION });
+          case 'entryCurveRoute':
+            return entryCurvePath(s.positions, { fraction: ENTRY_CURVE_FRACTION });
+          case 'mixedRoute':
+            return mixedRoutePath(s.positions, s.turns, {
+              radiusFraction: CURVE_RADIUS_FRACTION,
+              exitFraction: EXIT_CURVE_FRACTION,
+              entryFraction: ENTRY_CURVE_FRACTION,
+            });
+          default:
+            return s.positions;
+        }
+      },
       getColor: [0, 200, 140, 230],
       getWidth: 3,
       widthUnits: 'pixels',

@@ -135,163 +135,247 @@ function cubicBezier(start: LngLat, c1: LngLat, c2: LngLat, end: LngLat, t: numb
   ];
 }
 
+// ── Route turn styles ────────────────────────────────────────────────────
+//
+// Every route type is just a rule applied at each interior waypoint. The
+// per-corner builders below each return the points that *replace* one
+// waypoint, so pieces can be concatenated and the gaps between them are
+// straight segments.
+
+/** How a route behaves at one interior waypoint. */
+export type TurnStyle = 'sharp' | 'rounded' | 'exit' | 'entry';
+
+/** All turn styles, in display order. */
+export const TURN_STYLES: readonly TurnStyle[] = ['sharp', 'rounded', 'exit', 'entry'];
+
+/** Resize a turn list to `count` entries, filling gaps with 'sharp'. */
+export function fitTurns(turns: readonly TurnStyle[] | undefined, count: number): TurnStyle[] {
+  return Array.from({ length: count }, (_, i) => turns?.[i] ?? 'sharp');
+}
+
+export interface TurnOptions {
+  /** 'rounded': fillet size as a fraction of the shorter adjacent leg (0..0.5). */
+  radiusFraction?: number;
+  /** 'exit': how far along the outgoing leg the curve straightens out (0..1). */
+  exitFraction?: number;
+  /** 'entry': how far back along the incoming leg the curve begins (0..1). */
+  entryFraction?: number;
+  /** Samples per curve (higher = smoother). */
+  steps?: number;
+}
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(max, Math.max(min, value));
+
 /**
- * Round the sharp turns of a polyline while keeping the segments between
- * turns straight. Each interior vertex is replaced by a small fillet: the
- * path is cut back along both adjacent segments and the corner is bridged
- * with a quadratic Bézier that stays tangent to both segments.
- *
- * The cut-back distance is `radiusFraction` of the shorter adjacent segment
- * (so adjacent fillets never overlap), optionally capped at `maxRadiusKm`.
- * Endpoints are preserved and lines with fewer than 3 points are returned
- * unchanged.
+ * Fillet that cuts the corner. Backs off `cutIn` (fraction of the incoming
+ * leg) and `cutOut` (fraction of the outgoing leg) from the corner and bridges
+ * the gap with a quadratic Bézier whose control point is the corner, so the
+ * arc is tangent to both legs.
  */
-export function roundedCornerPath(
-  positions: LngLat[],
-  opts?: { radiusFraction?: number; maxRadiusKm?: number; steps?: number },
+function roundedCorner(
+  prev: LngLat,
+  corner: LngLat,
+  next: LngLat,
+  cutIn: number,
+  cutOut: number,
+  steps: number,
 ): LngLat[] {
-  const radiusFraction = opts?.radiusFraction ?? 0.25;
-  const steps = Math.max(2, opts?.steps ?? 12);
-
-  // Nothing to round without at least one interior corner.
-  if (positions.length < 3) return positions.slice();
-
-  // The first point is never moved.
-  const rounded: LngLat[] = [positions[0]];
-
-  // Round every interior corner; endpoints (i = 0 and i = last) are left as-is.
-  for (let i = 1; i < positions.length - 1; i++) {
-    const prev = positions[i - 1];
-    const corner = positions[i];
-    const next = positions[i + 1];
-
-    const distToPrev = distanceKm(prev, corner);
-    const distToNext = distanceKm(corner, next);
-
-    // How far back from the corner to start rounding, along each leg. Using a
-    // fraction of the *shorter* leg guarantees neighbouring fillets can't
-    // overlap. `maxRadiusKm` optionally caps it to an absolute size.
-    let cutBackKm = radiusFraction * Math.min(distToPrev, distToNext);
-    if (opts?.maxRadiusKm != null) cutBackKm = Math.min(cutBackKm, opts.maxRadiusKm);
-
-    // Collinear/degenerate corner, or a fillet too small to matter: keep the
-    // sharp corner unchanged.
-    if (cutBackKm <= 1e-9 || distToPrev <= 1e-9 || distToNext <= 1e-9) {
-      rounded.push(corner);
-      continue;
-    }
-
-    // Where the fillet leaves the incoming leg and where it rejoins the
-    // outgoing leg. The corner itself is used as the Bézier control point, so
-    // the arc stays tangent to both legs.
-    const filletStart = lerpLngLat(corner, prev, cutBackKm / distToPrev);
-    const filletEnd = lerpLngLat(corner, next, cutBackKm / distToNext);
-
-    rounded.push(filletStart);
-    for (let s = 1; s < steps; s++) {
-      rounded.push(quadBezier(filletStart, corner, filletEnd, s / steps));
-    }
-    rounded.push(filletEnd);
+  if (cutIn <= 1e-9 || cutOut <= 1e-9) return [corner];
+  const filletStart = lerpLngLat(corner, prev, cutIn);
+  const filletEnd = lerpLngLat(corner, next, cutOut);
+  const piece: LngLat[] = [filletStart];
+  for (let s = 1; s < steps; s++) {
+    piece.push(quadBezier(filletStart, corner, filletEnd, s / steps));
   }
-
-  // The last point is never moved.
-  rounded.push(positions[positions.length - 1]);
-  return rounded;
+  piece.push(filletEnd);
+  return piece;
 }
 
 /**
- * Route that stays perfectly straight *into* every waypoint, then curves only
- * *after* it. The curve starts at the waypoint continuing the arrival heading
- * (so there is no kink on the way in), then eases until it lines up with the
- * leg toward the next waypoint, from where the path runs straight again. The
- * incoming leg is never curved and every waypoint is hit exactly.
+ * Exit curve: perfectly straight *into* the corner, then a cubic Bézier that
+ * leaves it along the arrival heading and eases onto the outgoing leg,
+ * rejoining it `fraction` of the way to `next`. The waypoint is hit exactly.
+ */
+function exitCurveCorner(
+  prev: LngLat,
+  corner: LngLat,
+  next: LngLat,
+  fraction: number,
+  steps: number,
+): LngLat[] {
+  const arrival = unitDirection(prev, corner); //   heading coming into the corner
+  const departure = unitDirection(corner, next); // heading leaving the corner
+  if (fraction <= 1e-9 || arrival === null || departure === null) return [corner];
+
+  // Where the curve rejoins the outgoing leg. A larger fraction meets the next
+  // line deeper and widens the turn instead of bulging further out.
+  const curveEnd = lerpLngLat(corner, next, fraction);
+
+  // Half the exit distance keeps the arc gentle so it doesn't arc higher as
+  // the turn is widened.
+  const handleLen = 0.5 * fraction * departure.length;
+
+  // The entry handle continues the arrival heading, so the curve leaves the
+  // corner straight (no kink on the way in). The exit handle sits back along
+  // the outgoing heading, so the curve lands on the next leg tangentially.
+  const entryHandle: LngLat = [
+    corner[0] + handleLen * arrival.x,
+    corner[1] + handleLen * arrival.y,
+  ];
+  const exitHandle: LngLat = [
+    curveEnd[0] - handleLen * departure.x,
+    curveEnd[1] - handleLen * departure.y,
+  ];
+
+  const piece: LngLat[] = [corner];
+  for (let s = 1; s <= steps; s++) {
+    piece.push(cubicBezier(corner, entryHandle, exitHandle, curveEnd, s / steps));
+  }
+  return piece;
+}
+
+/**
+ * Entry curve: the mirror image of `exitCurveCorner` — curve *before* the
+ * corner and leave it perfectly straight. Walking the exit curve backwards
+ * (next → corner → prev) and reversing the points gives exactly that;
+ * `fraction` then refers to the incoming leg.
+ */
+function entryCurveCorner(
+  prev: LngLat,
+  corner: LngLat,
+  next: LngLat,
+  fraction: number,
+  steps: number,
+): LngLat[] {
+  return exitCurveCorner(next, corner, prev, fraction, steps).reverse();
+}
+
+/**
+ * Route whose turn style can differ at every waypoint. `turns[i]` is the
+ * style at `positions[i]`; missing entries default to 'sharp' and the first
+ * and last waypoints are always plain endpoints.
  *
- * `fraction` is how far along the outgoing leg the curve takes to straighten
- * out (0 = no curve, 1 = the whole leg). `steps` is samples per curve. Lines
- * with fewer than 3 points are returned unchanged.
+ * Neighbouring turns share the leg between them. If together they would use
+ * more than the whole leg (e.g. a long exit curve followed by a long entry
+ * curve) both are scaled back proportionally so the curves never cross.
+ * Lines with fewer than 3 points are returned unchanged.
+ */
+export function mixedRoutePath(
+  positions: LngLat[],
+  turns: readonly TurnStyle[],
+  opts?: TurnOptions,
+): LngLat[] {
+  const radiusFraction = clamp(opts?.radiusFraction ?? 0.25, 0, 0.5);
+  const exitFraction = clamp(opts?.exitFraction ?? 0.3, 0, 1);
+  const entryFraction = clamp(opts?.entryFraction ?? 0.3, 0, 1);
+  const steps = Math.max(2, opts?.steps ?? 16);
+  const lastIndex = positions.length - 1;
+  if (positions.length < 3) return positions.slice();
+
+  const styleAt = (i: number): TurnStyle => turns[i] ?? 'sharp';
+
+  // How much of the legs on either side each corner wants, as fractions of
+  // that leg: [share of the incoming leg, share of the outgoing leg].
+  const demand: [number, number][] = positions.map((corner, i) => {
+    if (i === 0 || i === lastIndex) return [0, 0];
+    switch (styleAt(i)) {
+      case 'rounded': {
+        // A fraction of the *shorter* leg, expressed per leg.
+        const legIn = distanceKm(positions[i - 1], corner);
+        const legOut = distanceKm(corner, positions[i + 1]);
+        if (legIn <= 1e-9 || legOut <= 1e-9) return [0, 0];
+        const cutKm = radiusFraction * Math.min(legIn, legOut);
+        return [cutKm / legIn, cutKm / legOut];
+      }
+      case 'exit':
+        return [0, exitFraction];
+      case 'entry':
+        return [entryFraction, 0];
+      default:
+        return [0, 0];
+    }
+  });
+
+  // Each leg is shared by the corner before it and the corner after it.
+  for (let i = 0; i < lastIndex; i++) {
+    const total = demand[i][1] + demand[i + 1][0];
+    if (total > 1) {
+      demand[i][1] /= total;
+      demand[i + 1][0] /= total;
+    }
+  }
+
+  // Endpoints are never moved; every interior corner is replaced by its piece.
+  const path: LngLat[] = [positions[0]];
+  for (let i = 1; i < lastIndex; i++) {
+    const prev = positions[i - 1];
+    const corner = positions[i];
+    const next = positions[i + 1];
+    const [shareIn, shareOut] = demand[i];
+    switch (styleAt(i)) {
+      case 'rounded':
+        path.push(...roundedCorner(prev, corner, next, shareIn, shareOut, steps));
+        break;
+      case 'exit':
+        path.push(...exitCurveCorner(prev, corner, next, shareOut, steps));
+        break;
+      case 'entry':
+        path.push(...entryCurveCorner(prev, corner, next, shareIn, steps));
+        break;
+      default:
+        path.push(corner);
+    }
+  }
+  path.push(positions[lastIndex]);
+  return path;
+}
+
+/** The same turn style at every waypoint. */
+const uniformTurns = (positions: LngLat[], style: TurnStyle): TurnStyle[] =>
+  positions.map(() => style);
+
+/**
+ * Round every turn of a polyline while keeping the legs straight (a fillet at
+ * each interior waypoint, cutting the corner). `radiusFraction` is the fillet
+ * size as a fraction of the shorter adjacent leg (0 = sharp, 0.5 = maximum).
+ */
+export function roundedCornerPath(
+  positions: LngLat[],
+  opts?: { radiusFraction?: number; steps?: number },
+): LngLat[] {
+  return mixedRoutePath(positions, uniformTurns(positions, 'rounded'), {
+    radiusFraction: opts?.radiusFraction,
+    steps: opts?.steps ?? 12,
+  });
+}
+
+/**
+ * Route that is straight *into* every waypoint and curves only *after* it,
+ * straightening out `fraction` of the way along the next leg.
  */
 export function exitCurvePath(
   positions: LngLat[],
   opts?: { fraction?: number; steps?: number },
 ): LngLat[] {
-  const fraction = Math.min(1, Math.max(0, opts?.fraction ?? 0.3));
-  const steps = Math.max(2, opts?.steps ?? 16);
-  const lastIndex = positions.length - 1;
-  if (positions.length < 3 || fraction === 0) return positions.slice();
-
-  // The first waypoint is never moved.
-  const curve: LngLat[] = [positions[0]];
-
-  for (let i = 1; i <= lastIndex; i++) {
-    const corner = positions[i];
-
-    // The final waypoint has no next leg to curve toward: arrive straight.
-    if (i === lastIndex) {
-      curve.push(corner);
-      continue;
-    }
-
-    const prev = positions[i - 1];
-    const next = positions[i + 1];
-
-    // Unit headings of the two legs meeting at this corner.
-    const arrival = unitDirection(prev, corner); //   coming into the corner
-    const departure = unitDirection(corner, next); // leaving the corner
-
-    // A zero-length leg has no heading: keep the sharp corner unchanged.
-    if (arrival === null || departure === null) {
-      curve.push(corner);
-      continue;
-    }
-
-    // Where the curve rejoins the outgoing leg: `fraction` of the way to the
-    // next waypoint. A larger fraction meets the next line deeper and widens
-    // the turn instead of bulging further out.
-    const curveEnd = lerpLngLat(corner, next, fraction);
-
-    // Bézier handle length. Half the exit distance keeps the arc gentle so the
-    // curve does not arc higher as the turn is widened.
-    const handleLen = 0.5 * fraction * departure.length;
-
-    // Cubic Bézier from `corner` to `curveEnd`:
-    //  • the entry handle continues the arrival heading, so the curve leaves
-    //    the corner exactly straight (no kink on the way in);
-    //  • the exit handle sits back along the outgoing heading, so the curve
-    //    eases onto the next leg tangentially instead of pinching.
-    const entryHandle: LngLat = [
-      corner[0] + handleLen * arrival.x,
-      corner[1] + handleLen * arrival.y,
-    ];
-    const exitHandle: LngLat = [
-      curveEnd[0] - handleLen * departure.x,
-      curveEnd[1] - handleLen * departure.y,
-    ];
-
-    curve.push(corner);
-    for (let s = 1; s <= steps; s++) {
-      curve.push(cubicBezier(corner, entryHandle, exitHandle, curveEnd, s / steps));
-    }
-  }
-  return curve;
+  return mixedRoutePath(positions, uniformTurns(positions, 'exit'), {
+    exitFraction: opts?.fraction,
+    steps: opts?.steps,
+  });
 }
 
 /**
- * The mirror image of `exitCurvePath`: the route curves *before* each
- * waypoint and leaves it perfectly straight. The path runs straight along the
- * incoming leg until `fraction` of it remains, then bends so that it arrives
- * at the waypoint already pointing down the next leg, and continues straight
- * from there. Every waypoint is hit exactly and the outgoing leg is never
- * curved.
- *
- * Implemented by walking the polyline backwards through `exitCurvePath` —
- * curving *after* a waypoint when travelling in reverse is the same as
- * curving *before* it going forwards. Options mean the same as there.
+ * Route that curves *before* every waypoint (starting `fraction` of the way
+ * back along the incoming leg) and leaves it perfectly straight.
  */
 export function entryCurvePath(
   positions: LngLat[],
   opts?: { fraction?: number; steps?: number },
 ): LngLat[] {
-  return exitCurvePath(positions.slice().reverse(), opts).reverse();
+  return mixedRoutePath(positions, uniformTurns(positions, 'entry'), {
+    entryFraction: opts?.fraction,
+    steps: opts?.steps,
+  });
 }
 
 /**

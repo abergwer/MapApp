@@ -18,6 +18,7 @@ import RouteIcon from '@mui/icons-material/Route';
 import RoundedCornerIcon from '@mui/icons-material/RoundedCorner';
 import TurnSlightRightIcon from '@mui/icons-material/TurnSlightRight';
 import TurnSlightLeftIcon from '@mui/icons-material/TurnSlightLeft';
+import AltRouteIcon from '@mui/icons-material/AltRoute';
 import CloseIcon from '@mui/icons-material/Close';
 import type { MapEngine } from '../../map/mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
@@ -37,6 +38,7 @@ const DRAW_TOOLS: { id: DrawTool; Icon: typeof FiberManualRecordIcon; enabled: b
   { id: 'curvedRoute', Icon: RoundedCornerIcon, enabled: true },
   { id: 'exitCurveRoute', Icon: TurnSlightRightIcon, enabled: true },
   { id: 'entryCurveRoute', Icon: TurnSlightLeftIcon, enabled: true },
+  { id: 'mixedRoute', Icon: AltRouteIcon, enabled: true },
 ];
 
 /**
@@ -98,6 +100,12 @@ function startDraw(engine: MapEngine, tool: DrawTool, entities: EntityService, d
       // as-is; the curve is generated at render time.
       return engine.startDrawLine((id, positions) =>
         done({ id, kind: 'entryCurveRoute', positions }),
+      );
+    case 'mixedRoute':
+      // Every waypoint starts sharp; the turn style per waypoint is picked
+      // afterwards in RouteTurnsPanel while the route is selected.
+      return engine.startDrawLine((id, positions) =>
+        done({ id, kind: 'mixedRoute', positions, turns: positions.map(() => 'sharp') }),
       );
   }
 }

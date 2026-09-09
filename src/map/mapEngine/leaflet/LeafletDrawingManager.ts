@@ -12,6 +12,7 @@ import {
 } from '../../utils/leafletSectorTool';
 import type { MapShape } from '../../../stores/DrawingToolStore';
 import { newShapeId } from '../../../stores/DrawingToolStore';
+import { fitTurns } from '../../utils/geo';
 
 /** Leaflet primitives work in metres; the store is unit-canonical in km. */
 const KM_TO_M = 1000;
@@ -24,6 +25,7 @@ const DRAGGABLE_KINDS: ReadonlySet<MapShape['kind']> = new Set([
   'curvedRoute',
   'exitCurveRoute',
   'entryCurveRoute',
+  'mixedRoute',
 ]);
 
 /** Tags we stamp on every drawn layer so edit events can rebuild the shape. */
@@ -470,6 +472,12 @@ export class LeafletDrawingManager {
       case 'exitCurveRoute':
       case 'entryCurveRoute':
         return { id, kind, positions: latLngsToCoords(layer as L.Polyline) };
+      case 'mixedRoute': {
+        // The engine only edits geometry; the store owns the per-waypoint turn
+        // styles and MapWrapper re-applies them. Emit a placeholder list.
+        const positions = latLngsToCoords(layer as L.Polyline);
+        return { id, kind, positions, turns: fitTurns(undefined, positions.length) };
+      }
       case 'polygon':
         return { id, kind, positions: polygonRingToCoords(layer as L.Polygon) };
       case 'circle': {
@@ -516,6 +524,7 @@ export class LeafletDrawingManager {
       case 'curvedRoute':
       case 'exitCurveRoute':
       case 'entryCurveRoute':
+      case 'mixedRoute':
         return L.polyline(shape.positions.map(([lng, lat]) => [lat, lng]));
 
       case 'polygon':

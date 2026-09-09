@@ -17,7 +17,8 @@ export type DrawTool =
   | 'route'
   | 'curvedRoute'
   | 'exitCurveRoute'
-  | 'entryCurveRoute';
+  | 'entryCurveRoute'
+  | 'mixedRoute';
 
 export type MeasureTool = 'distance' | 'area';
 

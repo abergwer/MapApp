@@ -11,6 +11,7 @@ import { useStores } from './stores/StoreContext'
 import { createLayerBuilder } from './Components/layerManager'
 import { DEMO_SERVER_SHAPES } from './stores/DrawingToolStore'
 import type { MapShape } from './stores/shapes'
+import MessageDialog from './Components/features/MessageDialog'
 
 function App() {
   const stores = useStores()
