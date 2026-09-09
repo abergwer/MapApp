@@ -354,6 +354,25 @@ export function exitCurvePath(
 }
 
 /**
+ * The mirror image of `exitCurvePath`: the route curves *before* each
+ * waypoint and leaves it perfectly straight. The path runs straight along the
+ * incoming leg until `fraction` of it remains, then bends so that it arrives
+ * at the waypoint already pointing down the next leg, and continues straight
+ * from there. Every waypoint is hit exactly and the outgoing leg is never
+ * curved.
+ *
+ * Implemented by walking the polyline backwards through `exitCurvePath` —
+ * curving *after* a waypoint when travelling in reverse is the same as
+ * curving *before* it going forwards. Options mean the same as there.
+ */
+export function entryCurvePath(
+  positions: LngLat[],
+  opts?: { fraction?: number; steps?: number },
+): LngLat[] {
+  return exitCurvePath(positions.slice().reverse(), opts).reverse();
+}
+
+/**
  * Spherical-excess area of a polygon ring (km²). Uses the trapezoidal form
  * from Chamberlain & Duquette (NASA, 2007). Accepts open or closed rings.
  */

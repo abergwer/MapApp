@@ -24,7 +24,8 @@
             "route": "מסלול",
             "curvedRoute": "מסלול מעוקל",
             "splineRoute": "מסלול חלק",
-            "exitCurveRoute": "מסלול עיקול יציאה"
+            "exitCurveRoute": "מסלול עיקול יציאה",
+            "entryCurveRoute": "מסלול עיקול כניסה"
         },
         "measure": {
             "measure": "מדידה",
