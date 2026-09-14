@@ -1,12 +1,14 @@
-import { GeoJsonLayer, ScatterplotLayer } from '@deck.gl/layers';
+import { GeoJsonLayer, IconLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import { MaskExtension } from '@deck.gl/extensions';
 import type { Feature, Polygon } from 'geojson';
 import type { LOSStore } from './LOSStore';
 import type { AreaLOSStore } from './AreaLOSStore';
 import { LOS_COLORS } from './constants';
+import OBSERVER_ICON from '../assets/los-observer.svg';
+import TARGET_ICON from '../assets/los-target.svg';
 
-/** Observer→target sightline: green (visible) / red (shadow) + endpoint dots. */
+/** Observer→target sightline: green (visible) / red (shadow) + endpoint icons. */
 export function createLOSLayers(losStore: LOSStore): Layer[] {
   const { visibleGeoJSON, shadowGeoJSON, observer, target } = losStore;
   if (!observer) return [];
@@ -45,24 +47,24 @@ export function createLOSLayers(losStore: LOSStore): Layer[] {
 
   // Observer + target markers so the endpoints stay readable on top of
   // the colored line.
-  const endpoints: { position: [number, number]; color: [number, number, number, number] }[] = [
-    { position: [observer.lng, observer.lat], color: [255, 255, 255, 255] },
+  const endpoints: { position: [number, number]; role: 'observer' | 'target' }[] = [
+    { position: [observer.lng, observer.lat], role: 'observer' },
   ];
   if (target) {
-    endpoints.push({ position: [target.lng, target.lat], color: [148, 163, 184, 255] });
+    endpoints.push({ position: [target.lng, target.lat], role: 'target' });
   }
   layers.push(
-    new ScatterplotLayer({
+    new IconLayer({
       id: 'los-endpoints',
       data: endpoints,
       getPosition: (d: { position: [number, number] }) => d.position,
-      getFillColor: (d: { color: [number, number, number, number] }) => d.color,
-      getRadius: 6,
-      radiusUnits: 'pixels',
-      stroked: true,
-      getLineColor: [15, 20, 32, 255],
-      getLineWidth: 2,
-      lineWidthUnits: 'pixels',
+      getIcon: (d: { role: 'observer' | 'target' }) => ({
+        url: d.role === 'observer' ? OBSERVER_ICON : TARGET_ICON,
+        width: 32,
+        height: 32,
+      }),
+      getSize: 30,
+      sizeUnits: 'pixels',
     }),
   );
 
@@ -155,17 +157,13 @@ export function createAreaLOSLayers(areaLOSStore: AreaLOSStore): Layer[] {
   }
 
   layers.push(
-    new ScatterplotLayer({
+    new IconLayer({
       id: 'area-los-observer',
       data: [observer],
       getPosition: (d: { lng: number; lat: number }) => [d.lng, d.lat],
-      getFillColor: [255, 255, 255, 255],
-      getRadius: 6,
-      radiusUnits: 'pixels',
-      stroked: true,
-      getLineColor: [15, 20, 32, 255],
-      getLineWidth: 2,
-      lineWidthUnits: 'pixels',
+      getIcon: () => ({ url: OBSERVER_ICON, width: 32, height: 32 }),
+      getSize: 30,
+      sizeUnits: 'pixels',
     }),
   );
 
