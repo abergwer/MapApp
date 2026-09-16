@@ -6,6 +6,7 @@ import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
 import config from '../../../config.json';
 import { LeafletDrawingManager } from './leaflet/LeafletDrawingManager';
 import { LeafletMeasureManager } from './leaflet/LeafletMeasureManager';
+import { isRtl, onDirectionChange } from '../utils/direction';
 
 /**
  * Thin orchestrator over `LeafletDrawingManager` + `LeafletMeasureManager`.
@@ -21,6 +22,9 @@ export class LeafletEngine implements MapEngine {
   private baseLayer?: L.TileLayer;
   private viewChangeCallbacks = new Set<(vs: MapViewState) => void>();
   private clickCallback?: (lat: number, lng: number) => void;
+  private scaleControl?: L.Control.Scale;
+  private zoomControl?: L.Control.Zoom;
+  private directionCleanup?: () => void;
 
   // ── Lifecycle ────────────────────────────────────────────────────────
 
@@ -42,8 +46,20 @@ export class LeafletEngine implements MapEngine {
     });
     this.map = map;
 
-    L.control.scale({ position: 'bottomright' }).addTo(map);
-    L.control.zoom({ position: 'topright' as L.ControlPosition }).addTo(map);
+    // Controls sit in corners chosen by physical CSS, so document dir=rtl
+    // doesn't move them — mirror them ourselves, and follow live switches.
+    const corners = (rtl: boolean) => ({
+      scale: (rtl ? 'bottomleft' : 'bottomright') as L.ControlPosition,
+      zoom: (rtl ? 'topleft' : 'topright') as L.ControlPosition,
+    });
+    const initial = corners(isRtl());
+    this.scaleControl = L.control.scale({ position: initial.scale }).addTo(map);
+    this.zoomControl = L.control.zoom({ position: initial.zoom }).addTo(map);
+    this.directionCleanup = onDirectionChange((rtl) => {
+      const next = corners(rtl);
+      this.scaleControl?.setPosition(next.scale);
+      this.zoomControl?.setPosition(next.zoom);
+    });
 
     this.baseLayer = L.tileLayer(config.LeafletTilesURL, {
       attribution: '&copy; OpenStreetMap contributors',
@@ -65,6 +81,10 @@ export class LeafletEngine implements MapEngine {
   }
 
   destroy(): void {
+    this.directionCleanup?.();
+    this.directionCleanup = undefined;
+    this.scaleControl = undefined;
+    this.zoomControl = undefined;
     this.drawing?.dispose();
     this.map?.remove();
     this.drawing = undefined;

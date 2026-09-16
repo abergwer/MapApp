@@ -5,6 +5,7 @@ import type { MapShape } from '../../stores/DrawingToolStore';
 import config from '../../../config.json';
 import { MapLibreDrawingManager } from './maplibre/MapLibreDrawingManager';
 import { MapLibreMeasureManager } from './maplibre/MapLibreMeasureManager';
+import { isRtl, onDirectionChange } from '../utils/direction';
 
 /**
  * Thin orchestrator over `MapLibreDrawingManager` + `MapLibreMeasureManager`.
@@ -22,6 +23,9 @@ export class MapLibreEngine implements MapEngine {
   private measure?: MapLibreMeasureManager;
   private viewChangeCallbacks = new Set<(vs: MapViewState) => void>();
   private clickCallback?: (lat: number, lng: number) => void;
+  private navControl?: maplibregl.NavigationControl;
+  private scaleControl?: maplibregl.ScaleControl;
+  private directionCleanup?: () => void;
 
   // ── Lifecycle ────────────────────────────────────────────────────────
 
@@ -65,11 +69,19 @@ export class MapLibreEngine implements MapEngine {
     });
     this.map = map;
 
-    map.addControl(new maplibregl.NavigationControl(), 'top-right');
-    map.addControl(
-      new maplibregl.ScaleControl({ maxWidth: 80, unit: 'metric' }),
-      'bottom-right',
-    );
+    // Controls are pinned to physical corners, so document dir=rtl doesn't
+    // move them — mount them on the mirrored side and follow live switches
+    // (MapLibre has no setPosition, so re-add the controls on change).
+    const mountControls = (rtl: boolean) => {
+      if (this.navControl) map.removeControl(this.navControl);
+      if (this.scaleControl) map.removeControl(this.scaleControl);
+      this.navControl = new maplibregl.NavigationControl();
+      this.scaleControl = new maplibregl.ScaleControl({ maxWidth: 80, unit: 'metric' });
+      map.addControl(this.navControl, rtl ? 'top-left' : 'top-right');
+      map.addControl(this.scaleControl, rtl ? 'bottom-left' : 'bottom-right');
+    };
+    mountControls(isRtl());
+    this.directionCleanup = onDirectionChange(mountControls);
 
     map.on('move', () => {
       const vs = this.getViewState();
@@ -88,6 +100,10 @@ export class MapLibreEngine implements MapEngine {
   }
 
   destroy(): void {
+    this.directionCleanup?.();
+    this.directionCleanup = undefined;
+    this.navControl = undefined;
+    this.scaleControl = undefined;
     this.drawing?.dispose();
     this.map?.remove();
     this.drawing = undefined;

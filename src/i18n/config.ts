@@ -2,22 +2,22 @@ import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { resources, defaultNS } from './resources'
-import { FALLBACK_LANGUAGE, SUPPORTED_LANGUAGES } from './languages'
+import { FALLBACK_LANGUAGE, SUPPORTED_LANGUAGES, directionFor } from './languages'
 
 const STORAGE_KEY = 'app.language'
 
 /**
- * Keep the document's `lang` attribute in sync with the active language
- * (helps a11y, spellcheck, and per-language CSS). We intentionally do NOT
- * set `dir` on the root element: flipping the document direction mirrors
- * the whole layout (toolbars, flex order, alignment). Hebrew/RTL text still
- * renders correctly thanks to the browser's Unicode bidi algorithm. If a
- * specific text block needs true RTL alignment, set `dir="auto"` on that
- * element (or use the `dir` value from the `useLanguage` hook) locally.
+ * Keep the document's `lang` and `dir` attributes in sync with the active
+ * language. Setting `dir` on the root element flips the whole app to RTL
+ * for right-to-left languages (Hebrew): layout, flex order and alignment
+ * all mirror. MUI's physical CSS (paddings, icon offsets) is mirrored by
+ * the DirectionProvider (Emotion RTL cache + theme.direction). To keep a
+ * specific subtree LTR (e.g. a map overlay), wrap it in `dir="ltr"`.
  */
 function applyDocumentLanguage(language: string): void {
   const base = language.split('-')[0]
   document.documentElement.lang = base
+  document.documentElement.dir = directionFor(base)
 }
 
 /**
