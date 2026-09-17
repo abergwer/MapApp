@@ -37,6 +37,9 @@ import { DEMO_LAYERS } from './mocks/demoLayers'
 import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
 import airCraftIcon from './assets/aircraft.png'
 import droneIcon from './assets/drone.png'
+import { MissionsPanel } from './Components/features/missionPanel'
+import { demoMissionEntitySources } from './mocks/demoMissionSources'
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 
 function App() {
   const stores = useStores()
@@ -96,6 +99,13 @@ function App() {
       content: <LayersPanel layers={DEMO_LAYERS} />,
     },
     { id: 'missiles', title: 'Missiles', Icon: RocketLaunchOutlinedIcon, content: <MissilesPanel /> },
+    {
+      id: 'missions',
+      title: 'Missions',
+      Icon: AssignmentOutlinedIcon,
+      // Entity pickers in the mission form read from these lists (see missionSchema.ts).
+      content: <MissionsPanel entitySources={demoMissionEntitySources(stores)} />,
+    },
   ]
 
   /** Standard workspace-panel window actions: full view / float / close. */
