@@ -1,0 +1,68 @@
+{
+  "app": {
+    "title": "Map Engine Orchestrator",
+    "subtitle": "This app uses {{engine}} as the selected map engine."
+  },
+  "language": {
+    "label": "Language",
+    "en": "English",
+    "he": "Hebrew"
+  },
+  "toolbar": {
+    "draw": "Draw",
+    "drawTools": "Draw Tools",
+    "measurements": "Measurements",
+    "cancel": "Cancel",
+    "editHint": "Click a shape to edit · Esc to deselect",
+    "tools": {
+      "point": "Point",
+      "line": "Line",
+      "polygon": "Polygon",
+      "circle": "Circle",
+      "ellipse": "Ellipse",
+      "sector": "Sector",
+      "route": "Route"
+    },
+    "measure": {
+      "measure": "Measure",
+      "distance": "Distance",
+      "area": "Area",
+      "remove": "Remove Measurements"
+    }
+  },
+  "MapStyleBar": {
+    "minimap": "Minimap",
+    "video": "Video"
+  },
+  "LOS": {
+    "label": "Line of Sight",
+    "startPoint": "Start Point",
+    "endPoint": "End Point",
+    "clear": "Clear",
+    "Area": {
+      "label": "Area of Sight",
+      "centerPoint": "Center Point",
+      "radius": "Radius",
+      "clear": "Clear"
+    },
+    "lineButton": {
+      "idle": { "label": "LOS", "tooltip": "Line of sight: click, then pick observer + target on the map" },
+      "computing": { "label": "LOS · computing…", "tooltip": "Computing line of sight" },
+      "ready": { "label": "LOS · clear", "tooltip": "Click to clear the line" },
+      "error": { "label": "LOS · error", "tooltip": "Computation failed — click to clear" },
+      "clickObserver": "LOS · click observer…",
+      "clickTarget": "LOS · click target…",
+      "clickHint": "Click on the map (Esc to cancel)"
+    },
+    "areaButton": {
+      "idle": { "label": "Area", "tooltip": "Area line of sight: place the observer, then draw a polygon around it" },
+      "computing": { "label": "Area · computing…", "tooltip": "Computing viewshed" },
+      "ready": { "label": "Area · clear", "tooltip": "Click to clear the coverage" },
+      "error": { "label": "Area · error", "tooltip": "Computation failed — click to clear" },
+      "clickObserver": "Area · click observer…",
+      "clickHint": "Click on the map (Esc to cancel)",
+      "drawPolygon": "Area · draw polygon…",
+      "drawHint": "Click vertices around the observer, double-click to finish (Esc to cancel)"
+    }
+  }
+}

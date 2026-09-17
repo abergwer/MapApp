@@ -10,6 +10,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import HandymanOutlinedIcon from '@mui/icons-material/HandymanOutlined';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../stores/StoreContext';
+import { LanguageSwitcher } from '../../i18n';
 import { palette } from '../../styles/system-ui/tokens';
 import * as layout from '../../styles/system-ui/layout.styles';
 
@@ -57,6 +58,8 @@ function TopBarImpl() {
           <HandymanOutlinedIcon fontSize="small" />
         </IconButton>
       </Tooltip>
+
+      <LanguageSwitcher />
 
       <Tooltip title={isDark ? 'Switch to light theme' : 'Switch to dark theme'} arrow>
         <IconButton

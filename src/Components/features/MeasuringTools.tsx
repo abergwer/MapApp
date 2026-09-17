@@ -6,6 +6,7 @@ import { MEASURE_TOOLS, startMeasure } from './toolDefs';
 import { useStores } from '../../stores/StoreContext';
 import type { MeasureTool } from '../../stores/DrawingToolStore';
 import { toolButton } from '../../styles/common-ui/panel.styles';
+import { useTranslation } from 'react-i18next';
 
 /**
  * Measurement tools as an icon strip. Clicking a tool arms it; clicking the
@@ -13,6 +14,7 @@ import { toolButton } from '../../styles/common-ui/panel.styles';
  * implements the full measurement API on `MapEngine`.
  */
 function MeasuringToolsImpl() {
+  const { t } = useTranslation();
   const { mapEngineStore, drawingToolStore } = useStores();
   const engine = mapEngineStore.engine;
   const activeTool = drawingToolStore.activeMeasureTool;
@@ -43,7 +45,7 @@ function MeasuringToolsImpl() {
   return (
     <>
       {MEASURE_TOOLS.map(({ id, label, Icon }) => (
-        <Tooltip key={id} title={activeTool === id ? `${label} (click to cancel)` : label} arrow>
+        <Tooltip key={id} title={activeTool === id ? `${t(label)} (click to cancel)` : t(label)} arrow>
           <span>
             <IconButton
               size="small"
@@ -57,13 +59,13 @@ function MeasuringToolsImpl() {
           </span>
         </Tooltip>
       ))}
-      <Tooltip title="Remove measurements" arrow>
+      <Tooltip title={t("Remove measurements")} arrow>
         <span>
           <IconButton
             size="small"
             onClick={handleClear}
             sx={toolButton(false)}
-            aria-label="Remove measurements"
+            aria-label={t("Remove measurements")}
           >
             <DeleteOutlinedIcon fontSize="small" />
           </IconButton>

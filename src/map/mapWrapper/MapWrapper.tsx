@@ -5,7 +5,7 @@ import Paper from '@mui/material/Paper';
 import Slider from '@mui/material/Slider';
 import Typography from '@mui/material/Typography';
 import { observer } from 'mobx-react-lite';
-import { createMapEngine } from '../engineFactory';
+import { createMapEngine } from '../EngineFactory';
 import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
@@ -16,6 +16,8 @@ import MapStyleBar from '../../Components/features/MapStyleBar';
 import MapControls from '../../Components/features/MapControls';
 import * as mapStyles from '../../styles/features/map.styles';
 import type { MapShape } from '../../stores/shapes';
+import LOSControls from '../../los/LOSControls';
+import LOSProfileChart from '../../los/LOSProfileChart';
 
 const defaultOptions = {
   center: [32.2, 34.95] as [number, number],
@@ -211,6 +213,12 @@ function MapWrapperImpl({
             </Paper>
             <Paper sx={mapStyles.toolCluster}>
               <MapStyleBar />
+            </Paper>
+            <Paper sx={mapStyles.toolCluster}>
+             <LOSControls />
+            </Paper>
+            <Paper sx={mapStyles.toolCluster}>
+           <LOSProfileChart />
             </Paper>
           </Box>
 

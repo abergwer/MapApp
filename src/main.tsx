@@ -1,6 +1,8 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
+import './i18n/config'
+import { DirectionProvider } from './i18n'
 import App from './App.tsx'
 import AppThemeProvider from './Components/layout/AppThemeProvider'
 import { StoreProvider } from './stores/StoreProvider'
@@ -10,7 +12,9 @@ createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <StoreProvider>
       <AppThemeProvider>
-        <App />
+        <DirectionProvider>
+          <App />
+        </DirectionProvider>
       </AppThemeProvider>
     </StoreProvider>
   </StrictMode>,

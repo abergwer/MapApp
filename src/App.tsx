@@ -135,6 +135,13 @@ function App() {
     floatContent: panelContent[id].node,
   }))
 
+
+ 
+
+
+  // Built once. Layer updates flow through a MobX reaction inside
+  // LayerManager — App no longer re-renders when layer data changes.
+
   return (
     <LayoutManager
       topBar={<TopBar />}
@@ -143,6 +150,18 @@ function App() {
       rightPanels={rightPanels}
       showFloatingWindows
     >
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+        {/* <Typography variant="h3" component="h1">
+          {t('app.title')}
+        </Typography>
+        <LanguageSwitcher /> */}
+      </Box>
+      {/* <Typography color="text.secondary">
+        {t('app.subtitle', {
+          engine: mapEngineLabel[stores.mapEngineStore.selectedEngine],
+        })}
+      </Typography> */}
+
       {/*
         Data contract with the map:
         • Inbound:  `shapes` — hydrated once from the server's WS

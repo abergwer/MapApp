@@ -5,6 +5,7 @@ import { createDroneLayer } from '../Layers/DroneLayer';
 import { createAirCraftLayer } from '../Layers/AirCraftLayer';
 import { createRangeRingsLayer } from '../Layers/RangeRingsLayer';
 import { createDrawnShapeLayers } from '../Layers/DrawnShapeLayers';
+import { createLOSLayers, createAreaLOSLayers } from '../../los/LOSLayers';
 import type { RootStore } from '../../stores/RootStore';
 
 /**
@@ -21,6 +22,11 @@ import type { RootStore } from '../../stores/RootStore';
 export function buildLayers(stores: RootStore): Layer[] {
   const { drawingToolStore, uiVisibilityStore: vis } = stores;
   const layers: Layer[] = [];
+
+  // Line-of-sight coverage. Bottom of the stack: large area fills that
+  // everything else should render above.
+  layers.push(...createAreaLOSLayers(stores.areaLOSStore));
+  layers.push(...createLOSLayers(stores.losStore));
 
   // User-drawn shapes. The map engine's native edit tools drive the same
   // store via `entityService`; deck.gl only renders and picks here.
@@ -50,5 +56,14 @@ export function buildLayers(stores: RootStore): Layer[] {
     layers.push(...createAirCraftLayer(stores.airCraftStore.targets));
   }
   return layers;
+}
+
+/**
+ * Adapter for LayerManager's `buildLayers` prop. Create it once (e.g. with
+ * `useMemo`); LayerManager calls it inside a MobX reaction so observable
+ * reads in `buildLayers` are tracked without React re-renders.
+ */
+export function createLayerBuilder(stores: RootStore): () => Layer[] {
+  return () => buildLayers(stores);
 }
 

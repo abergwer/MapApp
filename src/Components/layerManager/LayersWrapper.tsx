@@ -1,18 +1,17 @@
-import { observer } from 'mobx-react-lite';
+import { useMemo } from 'react';
 import LayerManager from './LayerManager';
-import { buildLayers } from './index';
+import { createLayerBuilder } from './index';
 import { useStores } from '../../stores/StoreContext';
 
 /**
- * Small observer wrapper that owns the observable reads of the demo layer
- * builder. Building layers here (instead of in App's render) scopes the
- * fast live-feed tick subscriptions to this component, so only it
- * re-renders every tick — not the whole App tree.
+ * Mounts the demo layer builder. LayerManager calls the builder inside a
+ * MobX reaction, so live-feed ticks update deck.gl directly without
+ * re-rendering any React component.
  */
-function LayersWrapperImpl() {
+function LayersWrapper() {
   const stores = useStores();
-  return <LayerManager layers={buildLayers(stores)} />;
+  const buildLayers = useMemo(() => createLayerBuilder(stores), [stores]);
+  return <LayerManager buildLayers={buildLayers} />;
 }
 
-const LayersWrapper = observer(LayersWrapperImpl);
 export default LayersWrapper;
