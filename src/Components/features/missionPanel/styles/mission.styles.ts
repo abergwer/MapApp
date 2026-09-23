@@ -427,6 +427,20 @@ export const formError: SxProps<Theme> = {
 
 // ── Create-entity dialog ───────────────────────────────────────
 
+/** Paper of the "create new entity" dialog opened from an entity picker. */
+export const dialogPaper: SxProps<Theme> = {
+  width: 360,
+  maxWidth: 'calc(100vw - 32px)',
+  p: 2,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 1.5,
+  borderRadius: 2,
+  border: `1px solid ${palette.border}`,
+  bgcolor: palette.panel,
+  backgroundImage: 'none',
+};
+
 /** Inline hint shown under an entity picker while an async `add` waits
  *  for the user (e.g. "click the map…"). */
 export const drawPrompt: SxProps<Theme> = {

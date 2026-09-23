@@ -9,6 +9,7 @@
  *  - types.ts           Mission / MissionValues
  *  - list/              mission cards, search, sort
  *  - form/              schema-driven create/edit form and its field widgets
+ *  - impactData/        secondary "impact data" schema + its create dialog
  *  - styles/            all sx styles for the feature
  */
 export { MissionsPanel, default } from './MissionPanel';
@@ -22,3 +23,4 @@ export {
   type CreateDialogProps,
 } from './missionSchema';
 export type { Mission, MissionSummary, MissionValues } from './types';
+export { ImpactDataDialog, IMPACT_DATA_SCHEMA, type ImpactDataValues } from './impactData';

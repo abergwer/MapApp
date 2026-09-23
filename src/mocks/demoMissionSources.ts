@@ -2,7 +2,9 @@ import { createElement } from 'react';
 import { observable } from 'mobx';
 import WidgetsIcon from '@mui/icons-material/Widgets';
 import {
+  ImpactDataDialog,
   type EntitySources,
+  type ImpactDataValues,
 } from '../Components/features/missionPanel';
 import { getEntityDef } from '../Components/features/entities/entityDefinitions';
 import EntityIcon from '../Components/features/entities/EntityIcon';
@@ -10,6 +12,14 @@ import type { RootStore } from '../stores/RootStore';
 
 /** Demo-only list behind the `commander` source; supports `Add "…"`. */
 const commanders = observable.array(['Maj. R. Halvorsen', 'Capt. L. Okafor', 'Lt. Col. S. Brandt']);
+
+/** Demo-only list behind the `impactData` source. Replace with the DB fetch;
+ *  new items are created through the ImpactDataDialog form. */
+type ImpactDataRecord = { id: string } & ImpactDataValues;
+const impactDataList = observable.array<ImpactDataRecord>([
+  { id: 'impact-1', name: 'Blast profile A', radius: '250', speed: '340', details: 'Standard HE warhead' },
+  { id: 'impact-2', name: 'Blast profile B', radius: '600', speed: '290', details: 'Thermobaric' },
+]);
 
 /** The definition's icon (tinted) for a shape, or nothing for untyped shapes. */
 const iconFor = (defId?: string) => {
@@ -159,6 +169,22 @@ export function demoMissionEntitySources(stores: RootStore): EntitySources {
         if (!commanders.includes(label)) commanders.push(label);
         return { id: label, label };
       },
+    },
+
+    /** Impact data: pick an existing record, or `Add "…"` opens a form to
+     *  fill a whole new record which is then appended to the list and selected. */
+    impactData: {
+      options: () => impactDataList.map((d) => ({ id: d.id, label: `${d.name} · r ${d.radius} m` })),
+      createDialog: ({ initialLabel, onClose }) =>
+        createElement(ImpactDataDialog, {
+          initialName: initialLabel,
+          onSave: (values) => {
+            const record: ImpactDataRecord = { id: `impact-${crypto.randomUUID()}`, ...values };
+            impactDataList.push(record);
+            onClose({ id: record.id, label: record.name });
+          },
+          onCancel: () => onClose(null),
+        }),
     },
   };
 }

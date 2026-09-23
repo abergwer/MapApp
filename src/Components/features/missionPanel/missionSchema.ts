@@ -84,5 +84,6 @@ export const MISSION_SCHEMA: readonly FieldDef[] = [
   { key: 'component', type: 'entity', label: 'Component', source: 'component', dependsOn: 'target' },
   { key: 'attackPoint', type: 'entity', label: 'Attack point', source: 'attackPoint', dependsOn: 'component', allowCreate: true },
   {key: 'route', type: 'entity', label : 'Route', source: 'route', allowCreate: true},
+  { key: 'impactData', type: 'entity', label: 'Impact data', source: 'impactData', allowCreate: true },
   { key: 'startAt', type: 'datetime', label: 'Start' },
 ];
