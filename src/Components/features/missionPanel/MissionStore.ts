@@ -72,10 +72,11 @@ export class MissionStore {
   }
 
   update(id: string, values: MissionValues) {
-    const m = this.missions.find((x) => x.id === id);
-    if (m) {
-      m.name = nameOf(values);
-      m.values = values;
+    const mission = this.missions.find((x) => x.id === id);
+    if (mission) {
+      mission.name = nameOf(values);
+      mission.values = values;
+      mission.updatedAt = new Date().toISOString();
     }
   }
 

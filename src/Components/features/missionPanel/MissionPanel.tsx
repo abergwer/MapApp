@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { DEMO_MISSIONS } from './demoMissions';
 import { MissionContext } from './MissionContext';
-import MissionForm from './MissionForm';
-import MissionList from './MissionList';
+import MissionForm from './form/MissionForm';
+import MissionList from './list/MissionList';
 import { MissionStore } from './MissionStore';
 import type { EntitySources } from './missionSchema';
 

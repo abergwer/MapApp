@@ -104,6 +104,9 @@ export const palette: Palette = Object.fromEntries(
 export const fonts = {
   ui: "'Segoe UI', system-ui, Roboto, Helvetica, Arial, sans-serif",
   mono: "'JetBrains Mono', ui-monospace, Consolas, 'Courier New', monospace",
+  /** Titles / names that may be in Hebrew: fonts with good Hebrew glyphs first,
+   *  falling back to system fonts that also cover the Hebrew block. */
+  display: "'Heebo', 'Rubik', 'Assistant', 'Segoe UI', 'Noto Sans Hebrew', 'Arial Hebrew', Arial, sans-serif",
 } as const;
 
 export const radii = {

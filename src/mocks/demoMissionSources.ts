@@ -1,11 +1,12 @@
 import { createElement } from 'react';
 import { observable } from 'mobx';
 import WidgetsIcon from '@mui/icons-material/Widgets';
-import type { EntitySources } from '../Components/features/missionPanel';
+import {
+  type EntitySources,
+} from '../Components/features/missionPanel';
 import { getEntityDef } from '../Components/features/entities/entityDefinitions';
 import EntityIcon from '../Components/features/entities/EntityIcon';
 import type { RootStore } from '../stores/RootStore';
-import { newShapeId, type MapShape } from '../types/shapes';
 
 /** Demo-only list behind the `commander` source; supports `Add "…"`. */
 const commanders = observable.array(['Maj. R. Halvorsen', 'Capt. L. Okafor', 'Lt. Col. S. Brandt']);
@@ -84,6 +85,12 @@ const findComponent = (id?: string) => DB_TARGETS.flatMap((t) => t.components).f
  * stores here (and implement `add` where the schema sets `allowCreate`).
  */
 export function demoMissionEntitySources(stores: RootStore): EntitySources {
+  /** Disarm the map tool when the user cancels a map-drawn `add`. */
+  const stopDrawing = () => {
+    stores.mapEngineStore.engine?.cancelDrawing();
+    stores.drawingToolStore.setActiveDrawTool(null);
+  };
+
   return {
     /** Targets exactly as the DB sends them (no create — schema has allowCreate: false). */
     target: {
@@ -97,8 +104,8 @@ export function demoMissionEntitySources(stores: RootStore): EntitySources {
     },
 
     /** Attack points of the chosen component (parentId = component id).
-     *  `add` drops a new point entity on the map and appends it to the
-     *  component's list (a real app would also POST it to the DB). */
+     *  `add` arms the map's point tool; once the user clicks, the point entity
+     *  is created and appended to the component (a real app would POST it). */
     attackPoint: {
       options: (componentId) =>
         findComponent(componentId)?.attackPoints.map((p) => ({
@@ -106,19 +113,36 @@ export function demoMissionEntitySources(stores: RootStore): EntitySources {
           label: p.name,
           icon: iconFor('attackPoint'),
         })) ?? [],
-      add: (label, componentId) => {
-        const view = stores.mapEngineStore.engine?.getViewState();
-        const shape: MapShape = {
-          id: newShapeId(),
-          kind: 'point',
-          defId: 'attackPoint',
-          name: label,
-          position: [view?.longitude ?? 0, view?.latitude ?? 0],
-        };
-        stores.entityService.create(shape);
-        findComponent(componentId)?.attackPoints.push({ id: shape.id, name: label });
-        return { id: shape.id, label };
-      },
+      addHint: 'Click the map to place the attack point.',
+      add: (label, componentId) =>
+        new Promise((resolve) => {
+          stores.drawingToolStore.setActiveDrawTool('point', 'attackPoint');
+          stores.mapEngineStore.engine?.startDrawPoint((id, position) => {
+            stores.entityService.create({ id, kind: 'point', defId: 'attackPoint', name: label, position });
+            findComponent(componentId)?.attackPoints.push({ id, name: label });
+            resolve({ id, label });
+          });
+        }),
+      cancelAdd: stopDrawing,
+    },
+
+    /** Routes drawn on the map (defId `attackRoute`). `add` arms the map's
+     *  line tool and resolves once the drawing is finished. */
+    route: {
+      options: () =>
+        stores.drawingToolStore.completedShapes
+          .filter((s) => s.defId === 'attackRoute')
+          .map((s) => ({ id: s.id, label: s.name ?? `Route ${s.id.slice(0, 8)}`, icon: iconFor(s.defId) })),
+      addHint: 'Click the map to draw the route; double-click to finish.',
+      add: (label) =>
+        new Promise((resolve) => {
+          stores.drawingToolStore.setActiveDrawTool('line', 'attackRoute');
+          stores.mapEngineStore.engine?.startDrawLine((id, positions) => {
+            stores.entityService.create({ id, kind: 'line', defId: 'attackRoute', name: label, positions });
+            resolve({ id, label });
+          });
+        }),
+      cancelAdd: stopDrawing,
     },
 
     shape: {

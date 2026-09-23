@@ -11,8 +11,10 @@
  *  - entity — pick an entity from the app (targets, drawn shapes, …).
  *             `source` names the list; the host provides it via
  *             `<MissionsPanel entitySources={{ [source]: { options, add? } }} />`.
- *             Set `allowCreate: true` to show an `Add "…"` option that calls
- *             the source's `add(label)` (the source must implement it).
+ *             Set `allowCreate: true` to show an `Add "…"` option. It calls the
+ *             source's `add(label)` — or, when the source implements
+ *             `createDialog`, opens that dialog instead so the user can fill a
+ *             whole form before the new entity is added and selected.
  *             Set `dependsOn: <other entity key>` to chain fields: the field
  *             stays disabled until the parent is chosen, the parent's value is
  *             passed to `options(parentId)` / `add(label, parentId)`, and
@@ -44,11 +46,27 @@ export interface EntityOption {
   icon?: ReactNode;
 }
 
-/** One selectable entity list. `add` is only needed for `allowCreate` fields.
- *  For `dependsOn` fields both callbacks receive the parent field's value. */
+/** Props handed to a source's `createDialog`. Call `onClose` with the new
+ *  entity to select it, or with `null` when the user cancelled. */
+export interface CreateDialogProps {
+  /** What the user typed in the picker before choosing `Add "…"`. */
+  initialLabel: string;
+  parentId?: string;
+  onClose: (created: EntityOption | null) => void;
+}
+
+/** One selectable entity list. For `allowCreate` fields implement either
+ *  `add` (label only) or `createDialog` (multi-field form).
+ *  `add` may return a Promise when the user has to do something first
+ *  (e.g. click the map); `addHint` is shown under the field meanwhile and
+ *  `cancelAdd` is called if they press Cancel or leave the form.
+ *  For `dependsOn` fields the callbacks receive the parent field's value. */
 export interface EntitySource {
   options: (parentId?: string) => EntityOption[];
-  add?: (label: string, parentId?: string) => EntityOption;
+  add?: (label: string, parentId?: string) => EntityOption | Promise<EntityOption>;
+  addHint?: string;
+  cancelAdd?: () => void;
+  createDialog?: (props: CreateDialogProps) => ReactNode;
 }
 
 export type EntitySources = Record<string, EntitySource>;
@@ -60,10 +78,11 @@ export const MISSION_SCHEMA: readonly FieldDef[] = [
   { key: NAME_KEY, type: 'text', label: 'Mission name', required: true },
   { key: 'description', type: 'textarea', label: 'Description' },
   { key: 'commander', type: 'entity', label: 'Commander', source: 'commander', allowCreate: true },
+  {key : 'areaOfOperation', type: 'text', label: 'Area of Operation'},
   { key: 'status', type: 'select', label: 'Status', options: ['Planned', 'Active', 'Completed'], required: true },
   { key: 'target', type: 'entity', label: 'Primary target', source: 'target', allowCreate: false },
   { key: 'component', type: 'entity', label: 'Component', source: 'component', dependsOn: 'target' },
   { key: 'attackPoint', type: 'entity', label: 'Attack point', source: 'attackPoint', dependsOn: 'component', allowCreate: true },
-  { key: 'area', type: 'entity', label: 'Area of operation', source: 'shape' },
+  {key: 'route', type: 'entity', label : 'Route', source: 'route', allowCreate: true},
   { key: 'startAt', type: 'datetime', label: 'Start' },
 ];

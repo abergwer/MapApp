@@ -424,3 +424,26 @@ export const formError: SxProps<Theme> = {
   border: `1px solid color-mix(in srgb, ${palette.danger} 30%, transparent)`,
   '& svg': { fontSize: 14 },
 };
+
+// ── Create-entity dialog ───────────────────────────────────────
+
+/** Inline hint shown under an entity picker while an async `add` waits
+ *  for the user (e.g. "click the map…"). */
+export const drawPrompt: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 1,
+  mt: -0.75,
+  px: 1.25,
+  py: 0.75,
+  borderRadius: 1.5,
+  fontSize: 11.5,
+  lineHeight: 1.4,
+  color: palette.accentBright,
+  bgcolor: `color-mix(in srgb, ${palette.accent} 12%, transparent)`,
+  border: `1px solid color-mix(in srgb, ${palette.accent} 30%, transparent)`,
+};
+
+export const drawPromptSpinner: SxProps<Theme> = { flex: 'none' };
+
+export const drawPromptText: SxProps<Theme> = { flex: 1, minWidth: 0 };

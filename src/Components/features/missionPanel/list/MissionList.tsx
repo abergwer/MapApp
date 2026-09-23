@@ -11,16 +11,17 @@ import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import SearchIcon from '@mui/icons-material/Search';
 import SearchOffIcon from '@mui/icons-material/SearchOff';
 import SwapVertIcon from '@mui/icons-material/SwapVert';
 import { observer } from 'mobx-react-lite';
-import { useMissions } from './MissionContext';
-import type { MissionSort } from './MissionStore';
-import type { MissionSummary } from './types';
-import * as styles from './styles/mission.styles';
+import { useMissions } from '../MissionContext';
+import type { MissionSort } from '../MissionStore';
+import type { MissionSummary } from '../types';
+import * as styles from '../styles/mission.styles';
 
 const SORT_OPTIONS: { value: MissionSort; label: string }[] = [
   { value: 'newest', label: 'Newest first' },
@@ -44,6 +45,8 @@ const initials = (name: string) =>
 /** One mission box — shows the header fields only. Click to edit. */
 function MissionCard({ mission, onOpen, onDelete }: { mission: MissionSummary; onOpen: () => void; onDelete: () => void }) {
   const name = mission.name || 'Untitled mission';
+  // Show the latest event on the card; the other date lives in the tooltip.
+  const edited = Boolean(mission.updatedAt && mission.updatedAt !== mission.createdAt);
   return (
     <ButtonBase sx={styles.card} onClick={onOpen} aria-label={`Open mission ${name}`}>
       <Box className="msn-card-avatar" sx={styles.cardAvatar} aria-hidden>
@@ -51,24 +54,17 @@ function MissionCard({ mission, onOpen, onDelete }: { mission: MissionSummary; o
       </Box>
       <Box sx={styles.cardBody}>
         <Typography sx={styles.cardName}>{name}</Typography>
-        <Typography component="span" sx={styles.cardDate}>
-          <ScheduleIcon />
-          {formatDate(mission.createdAt)}
-          {mission.updatedAt && (
-            <>
-              <ScheduleIcon />
-              {formatDate(mission.updatedAt)}
-            </>
-          )}
-        </Typography>
-        {/* {mission.updatedAt && (
-          <>
-            <Typography component="span" sx={styles.cardDate}>
-              <ScheduleIcon />
-              {formatDate(mission.updatedAt)}
-            </Typography>
-          </>
-        )} */}
+        <Tooltip
+          title={edited ? `Created ${formatDate(mission.createdAt)}` : ''}
+          arrow
+          placement="bottom-start"
+          disableHoverListener={!edited}
+        >
+          <Typography component="span" sx={styles.cardDate}>
+            {edited ? <EditOutlinedIcon /> : <ScheduleIcon />}
+            {edited ? `Edited ${formatDate(mission.updatedAt!)}` : formatDate(mission.createdAt)}
+          </Typography>
+        </Tooltip>
       </Box>
       <Box className="msn-card-actions" sx={styles.cardActions}>
         <Tooltip title="Delete mission" arrow>

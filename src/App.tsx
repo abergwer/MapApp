@@ -37,13 +37,12 @@ import { DEMO_LAYERS } from './mocks/demoLayers'
 import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
 import airCraftIcon from './assets/aircraft.png'
 import droneIcon from './assets/drone.png'
-import { MissionsPanel, MissionStore } from './Components/features/missionPanel'
+import { MissionsPanel } from './Components/features/missionPanel'
 import { demoMissionEntitySources } from './mocks/demoMissionSources'
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 
 function App() {
   const stores = useStores()
-  const missionStore = new MissionStore();
   const { uiVisibilityStore: ui } = stores
 
   // Live feed: the demo server pushes targets/missiles over the bridge's WS
