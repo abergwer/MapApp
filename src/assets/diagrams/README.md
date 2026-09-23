@@ -98,3 +98,17 @@ composition, dashed = calls / uses. The `MapEngine → MapWrapper` and
 ![Drawing entities class diagram](07-drawing-entities-class.png)
 
 Source: [07-drawing-entities-class.mmd](07-drawing-entities-class.mmd)
+
+---
+
+## 8. Mission create flow
+
+`MissionForm` is generated from `MISSION_SCHEMA`; entity fields read from
+the host's `EntitySources`. Choosing `Add "…"` on the impact-data field
+opens `ImpactDataDialog`; the saved record is appended to the list and
+selected. `Create` validates required fields, then `MissionStore.add`
+stores the mission and returns to the list.
+
+![Mission create flow](08-mission-create-flow.png)
+
+Source: [08-mission-create-flow.mmd](08-mission-create-flow.mmd)

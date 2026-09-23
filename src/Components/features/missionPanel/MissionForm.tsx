@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type HTMLAttributes } from 'react';
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -8,27 +8,33 @@ import TextField from '@mui/material/TextField';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs, { type Dayjs } from 'dayjs';
 import { observer } from 'mobx-react-lite';
 import { useMissions } from './MissionContext';
 import { MISSION_SCHEMA, type EntityOption, type EntitySource, type EntitySources, type FieldDef } from './missionSchema';
 import { emptyValues, type Mission, type MissionValues } from './types';
 import * as styles from './styles/mission.styles';
 
-/** ISO ⇄ `<input type="datetime-local">` (local time, minute precision). */
-const isoToLocal = (iso: string) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+/** ISO ⇄ Dayjs for the 24h DateTimePicker. */
+const isoToDay = (iso: string): Dayjs | null => {
+  if (!iso) return null;
+  const d = dayjs(iso);
+  return d.isValid() ? d : null;
 };
-const localToIso = (local: string) => (local ? new Date(local).toISOString() : '');
+const dayToIso = (d: Dayjs | null) => (d && d.isValid() ? d.toISOString() : '');
 
 /** Autocomplete row; `create` is set only on the synthetic `Add "…"` row. */
 type EntityRow = EntityOption & { create?: string };
 const filterRows = createFilterOptions<EntityRow>();
 
-/** Entity picker: searchable dropdown, optionally with an `Add "…"` last row. */
+/** Entity picker: searchable dropdown, optionally with an `Add "…"` last row.
+ *  When the field `dependsOn` another one, it is disabled until `parentId`
+ *  exists and forwards it to the source's `options` / `add`. */
 function EntityField({
   label,
   required,
@@ -36,6 +42,8 @@ function EntityField({
   error,
   source,
   allowCreate,
+  parentId,
+  disabledHint,
   onChange,
 }: {
   label: string;
@@ -44,9 +52,14 @@ function EntityField({
   error?: string;
   source: EntitySource | undefined;
   allowCreate?: boolean;
+  /** Value of the field this one depends on ('' = not chosen yet). */
+  parentId?: string;
+  /** Helper text shown while waiting for the parent field. */
+  disabledHint?: string;
   onChange: (next: string) => void;
 }) {
-  const options: EntityRow[] = source?.options() ?? [];
+  const disabled = Boolean(disabledHint) && !parentId;
+  const options: EntityRow[] = disabled ? [] : source?.options(parentId) ?? [];
   const canCreate = Boolean(allowCreate && source?.add);
   // Keep a stale selection visible even if the entity is no longer live.
   const selected = options.find((o) => o.id === value) ?? (value ? { id: value, label: `${value} (unavailable)` } : null);
@@ -54,6 +67,7 @@ function EntityField({
   return (
     <Autocomplete
       size="small"
+      disabled={disabled}
       options={options}
       value={selected}
       getOptionLabel={(o) => o.label}
@@ -68,12 +82,30 @@ function EntityField({
       }}
       onChange={(_, row) => {
         if (!row) return onChange('');
-        if (row.create && source?.add) return onChange(source.add(row.create).id);
+        if (row.create && source?.add) return onChange(source.add(row.create, parentId).id);
         onChange(row.id);
       }}
       noOptionsText={canCreate ? 'Type to add a new one' : 'No entities available'}
+      renderOption={(props, row) => {
+        const { key, ...rest } = props as { key?: string } & HTMLAttributes<HTMLLIElement>;
+        return (
+          <Box component="li" key={key ?? row.id} {...rest} sx={{ display: 'flex', gap: 1 }}>
+            {row.icon}
+            <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {row.label}
+            </Box>
+          </Box>
+        );
+      }}
       renderInput={(params) => (
-        <TextField {...params} label={label} required={required} error={Boolean(error)} helperText={error} sx={styles.field} />
+        <TextField
+          {...params}
+          label={label}
+          required={required}
+          error={Boolean(error)}
+          helperText={error ?? (disabled ? disabledHint : undefined)}
+          sx={styles.field}
+        />
       )}
     />
   );
@@ -86,12 +118,15 @@ function SchemaField({
   error,
   onChange,
   entitySources,
+  parentId,
 }: {
   field: FieldDef;
   value: string;
   error?: string;
   onChange: (next: string) => void;
   entitySources: EntitySources;
+  /** For `dependsOn` entity fields: current value of the parent field. */
+  parentId?: string;
 }) {
   const common = {
     size: 'small' as const,
@@ -117,7 +152,10 @@ function SchemaField({
         </TextField>
       );
 
-    case 'entity':
+    case 'entity': {
+      const parentLabel = field.dependsOn
+        ? MISSION_SCHEMA.find((f) => f.key === field.dependsOn)?.label ?? field.dependsOn
+        : undefined;
       return (
         <EntityField
           label={field.label}
@@ -126,19 +164,35 @@ function SchemaField({
           error={error}
           source={entitySources[field.source]}
           allowCreate={field.allowCreate}
+          parentId={parentId}
+          disabledHint={parentLabel ? `Choose ${parentLabel.toLowerCase()} first` : undefined}
           onChange={onChange}
         />
       );
+    }
 
     case 'datetime':
       return (
-        <TextField
-          {...common}
-          type="datetime-local"
-          value={isoToLocal(value)}
-          onChange={(e) => onChange(localToIso(e.target.value))}
-          slotProps={{ ...common.slotProps, inputLabel: { shrink: true } }}
-        />
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <DateTimePicker
+            label={field.label}
+            value={isoToDay(value)}
+            onChange={(d) => onChange(dayToIso(d))}
+            ampm={false}
+            format="DD/MM/YYYY HH:mm"
+            minDateTime={dayjs('1000-01-01T00:00')}
+            maxDateTime={dayjs('9999-12-31T23:59')}
+            slotProps={{
+              textField: {
+                size: 'small',
+                required: field.required,
+                error: Boolean(error),
+                helperText: error,
+                sx: styles.field,
+              },
+            }}
+          />
+        </LocalizationProvider>
       );
 
     case 'number':
@@ -166,6 +220,17 @@ const validate = (values: MissionValues) =>
   Object.fromEntries(
     MISSION_SCHEMA.filter((f) => f.required && !values[f.key]?.trim()).map((f) => [f.key, `${f.label} is required`]),
   ) as Record<string, string>;
+
+/** Empty every field that (directly or transitively) depends on `key`. */
+const clearDependents = (values: MissionValues, key: string): MissionValues => {
+  for (const f of MISSION_SCHEMA) {
+    if (f.type === 'entity' && f.dependsOn === key) {
+      values[f.key] = '';
+      clearDependents(values, f.key);
+    }
+  }
+  return values;
+};
 
 /**
  * Create / edit form generated from MISSION_SCHEMA. Edits a local copy of
@@ -197,13 +262,18 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
     >
       <Box sx={styles.formHeader}>
         <Tooltip title="Back to missions" arrow>
-          <IconButton size="small" onClick={() => store.showList()} aria-label="Back to mission list">
-            <ArrowBackIcon sx={{ fontSize: 18 }} />
+          <IconButton size="small" sx={styles.iconButton} onClick={() => store.showList()} aria-label="Back to mission list">
+            <ArrowBackIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Tooltip>
-        <Typography component="h3" sx={styles.formTitle}>
-          {mission ? `Edit · ${mission.name}` : 'New Mission'}
-        </Typography>
+        <Box sx={styles.formHeading}>
+          <Typography component="span" sx={styles.formEyebrow}>
+            {mission ? 'Edit mission' : 'New mission'}
+          </Typography>
+          <Typography component="h3" sx={styles.formTitle}>
+            {mission ? mission.name || 'Untitled mission' : 'Mission details'}
+          </Typography>
+        </Box>
       </Box>
 
       <Box sx={styles.formBody}>
@@ -214,8 +284,9 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
             value={values[field.key] ?? ''}
             error={errors[field.key]}
             entitySources={entitySources}
+            parentId={field.type === 'entity' && field.dependsOn ? values[field.dependsOn] || undefined : undefined}
             onChange={(next) => {
-              setValues((v) => ({ ...v, [field.key]: next }));
+              setValues((v) => clearDependents({ ...v, [field.key]: next }, field.key));
               if (errors[field.key]) {
                 setErrors((prev) => {
                   const rest = { ...prev };
@@ -229,10 +300,15 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
       </Box>
 
       <Box sx={styles.formFooter}>
-        <Typography sx={styles.formError}>
-          {Object.keys(errors).length > 0 ? 'Please fill the required fields' : ''}
-        </Typography>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        {Object.keys(errors).length > 0 ? (
+          <Typography component="span" role="alert" sx={styles.formError}>
+            <ErrorOutlinedIcon />
+            Fill the required fields
+          </Typography>
+        ) : (
+          <span />
+        )}
+        <Box sx={styles.formActions}>
           <ButtonBase sx={styles.ghostButton} onClick={() => store.showList()} aria-label="Cancel">
             Cancel
           </ButtonBase>

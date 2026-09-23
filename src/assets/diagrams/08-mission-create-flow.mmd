@@ -1,0 +1,38 @@
+%% Create-mission flow in the Missions panel (list -> form -> save),
+%% including the "Add new impact data" sub-dialog opened from an entity field.
+flowchart TD
+    A([User clicks New Mission]) --> B[MissionStore.openCreate]
+    B --> C[MissionForm opens<br/>every MISSION_SCHEMA key = empty]
+
+    C --> D{Field type}
+    D -->|text / number / datetime / select| E[Value typed or picked]
+    D -->|entity| F[Dropdown filled by<br/>EntitySource.options]
+
+    F --> G{User picks}
+    G -->|existing item| H[value = item id]
+    G -->|Add new - simple source<br/>commander, attackPoint| I[EntitySource.add label<br/>item created instantly]
+    G -->|Add new - impactData| J[ImpactDataDialog opens<br/>name pre-filled]
+
+    J --> K[Fill radius / speed / details]
+    K --> L{Valid?}
+    L -->|no| K
+    L -->|Cancel| M[Nothing selected]
+    L -->|yes - Add| N[Record pushed to impactDataList]
+    N --> H
+    I --> H
+
+    E --> O[Draft values updated<br/>dependents cleared]
+    H --> O
+    M --> O
+
+    O --> P([User clicks Create])
+    P --> Q{Required fields filled?}
+    Q -->|no| R[Show field errors] --> D
+    Q -->|yes| S[MissionStore.add values]
+    S --> T[Mission stored<br/>in-memory now, POST /missions later]
+    T --> U[MissionStore.showList<br/>new card visible]
+
+    style J fill:#3b82f6,color:#fff
+    style N fill:#3b82f6,color:#fff
+    style S fill:#22c55e,color:#fff
+    style T fill:#22c55e,color:#fff

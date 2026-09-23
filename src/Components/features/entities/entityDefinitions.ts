@@ -113,6 +113,13 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     geometries: ['line'],
   },
   {
+    id: 'attackPoint',
+    name: 'Attack Point',
+    color: '#ff5252',
+    icon: ICONS.targetZone,
+    geometries: ['point'],
+  },
+  {
     id: 'noFlyZone',
     name: 'No-Fly Zone',
     color: '#ba68c8',

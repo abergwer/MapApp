@@ -5,6 +5,7 @@ export interface MissionSummary {
   id: string;
   name: string;
   createdAt: string;
+  updatedAt?: string;
 }
 
 /** Field values keyed by `FieldDef.key`. Empty string = not filled. */

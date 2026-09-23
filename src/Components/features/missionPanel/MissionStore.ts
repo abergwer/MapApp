@@ -3,6 +3,16 @@ import { nameOf, type Mission, type MissionValues } from './types';
 
 export type MissionView = { mode: 'list' } | { mode: 'create' } | { mode: 'edit'; id: string };
 
+/** List orderings offered in the toolbar. */
+export type MissionSort = 'newest' | 'oldest' | 'name' | 'updatedAt';
+
+const SORTERS: Record<MissionSort, (a: Mission, b: Mission) => number> = {
+  newest: (a, b) => b.createdAt.localeCompare(a.createdAt),
+  oldest: (a, b) => a.createdAt.localeCompare(b.createdAt),
+  name: (a, b) => a.name.localeCompare(b.name),
+  updatedAt: (a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''),
+};
+
 /**
  * Mission list + which screen is showing. In-memory for now: replace the
  * seed / `add` / `update` / `remove` bodies with API calls when a backend
@@ -11,6 +21,7 @@ export type MissionView = { mode: 'list' } | { mode: 'create' } | { mode: 'edit'
 export class MissionStore {
   missions: Mission[] = [];
   search = '';
+  sort: MissionSort = 'newest';
   view: MissionView = { mode: 'list' };
 
   constructor(seed: Mission[] = []) {
@@ -18,12 +29,10 @@ export class MissionStore {
     makeAutoObservable(this);
   }
 
-  /** Newest first, filtered by name. */
+  /** Filtered by name, ordered by the chosen sort (newest first by default). */
   get filtered(): Mission[] {
     const q = this.search.trim().toLowerCase();
-    return this.missions
-      .filter((m) => !q || m.name.toLowerCase().includes(q))
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return this.missions.filter((m) => !q || m.name.toLowerCase().includes(q)).sort(SORTERS[this.sort]);
   }
 
   get editing(): Mission | null {
@@ -33,6 +42,10 @@ export class MissionStore {
 
   setSearch(search: string) {
     this.search = search;
+  }
+
+  setSort(sort: MissionSort) {
+    this.sort = sort;
   }
 
   openCreate() {

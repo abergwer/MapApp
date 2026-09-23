@@ -13,7 +13,13 @@
  *             `<MissionsPanel entitySources={{ [source]: { options, add? } }} />`.
  *             Set `allowCreate: true` to show an `Add "…"` option that calls
  *             the source's `add(label)` (the source must implement it).
+ *             Set `dependsOn: <other entity key>` to chain fields: the field
+ *             stays disabled until the parent is chosen, the parent's value is
+ *             passed to `options(parentId)` / `add(label, parentId)`, and
+ *             changing the parent clears the child.
  */
+
+import type { ReactNode } from 'react';
 
 export type FieldType = 'text' | 'textarea' | 'number' | 'datetime' | 'select' | 'entity';
 
@@ -28,18 +34,21 @@ interface BaseField {
 export type FieldDef =
   | (BaseField & { type: 'text' | 'textarea' | 'number' | 'datetime' })
   | (BaseField & { type: 'select'; options: readonly string[] })
-  | (BaseField & { type: 'entity'; source: string; allowCreate?: boolean });
+  | (BaseField & { type: 'entity'; source: string; allowCreate?: boolean; dependsOn?: string });
 
 /** An option for `entity` fields — the host maps its objects into this. */
 export interface EntityOption {
   id: string;
   label: string;
+  /** Optional icon rendered at the right of the option row. */
+  icon?: ReactNode;
 }
 
-/** One selectable entity list. `add` is only needed for `allowCreate` fields. */
+/** One selectable entity list. `add` is only needed for `allowCreate` fields.
+ *  For `dependsOn` fields both callbacks receive the parent field's value. */
 export interface EntitySource {
-  options: () => EntityOption[];
-  add?: (label: string) => EntityOption;
+  options: (parentId?: string) => EntityOption[];
+  add?: (label: string, parentId?: string) => EntityOption;
 }
 
 export type EntitySources = Record<string, EntitySource>;
@@ -52,7 +61,9 @@ export const MISSION_SCHEMA: readonly FieldDef[] = [
   { key: 'description', type: 'textarea', label: 'Description' },
   { key: 'commander', type: 'entity', label: 'Commander', source: 'commander', allowCreate: true },
   { key: 'status', type: 'select', label: 'Status', options: ['Planned', 'Active', 'Completed'], required: true },
-  { key: 'target', type: 'entity', label: 'Primary target', source: 'target', allowCreate: true },
+  { key: 'target', type: 'entity', label: 'Primary target', source: 'target', allowCreate: false },
+  { key: 'component', type: 'entity', label: 'Component', source: 'component', dependsOn: 'target' },
+  { key: 'attackPoint', type: 'entity', label: 'Attack point', source: 'attackPoint', dependsOn: 'component', allowCreate: true },
   { key: 'area', type: 'entity', label: 'Area of operation', source: 'shape' },
   { key: 'startAt', type: 'datetime', label: 'Start' },
 ];
