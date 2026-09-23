@@ -53,6 +53,7 @@ export default function ImpactDataDialog({
         sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}
         onSubmit={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           handleSave();
         }}
       >
