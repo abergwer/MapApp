@@ -104,8 +104,12 @@ Source: [07-drawing-entities-class.mmd](07-drawing-entities-class.mmd)
 ## 8. Mission create flow
 
 `MissionForm` is generated from `MISSION_SCHEMA`; entity fields read from
-the host's `EntitySources`. Choosing `Add "…"` on the impact-data field
-opens `ImpactDataDialog`; the saved record is appended to the list and
+the host's `EntitySources`. Choosing `Add "…"` in an entity field does one
+of three things depending on the source: creates the item instantly
+(`add` returns it, e.g. commander), waits for the user to draw on the map
+(`add` returns a Promise — the field shows `addHint` with a spinner and a
+Cancel button that calls `cancelAdd`, e.g. attack point / route), or opens a
+dialog (`createDialog`, e.g. impact data). The created item is then
 selected. `Create` validates required fields, then `MissionStore.add`
 stores the mission and returns to the list.
 
