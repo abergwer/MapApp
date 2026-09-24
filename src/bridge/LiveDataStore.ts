@@ -1,5 +1,5 @@
 import { makeAutoObservable, observable } from 'mobx'
-import type { MapShape } from '../stores/DrawingToolStore'
+import type { MapShape } from '@mapapp/map'
 import type { Missile, Target } from './types'
 
 export type TargetKind = 'drone' | 'aircraft'

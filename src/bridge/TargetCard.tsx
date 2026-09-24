@@ -11,7 +11,7 @@ import Box from '@mui/material/Box'
 import CloseIcon from '@mui/icons-material/Close'
 import droneIcon from '../assets/drone.png'
 import aircraftIcon from '../assets/aircraft.png'
-import { useMapContext } from '../map/MapContext'
+import { useMapContext } from '@mapapp/map'
 import { useRequest } from './liveDataApi'
 import type { LiveDataStore, TargetKind } from './LiveDataStore'
 

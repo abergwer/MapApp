@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { liveDataApi, useApiQuery, useApiMutation } from './liveDataApi'
 import type { LiveDataStore } from './LiveDataStore'
-import type { MapShape } from '../stores/DrawingToolStore'
+import type { MapShape } from '@mapapp/map'
 
 const logError = (err: unknown) =>
   console.error('[bridge] shape write failed:', err instanceof Error ? err.message : err)

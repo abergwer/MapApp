@@ -19,7 +19,26 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+
+    /* file:-linked @mapapp/* packages carry their own node_modules; force
+       shared libs referenced by their .d.ts files to resolve to THIS app's
+       copies so types stay identical (mirrors vite resolve.dedupe). */
+    "paths": {
+      "react": ["./node_modules/@types/react"],
+      "react-dom": ["./node_modules/@types/react-dom"],
+      "react-dom/*": ["./node_modules/@types/react-dom/*"],
+      "mobx": ["./node_modules/mobx"],
+      "mobx-react-lite": ["./node_modules/mobx-react-lite"],
+      "@mui/material": ["./node_modules/@mui/material"],
+      "@mui/material/*": ["./node_modules/@mui/material/*"],
+      "@mui/icons-material": ["./node_modules/@mui/icons-material"],
+      "@mui/icons-material/*": ["./node_modules/@mui/icons-material/*"],
+      "leaflet": ["./node_modules/@types/leaflet"],
+      "maplibre-gl": ["./node_modules/maplibre-gl"],
+      "cesium": ["./node_modules/cesium"],
+      "@deck.gl/*": ["./node_modules/@deck.gl/*"]
+    }
   },
   "include": ["src"]
 }

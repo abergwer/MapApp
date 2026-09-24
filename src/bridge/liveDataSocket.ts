@@ -1,4 +1,4 @@
-import { createWebSocketContext } from '../network'
+import { createWebSocketContext } from '@mapapp/network'
 import { liveDataStore } from './LiveDataStore'
 import type { Missile, Target } from './types'
 

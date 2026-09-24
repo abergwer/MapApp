@@ -5,9 +5,9 @@
  * `network` package. It compiles and works if you render it.)
  */
 import { useState } from 'react'
-import { useWebSocket } from '../network'
+import { useWebSocket } from '@mapapp/network'
 import { useApiQuery, useApiMutation, useRequest, DEMO_SERVER_URL } from './liveDataApi'
-import type { MapShape } from '../stores/DrawingToolStore'
+import type { MapShape } from '@mapapp/map'
 
 /** A shape to send in the write examples (server assigns the real id). */
 const DEMO_SHAPE: MapShape = { id: 'temp-example', kind: 'point', position: [34.8, 32.1] }

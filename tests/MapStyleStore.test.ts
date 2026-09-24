@@ -1,4 +1,4 @@
-import { MapStyleStore } from '../src/stores/MapStyleStore';
+import { MapStyleStore } from '@mapapp/map';
 
 describe('MapStyleStore', () => {
   it('has sensible defaults', () => {

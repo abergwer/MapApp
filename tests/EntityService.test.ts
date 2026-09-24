@@ -1,5 +1,4 @@
-import { DrawingToolStore } from '../src/stores/DrawingToolStore';
-import { EntityService } from '../src/Components/features/entities/EntityService';
+import { DrawingToolStore, EntityService } from '@mapapp/map';
 import {
   ENTITY_DEFINITIONS,
   drawOptions,

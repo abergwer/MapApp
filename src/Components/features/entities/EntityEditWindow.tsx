@@ -12,10 +12,11 @@ import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
 import RemoveIcon from '@mui/icons-material/Remove';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { observer } from 'mobx-react-lite';
+import { useMapStores } from '@mapapp/map';
 import { useStores } from '../../../stores/StoreContext';
 import { getEntityDef, getParentEntityDef, type CustomFieldDef } from './entityDefinitions';
-import { isEntity, type Entity, type MapShape } from '../../../types/shapes';
-import EntityIcon from './EntityIcon';
+import { isEntity, type Entity, type MapShape } from '@mapapp/map';
+import { EntityIcon } from '@mapapp/map';
 import * as styles from './styles/entities.styles';
 
 /**
@@ -124,7 +125,8 @@ function PositionFields({
  * sync with the engine's native drag-editing both ways.
  */
 function EntityEditWindowImpl() {
-  const { mapEngineStore, drawingToolStore, entityService } = useStores();
+  const { mapEngineStore, drawingToolStore } = useMapStores();
+  const { entityService } = useStores();
   const engine = mapEngineStore.engine;
   const shape = drawingToolStore.selectedShape;
 

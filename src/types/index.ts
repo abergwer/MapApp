@@ -12,7 +12,7 @@
  */
 
 // ── Domain: editable map entities ──────────────────────────────────────
-export type { MapShape } from './shapes';
+export type { MapShape } from '@mapapp/map';
 
 // ── Domain: live-feed targets ─────────────────────────────────────────
 export type { AirCraftTarget } from '../stores/AirCraftStore';
@@ -25,13 +25,13 @@ export type {
   DrawTool,
   MeasureTool,
   Measurement,
-} from '../stores/DrawingToolStore';
+} from '@mapapp/map';
 
 // ── UI state: basemap styling ─────────────────────────────────────────
-export type { BaseMap } from '../stores/MapStyleStore';
+export type { BaseMap } from '@mapapp/map';
 
 // ── Service layer: entity CRUD hooks ──────────────────────────────────
-export type { EntityHooks } from '../Components/features/entities/EntityService';
+export type { EntityHooks } from '@mapapp/map';
 
 // ── Map engine abstraction ────────────────────────────────────────────
 export type {
@@ -39,22 +39,22 @@ export type {
   MapEngineType,
   MapEngineOptions,
   MapViewState,
-} from '../map/mapEngine/MapEngine';
+} from '@mapapp/map';
 
-export type { MapContextValue } from '../map/MapContext';
+export type { MapContextValue } from '@mapapp/map';
 
 // ── Geographic primitives ─────────────────────────────────────────────
-export type { LngLat } from '../map/utils/geo';
+export type { LngLat } from '@mapapp/map';
 
 // ── Leaflet sector tool internals (shared across sector code paths) ──
 export type {
   SectorMeta,
   SectorLayer,
   SectorDrawResult,
-} from '../map/utils/leafletSectorTool';
+} from '@mapapp/map';
 
 // ── External API contracts ────────────────────────────────────────────
 export type {
   WebrtcViewer,
   WebrtcViewerOptions,
-} from '../api/webrtcViewer';
+} from '@mapapp/mini-video';

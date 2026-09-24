@@ -4,7 +4,7 @@
 
 Three invariants keep this codebase simple — please don't break them:
 
-1. **All shape mutations go through `EntityService`** (`src/Components/features/entities/EntityService.ts`).
+1. **All shape mutations go through `EntityService`** (`@mapapp/map`, created by `createMapStores`).
    Never call `drawingToolStore.recordShape/updateShape/removeShape` directly from UI code — the
    service is the single writer that keeps undo/redo, server sync, id re-keying, and metadata
    merging correct in one place.

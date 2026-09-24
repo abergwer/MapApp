@@ -34,9 +34,6 @@ export class UIVisibilityStore {
     intel: { visible: true, mode: 'docked', rect: { x: 120, y: 152, width: 320, height: 380 } },
   };
 
-  /** Brightness card under the map toolbar. */
-  brightnessCardVisible = false;
-
   /** The tool clusters overlaid on the map (draw/measure/style strip). */
   toolbarVisible = false;
 
@@ -59,6 +56,7 @@ export class UIVisibilityStore {
    * visible so hosts don't need to pre-register anything.
    */
   layerVisibility: Record<string, boolean> = {};
+  
 
   constructor() {
     makeAutoObservable(this);
@@ -98,10 +96,6 @@ export class UIVisibilityStore {
 
   setPanelRect(id: WorkspacePanelId, rect: FloatRect) {
     this.panels[id].rect = rect;
-  }
-
-  toggleBrightnessCard() {
-    this.brightnessCardVisible = !this.brightnessCardVisible;
   }
 
   toggleToolbar() {

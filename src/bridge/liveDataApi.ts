@@ -1,5 +1,5 @@
-import { createApiHooks, createRestClient } from '../network'
-import type { MapShape } from '../stores/DrawingToolStore'
+import { createApiHooks, createRestClient } from '@mapapp/network'
+import type { MapShape } from '@mapapp/map'
 import type { TargetDetails } from './types'
 
 export const DEMO_SERVER_URL = 'http://localhost:4000'

@@ -62,12 +62,18 @@ test('hydrates live feeds and loads the selected missile in 3D', async ({ page }
 
   await page.getByRole('button', { name: 'Open Missiles view' }).click()
   await page.getByRole('button', { name: /^missile-1\b/i }).click()
+
+  // The workspace dock starts collapsed; expand it so the 3D view telemetry
+  // is visible (move the mouse away so the tooltip doesn't swallow clicks).
+  await page.getByRole('button', { name: 'Expand workspace' }).click()
+  await page.mouse.move(10, 10)
+
   await expect(page.getByText('Lat', { exact: true })).toBeVisible()
   await expect(page.getByText('Lng', { exact: true })).toBeVisible()
 })
 
 test('toggles the drones layer group and its child layers together', async ({ page }) => {
-  await page.getByRole('button', { name: 'Open Layers view' }).click()
+  await page.getByRole('button', { name: 'Open Filter view' }).click()
 
   const group = page.getByRole('switch', { name: 'Toggle Drones + Rings layer' })
   await expect(group).toBeChecked()

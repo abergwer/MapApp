@@ -1,27 +1,33 @@
 import { DroneStore } from './DroneStore';
 import { AirCraftStore } from './AirCraftStore';
 import { MissileStore } from './MissileStore';
-import { MapEngineStore } from './MapEngineStore';
-import { DrawingToolStore } from './DrawingToolStore';
-import { EntityService } from '../Components/features/entities/EntityService';
-import { MapStyleStore } from './MapStyleStore';
+import { createMapStores, type BaseMap } from '@mapapp/map';
 import { UIVisibilityStore } from './UIVisibilityStore';
 import { ThemeStore } from './ThemeStore';
+import { selectedMapEngine } from '../mapConfig';
+import config from '../../config.json';
 
 export class RootStore {
   droneStore = new DroneStore();
   airCraftStore = new AirCraftStore();
   missileStore = new MissileStore();
-  mapEngineStore = new MapEngineStore();
-  drawingToolStore = new DrawingToolStore();
-  mapStyleStore = new MapStyleStore();
+
+  // The map package's state handle (opaque trio created by its factory);
+  // MapStoresProvider shares it with the package's internals.
+  mapStores = createMapStores({
+    engineType: selectedMapEngine,
+    baseMapStyles: config.MapStyles as Partial<Record<BaseMap, string>>,
+  });
+
+  // Aliases for the package stores/services the host reads/writes directly.
+  mapEngineStore = this.mapStores.mapEngineStore;
+  drawingToolStore = this.mapStores.drawingToolStore;
+  // Single writer for drawn-entity CRUD, created by the map package; every
+  // create / edit / delete goes through it.
+  entityService = this.mapStores.entityService;
+
   uiVisibilityStore = new UIVisibilityStore();
   themeStore = new ThemeStore();
-
-  // Single writer for drawn-entity CRUD. Every create / edit / delete goes
-  // through here so external consumers can subscribe via `setHooks(...)` and
-  // observe every change without touching the store directly.
-  entityService = new EntityService(this.drawingToolStore);
 }
 
 export const rootStore = new RootStore();

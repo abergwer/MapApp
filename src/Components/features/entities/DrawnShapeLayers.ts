@@ -1,11 +1,11 @@
 import { IconLayer, PathLayer, PolygonLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
-import type { MapShape } from '../../../map/shapes';
+import type { MapShape } from '@mapapp/map';
 import {
   entityIconUrl,
   type EntityDefinition,
 } from './entityDefinitions';
-import { ellipseRing, sectorRing } from '../../../map/utils/geo';
+import { ellipseRing, sectorRing } from '@mapapp/map';
 
 /**
  * Map-pin marker for drawn points, inlined as an SVG data URL so there's no

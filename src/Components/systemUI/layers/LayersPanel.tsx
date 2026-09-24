@@ -10,7 +10,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import { observer } from 'mobx-react-lite';
 import SectionCard from '../../common/SectionCard';
 import { useStores } from '../../../stores/StoreContext';
-import type { LayerGroupDef } from '../../layerManager';
+import type { RootStore } from '../../../stores/RootStore';
+import type { LayerGroupDef } from '@mapapp/layer-manager';
 import * as styles from './styles/layers.styles';
 
 interface RowProps {
@@ -68,7 +69,7 @@ function Row({ color, label, count, checked, onToggle, expandable, expanded, onE
 
 interface LayersPanelProps {
   /** Layer-group defs — the same list the host passes to `LayersWrapper`. */
-  layers?: LayerGroupDef[];
+  layers?: LayerGroupDef<RootStore>[];
 }
 
 /** LAYERS view: search + map layer visibility switches with groups. */
@@ -81,14 +82,14 @@ function LayersPanelImpl({ layers = [] }: LayersPanelProps) {
   const q = search.trim().toLowerCase();
   const hit = (label: string) => label.toLowerCase().includes(q);
   /** True when the def's own label or any descendant's matches the search. */
-  const subtreeHit = (def: LayerGroupDef): boolean =>
+  const subtreeHit = (def: LayerGroupDef<RootStore>): boolean =>
     hit(def.label) || (def.children?.(stores) ?? []).some(subtreeHit);
 
   /**
    * Render one layer-group def, recursing into children at any depth.
    * `forceShow` keeps a subtree visible once an ancestor's label matched.
    */
-  const renderDef = (def: LayerGroupDef, depth = 0, forceShow = false): ReactNode => {
+  const renderDef = (def: LayerGroupDef<RootStore>, depth = 0, forceShow = false): ReactNode => {
     if (q && !forceShow && !subtreeHit(def)) return null;
     const children = def.children?.(stores) ?? [];
 

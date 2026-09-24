@@ -1,53 +1,19 @@
-import { createElement, type ComponentType } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-import type { SvgIconProps } from '@mui/material/SvgIcon';
 import BlockIcon from '@mui/icons-material/Block';
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import RouteIcon from '@mui/icons-material/Route';
-import type { DrawTool } from '../../../stores/DrawingToolStore';
+import {
+  flattenEntityDefs as flattenDefs,
+  type EntityDefinition,
+} from '@mapapp/map';
 
-/** An entity icon: an image URL (data URL / asset) or a MUI icon component. */
-export type EntityIconSource = string | ComponentType<SvgIconProps>;
-
-/** An extra per-instance text field declared by a definition. Shown in the
- *  edit window as a labelled textbox; values live in `shape.customValues`
- *  keyed by `title`. */
-export interface CustomFieldDef {
-  title: string;
-  /** Runs on blur; return false to reject the value and show an error. */
-  validator?: (value: string) => boolean;
-}
-
-/**
- * Code-declared entity-definition TREE.
- *
- * A definition binds a domain concept ("Target") to the graphic
- * presentations it may be drawn as, its icon and display color. Definitions
- * nest: a definition with `children` has sub-entity types (e.g. Target →
- * Radar Site), which render indented in the Entities panel and appear in
- * the toolbar menu of their root. To add a type — root or sub — add ONE
- * node below; toolbar buttons, panel tree, edit-window type picker and
- * layer colors all derive from this tree.
- */
-export interface EntityDefinition {
-  /** Stable id stored on shapes (`shape.defId`). Unique across the tree. */
-  id: string;
-  /** Human-readable name, also the fallback label for unnamed instances. */
-  name: string;
-  /** Display color, '#rrggbb' (layers, icon tint, UI swatches). */
-  color: string;
-  /** Icon: image URL or MUI icon component. Monochrome icons are tinted
-   *  with `color`. */
-  icon: EntityIconSource;
-  /** Set false for full-color icons that must NOT be tinted (uploads). */
-  iconMask?: boolean;
-  /** Graphic presentations this type may be drawn as. */
-  geometries: DrawTool[];
-  /** Extra per-instance fields (title + validator) editable in the edit window. */
-  customFields?: CustomFieldDef[];
-  /** Sub-entity types nested under this one. */
-  children?: EntityDefinition[];
-}
+// The definition CONTRACT (types + generic helpers) is owned by the map
+// package; this module owns the app's concrete definition TREE + lookups.
+export type {
+  EntityIconSource,
+  CustomFieldDef,
+  EntityDefinition,
+} from '@mapapp/map';
+export { entityIconUrl, drawOptions } from '@mapapp/map';
 
 /** Monochrome 24×24 SVG body → data URL (tintable via mask). */
 const svgIcon = (body: string): string =>
@@ -71,6 +37,17 @@ const ICONS = {
   ),
 };
 
+/**
+ * Code-declared entity-definition TREE.
+ *
+ * A definition binds a domain concept ("Target") to the graphic
+ * presentations it may be drawn as, its icon and display color. Definitions
+ * nest: a definition with `children` has sub-entity types (e.g. Target →
+ * Radar Site), which render indented in the Entities panel and appear in
+ * the toolbar menu of their root. To add a type — root or sub — add ONE
+ * node below; toolbar buttons, panel tree, edit-window type picker and
+ * layer colors all derive from this tree.
+ */
 export const ENTITY_DEFINITIONS: EntityDefinition[] = [
   {
     id: 'targetZone',
@@ -125,7 +102,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
 export function flattenEntityDefs(
   defs: EntityDefinition[] = ENTITY_DEFINITIONS,
 ): EntityDefinition[] {
-  return defs.flatMap((def) => [def, ...flattenEntityDefs(def.children ?? [])]);
+  return flattenDefs(defs);
 }
 
 const byId = new Map(flattenEntityDefs().map((d) => [d.id, d]));
@@ -142,38 +119,3 @@ export const getEntityDef = (id?: string): EntityDefinition | undefined =>
 /** The parent definition of a sub-entity type; `undefined` for roots. */
 export const getParentEntityDef = (id?: string): EntityDefinition | undefined =>
   id ? parentOf.get(id) : undefined;
-
-const iconUrlCache = new Map<EntityIconSource, string>();
-
-/**
- * Resolve a definition's icon to an image URL for canvas/deck.gl consumers.
- * MUI icon components are rendered once to a white monochrome SVG data URL
- * (tintable via mask, like the built-ins) and cached.
- */
-export function entityIconUrl(def: EntityDefinition): string {
-  if (typeof def.icon === 'string') return def.icon;
-  let url = iconUrlCache.get(def.icon);
-  if (!url) {
-    // MUI outputs no xmlns / size / fill (it styles via CSS classes, which
-    // don't exist inside a data URL) — stamp them on the root element.
-    const svg = renderToStaticMarkup(createElement(def.icon)).replace(
-      '<svg',
-      '<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" fill="#fff"',
-    );
-    url = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
-    iconUrlCache.set(def.icon, url);
-  }
-  return url;
-}
-
-/**
- * Every drawable (definition, geometry) pair in a definition's subtree —
- * what the toolbar menu of a root type offers.
- */
-export function drawOptions(
-  def: EntityDefinition,
-): { def: EntityDefinition; geometry: DrawTool }[] {
-  return flattenEntityDefs([def]).flatMap((d) =>
-    d.geometries.map((geometry) => ({ def: d, geometry })),
-  );
-}

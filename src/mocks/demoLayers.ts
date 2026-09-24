@@ -1,5 +1,6 @@
-import type { LayerGroupDef } from '../Components/layerManager';
-import { DRAWN_SHAPES_GROUP } from '../Components/layerManager';
+import type { LayerGroupDef } from '@mapapp/layer-manager';
+import { DRAWN_SHAPES_GROUP } from '../Components/features/entities/drawnShapesGroup';
+import type { RootStore } from '../stores/RootStore';
 import { createMissilesLayer } from './Layers/MissileLayer';
 import { createDroneLayer } from './Layers/DroneLayer';
 import { createAirCraftLayer } from './Layers/AirCraftLayer';
@@ -12,7 +13,7 @@ import { palette } from '../Components/layout/styles/tokens';
  * (deck.gl layers). Real projects declare their own list; this one is only
  * the reference composition used by the demo App.
  */
-export const DEMO_LAYERS: LayerGroupDef[] = [
+export const DEMO_LAYERS: LayerGroupDef<RootStore>[] = [
   DRAWN_SHAPES_GROUP,
   {
     id: 'droneGroup',

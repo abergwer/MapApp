@@ -4,6 +4,7 @@
     "module": "commonjs",
     "moduleResolution": "node",
     "ignoreDeprecations": "6.0",
+    "jsx": "react-jsx",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
@@ -13,18 +14,31 @@
     "verbatimModuleSyntax": false,
     "erasableSyntaxOnly": false,
     "typeRoots": ["../node_modules/@types"],
-    "types": ["jest", "node"]
+    "types": ["jest", "node"],
+    "paths": {
+      "@mapapp/map": ["../../mapapp-packages/map/src/index.ts"],
+      "react": ["../node_modules/@types/react"],
+      "react-dom": ["../node_modules/@types/react-dom"],
+      "react-dom/*": ["../node_modules/@types/react-dom/*"],
+      "mobx": ["../node_modules/mobx"],
+      "mobx-react-lite": ["../node_modules/mobx-react-lite"],
+      "@mui/material": ["../node_modules/@mui/material"],
+      "@mui/material/*": ["../node_modules/@mui/material/*"],
+      "@mui/icons-material/*": ["../node_modules/@mui/icons-material/*"],
+      "leaflet": ["../node_modules/@types/leaflet"],
+      "maplibre-gl": ["../node_modules/maplibre-gl"],
+      "cesium": ["../node_modules/cesium"]
+    }
   },
   "include": [
     "./**/*.ts",
     "../src/stores/UIVisibilityStore.ts",
-    "../src/stores/MapStyleStore.ts",
-    "../src/stores/DrawingToolStore.ts",
     "../src/stores/PolygonStore.ts",
     "../src/stores/MissileStore.ts",
     "../src/stores/AirCraftStore.ts",
     "../src/stores/DroneStore.ts",
     "../src/types/shapes.ts",
-    "../src/map/mapConfig.ts"
+    "../src/mapConfig.ts",
+    "../../mapapp-packages/map/src/**/*"
   ]
 }

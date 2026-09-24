@@ -30,13 +30,13 @@ const PORT = 4000
 // Simulation config — tweak these to change the demo feed.
 // ---------------------------------------------------------------------------
 
-const NUM_DRONES = 250
-const NUM_AIRCRAFT = 250
+const NUM_DRONES = 100
+const NUM_AIRCRAFT = 100
 const NUM_MISSILES = 40
 /** Drones + aircraft move (and are broadcast) at this interval. */
-const TARGET_TICK_MS = 200
+const TARGET_TICK_MS = 250
 /** Missiles move (and are broadcast) at this interval — fast for a smooth 3D chase view. */
-const MISSILE_TICK_MS = 100
+const MISSILE_TICK_MS = 250
 
 // ---------------------------------------------------------------------------
 // Data

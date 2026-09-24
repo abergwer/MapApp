@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
@@ -8,10 +8,15 @@ import CloseIcon from '@mui/icons-material/Close'
 import FmdGoodOutlinedIcon from '@mui/icons-material/FmdGoodOutlined'
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined'
 import RocketLaunchOutlinedIcon from '@mui/icons-material/RocketLaunchOutlined'
+import MapIcon from '@mui/icons-material/Map'
+import VideocamIcon from '@mui/icons-material/Videocam'
+import ViewInArIcon from '@mui/icons-material/ViewInAr'
+import RssFeedIcon from '@mui/icons-material/RssFeed'
 import { reaction } from 'mobx'
 import { observer } from 'mobx-react-lite'
-import LayersWrapper from './Components/layerManager/LayersWrapper'
-import MapWrapper from './map/mapWrapper/MapWrapper'
+import { LayersWrapper } from '@mapapp/layer-manager'
+import { MapWrapper } from '@mapapp/map'
+import type { MapEngine } from '@mapapp/map'
 import TopBar, {
   SystemStatusChip,
   ThemeToggleButton,
@@ -25,22 +30,67 @@ import LeftPanel, { type LeftPanelView } from './Components/layout/LeftPanel'
 import LayersPanel from './Components/systemUI/layers/LayersPanel'
 import MissilesPanel from './Components/systemUI/missiles/MissilesPanel'
 import EntitiesPanel from './Components/features/entities/EntitiesPanel'
+import EntityEditWindow from './Components/features/entities/EntityEditWindow'
+import { ENTITY_DEFINITIONS } from './Components/features/entities/entityDefinitions'
+import { DRAWN_SHAPE_LAYER_IDS } from './Components/features/entities/DrawnShapeLayers'
+import { toolButton } from './Components/common/styles/panel.styles'
 import IntelFeedPanel from './Components/systemUI/intel/IntelFeedPanel'
-import LazyMissileView3D from './Components/features/view-3d/LazyMissileView3D'
-import MiniMap from './Components/features/mini-map/MiniMap'
-import MiniVideo, { VideoMuteButton } from './Components/features/mini-video/MiniVideo'
+import { LazyMissileView3D } from '@mapapp/view-3d'
+import { MiniMap } from '@mapapp/mini-map'
+import { MiniVideo, VideoMuteButton } from '@mapapp/mini-video'
 import { useStores } from './stores/StoreContext'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
 import { LiveDataSocketProvider, liveDataStore, useLiveShapes } from './bridge'
-import { NetworkProvider } from './network'
+import { NetworkProvider } from '@mapapp/network'
 import { DEMO_LAYERS } from './mocks/demoLayers'
 import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
+import config from '../config.json'
 import airCraftIcon from './assets/aircraft.png'
 import droneIcon from './assets/drone.png'
+
+/** Workspace panel toggles the host slots into the map's style toolbar. */
+const PANEL_TOGGLES: { id: WorkspacePanelId; label: string; Icon: typeof MapIcon }[] = [
+  { id: 'minimap', label: 'minimap panel', Icon: MapIcon },
+  { id: 'video', label: 'video panel', Icon: VideocamIcon },
+  { id: 'view3d', label: '3D view panel', Icon: ViewInArIcon },
+  { id: 'intel', label: 'intel feed panel', Icon: RssFeedIcon },
+]
+
+const PanelToggleButtons = observer(() => {
+  const { uiVisibilityStore } = useStores()
+  return (
+    <>
+      {PANEL_TOGGLES.map(({ id, label, Icon }) => {
+        const visible = uiVisibilityStore.isPanelVisible(id)
+        const title = `${visible ? 'Hide' : 'Show'} ${label}`
+        return (
+          <Tooltip key={id} title={title} arrow>
+            <IconButton
+              size="small"
+              onClick={() => uiVisibilityStore.togglePanel(id)}
+              sx={toolButton(visible)}
+              aria-label={title}
+            >
+              <Icon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )
+      })}
+    </>
+  )
+})
 
 function App() {
   const stores = useStores()
   const { uiVisibilityStore: ui } = stores
+
+  // Live engine + map container, delivered by MapWrapper once the engine
+  // boots — the handle every engine-consuming sibling (layers overlay,
+  // minimap…) receives via props.
+  const [mapHandle, setMapHandle] = useState<{
+    engine: MapEngine | null
+    container: HTMLElement | null
+  }>({ engine: null, container: null })
 
   // Live feed: the demo server pushes targets/missiles over the bridge's WS
   // into `liveDataStore`; mirror each frame into the app's entity stores so
@@ -134,9 +184,28 @@ function App() {
   /** Panel content, shared between the dock and the floating window. The
    *  dock sections stretch to their full grid cell, so content uses `fill`. */
   const panelContent: Record<WorkspacePanelId, { title: string; node: React.ReactNode }> = {
-    view3d: { title: '3D View', node: <LazyMissileView3D fill /> },
-    video: { title: 'Video Feed', node: <MiniVideo fill /> },
-    minimap: { title: 'Mini Map', node: <MiniMap fill /> },
+    view3d: {
+      title: '3D View',
+      node: (
+        <LazyMissileView3D
+          fill
+          getMissile={() => stores.missileStore.selected}
+          groundTileUrl={config.MapStyles.light}
+        />
+      ),
+    },
+    video: { title: 'Video Feed', node: <MiniVideo fill signalingUrl={config.VideoSignalingURL} /> },
+    minimap: {
+      title: 'Mini Map',
+      node: (
+        <MiniMap
+          fill
+          engine={mapHandle.engine}
+          getViewState={() => stores.mapEngineStore.viewState}
+          tileUrl={config.MinimalTilesURL}
+        />
+      ),
+    },
     intel: {
       title: 'Intel Feed',
       // Demo injection: real projects pass their own kinds + target getter.
@@ -158,7 +227,15 @@ function App() {
     title: panelContent[id].title,
     hidden: !ui.isPanelVisible(id) || ui.panels[id].mode !== 'docked',
     headerAction: panelActions(id, panelContent[id].title),
-    content: id === 'view3d' ? <LazyMissileView3D /> : panelContent[id].node,
+    content:
+      id === 'view3d' ? (
+        <LazyMissileView3D
+          getMissile={() => stores.missileStore.selected}
+          groundTileUrl={config.MapStyles.satellite}
+        />
+      ) : (
+        panelContent[id].node
+      ),
     floatContent: panelContent[id].node,
     floatHeaderAction: floatHeaderActions[id],
   }))
@@ -181,7 +258,14 @@ function App() {
         shapes={liveShapes.shapes}
         onShapeSave={liveShapes.onShapeSave}
         onShapeDelete={liveShapes.onShapeDelete}
+        entityDefinitions={ENTITY_DEFINITIONS}
+        tileUrl={config.MapLibreTilesURL}
+        showToolbar={ui.toolbarVisible}
+        styleBarExtraActions={<PanelToggleButtons />}
+        onEngineReady={(engine, container) => setMapHandle({ engine, container })}
       >
+        {/* Floating inspector for the selected entity (host-composed). */}
+        <EntityEditWindow />
         {/*
           Layer injection point: real projects declare their own layer-group
           list (one entry = panel toggle + deck.gl builder, see
@@ -190,7 +274,16 @@ function App() {
           the layers inside its own render, so live-feed ticks re-render
           only it — not the whole App tree.
         */}
-        <LayersWrapper groups={DEMO_LAYERS} />
+        <LayersWrapper
+          groups={DEMO_LAYERS}
+          ctx={stores}
+          isLayerVisible={(id) => ui.isLayerVisible(id)}
+          engine={mapHandle.engine}
+          container={mapHandle.container}
+          getViewState={() => stores.mapEngineStore.viewState}
+          onShapePick={(id) => stores.drawingToolStore.setSelectedId(id)}
+          pickLayerIds={DRAWN_SHAPE_LAYER_IDS}
+        />
       </MapWrapper>
     </LayoutManager>
   )

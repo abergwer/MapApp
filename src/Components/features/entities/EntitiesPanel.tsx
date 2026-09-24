@@ -12,11 +12,12 @@ import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 import { observer } from 'mobx-react-lite';
 import SectionCard from '../../common/SectionCard';
 import DrawIcon from '@mui/icons-material/Draw';
-import { DRAW_TOOLS, toggleDrawEntity, toggleDrawGraphic } from '../../../map/ui/toolDefs';
+import { DRAW_TOOLS, toggleDrawEntity, toggleDrawGraphic } from '@mapapp/map';
+import { useMapStores } from '@mapapp/map';
 import { useStores } from '../../../stores/StoreContext';
 import { ENTITY_DEFINITIONS, getEntityDef, type EntityDefinition } from './entityDefinitions';
-import { isEntity, type MapShape } from '../../../types/shapes';
-import EntityIcon from './EntityIcon';
+import { isEntity, type MapShape } from '@mapapp/map';
+import { EntityIcon } from '@mapapp/map';
 import * as common from '../../common/styles/panel.styles';
 import * as styles from './styles/entities.styles';
 
@@ -32,7 +33,8 @@ const kindLabel = (kind: string) => kind.charAt(0).toUpperCase() + kind.slice(1)
  * selects it for editing on the map.
  */
 function EntitiesPanelImpl() {
-  const { mapEngineStore, drawingToolStore, entityService } = useStores();
+  const { mapEngineStore, drawingToolStore } = useMapStores();
+  const { entityService } = useStores();
   const engine = mapEngineStore.engine;
   const activeDefId = drawingToolStore.activeDefId;
   const selectedId = drawingToolStore.selectedId;
