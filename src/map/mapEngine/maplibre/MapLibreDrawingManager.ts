@@ -11,7 +11,7 @@ import { DragEllipseMode } from '../../utils/MaplibreEllipseMath';
 import { DragSectorMode } from '../../utils/MaplibreSectorMath';
 import { startMaplibreRouteDraw } from '../../utils/MaplibreRouteTool';
 import { drawStyles } from '../../drawStyles';
-import { ellipseRing, sectorRing } from '../../utils/geo';
+import { ellipseRing, sectorRing, fitTurns } from '../../utils/geo';
 import type { MapShape } from '../../../stores/DrawingToolStore';
 
 /**
@@ -361,6 +361,10 @@ function shapeToFeature(shape: MapShape): GeoJSON.Feature | null {
 
     case 'line':
     case 'route':
+    case 'curvedRoute':
+    case 'exitCurveRoute':
+    case 'entryCurveRoute':
+    case 'mixedRoute':
       return {
         type: 'Feature',
         properties: {},
@@ -449,7 +453,16 @@ function featureToShape(feature: any): MapShape | null {
       return { id, kind, position: feature.geometry.coordinates };
     case 'line':
     case 'route':
+    case 'curvedRoute':
+    case 'exitCurveRoute':
+    case 'entryCurveRoute':
       return { id, kind, positions: feature.geometry.coordinates };
+    case 'mixedRoute': {
+      // The engine only edits geometry; the store owns the per-waypoint turn
+      // styles and MapWrapper re-applies them. Emit a placeholder list.
+      const positions = feature.geometry.coordinates;
+      return { id, kind, positions, turns: fitTurns(undefined, positions.length) };
+    }
     case 'polygon':
       return { id, kind, positions: feature.geometry.coordinates[0] };
     case 'circle':

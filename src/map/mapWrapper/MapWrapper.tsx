@@ -18,6 +18,8 @@ import * as mapStyles from '../../styles/features/map.styles';
 import type { MapShape } from '../../stores/shapes';
 import LOSControls from '../../los/LOSControls';
 import LOSProfileChart from '../../los/LOSProfileChart';
+import RouteTurnsPanel from '../../Components/features/RouteTurnsPanel';
+import { fitTurns } from '../utils/geo';
 
 const defaultOptions = {
   center: [32.2, 34.95] as [number, number],
@@ -126,7 +128,18 @@ function MapWrapperImpl({
 
       // Round-trip user edits/deletes back through the entity service —
       // the single writer that also fans out to any hook subscribers.
-      eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(shape));
+      //
+      // Engines only know geometry. A mixed route's per-waypoint `turns` live
+      // in the store (edited via RouteTurnsPanel), so re-apply the stored
+      // turns to whatever the engine hands back — otherwise a vertex drag
+      // would overwrite them with the copy the engine got at selection time.
+      const withStoredTurns = (shape: MapShape): MapShape => {
+        if (shape.kind !== 'mixedRoute') return shape;
+        const stored = entityService.get(shape.id);
+        const turns = stored?.kind === 'mixedRoute' ? stored.turns : undefined;
+        return { ...shape, turns: fitTurns(turns, shape.positions.length) };
+      };
+      eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(withStoredTurns(shape)));
       eng.setOnShapeDeleted?.((id: string) => entityService.remove(id));
 
       // Clicking empty map background (Leaflet) exits edit mode by clearing
@@ -211,6 +224,10 @@ function MapWrapperImpl({
             <Paper sx={mapStyles.toolCluster}>
               <MeasuringTools />
             </Paper>
+             {/* Under the toolbar: per-waypoint turn editor for a selected mixed route. */}
+          <Box sx={{ position: 'absolute', top: 64, left: 12, zIndex: 1100 }}>
+            <RouteTurnsPanel />
+          </Box>
             <Paper sx={mapStyles.toolCluster}>
               <MapStyleBar />
             </Paper>

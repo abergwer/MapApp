@@ -47,7 +47,7 @@ function EntitiesPanelImpl() {
       return;
     }
     drawingToolStore.setActiveDrawTool(tool);
-    startDraw(engine, tool, entityService);
+    startDraw(engine, tool, entityService, drawingToolStore);
   };
 
   const handleClearAll = () => {

@@ -24,6 +24,7 @@ import LazyMissileView3D from './Components/features/view3d/LazyMissileView3D'
 import MiniMap from './Components/features/MiniMap'
 import MiniVideo from './Components/features/MiniVideo'
 import { useStores } from './stores/StoreContext'
+import MessageDialog from './Components/features/MessageDialog'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
 import { LiveDataSocketProvider, liveDataStore, useLiveShapes } from './bridge'
 import { DEMO_LAYER_TOGGLES } from './mocks/demoLayerToggles'
@@ -184,6 +185,8 @@ function App() {
         */}
         <LayersWrapper />
       </MapWrapper>
+      {/* Global message popup — drive it from anywhere via showMessage(...). */}
+      <MessageDialog />
     </LayoutManager>
   )
 }

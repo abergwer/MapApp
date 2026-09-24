@@ -3,8 +3,9 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import { DRAW_TOOLS, startDraw } from './toolDefs';
 import { useStores } from '../../stores/StoreContext';
-import type { DrawTool } from '../../stores/DrawingToolStore';
 import { toolButton } from '../../styles/common-ui/panel.styles';
+import type { DrawTool } from '../../stores/DrawingToolStore';
+
 
 /**
  * Draw tools as an icon strip (reference-design style). Clicking a tool
@@ -24,7 +25,7 @@ function ToolBarImpl() {
       return;
     }
     drawingToolStore.setActiveDrawTool(tool);
-    startDraw(engine, tool, entityService);
+    startDraw(engine, tool, entityService, drawingToolStore);
   };
 
   return (

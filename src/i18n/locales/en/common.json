@@ -21,7 +21,11 @@
       "circle": "Circle",
       "ellipse": "Ellipse",
       "sector": "Sector",
-      "route": "Route"
+      "route": "Route",
+      "curvedRoute": "Curved Route",
+      "exitCurveRoute": "Exit Curve Route",
+      "entryCurveRoute": "Entry Curve Route",
+      "mixedRoute": "Mixed Route"
     },
     "measure": {
       "measure": "Measure",
@@ -33,6 +37,14 @@
   "MapStyleBar": {
     "minimap": "Minimap",
     "video": "Video"
+  },
+  "routeTurns": {
+    "title": "Route turns",
+    "waypoint": "Waypoint {{n}}",
+    "sharp": "Sharp",
+    "rounded": "Rounded",
+    "exit": "Exit curve",
+    "entry": "Entry curve"
   },
   "LOS": {
     "label": "Line of Sight",

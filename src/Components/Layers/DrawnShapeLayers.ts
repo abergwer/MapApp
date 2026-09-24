@@ -1,7 +1,46 @@
 import { IconLayer, PathLayer, PolygonLayer } from '@deck.gl/layers';
 import type { Layer } from '@deck.gl/core';
 import type { MapShape } from '../../stores/DrawingToolStore';
-import { ellipseRing, sectorRing } from '../../map/utils/geo';
+import { ellipseRing, sectorRing, roundedCornerPath, exitCurvePath, entryCurvePath, mixedRoutePath } from '../../map/utils/geo';
+import config from '../../../config.json';
+
+/**
+ * How much of each turn is rounded on a curved route, as a fraction of the
+ * shorter adjacent segment. 0 = sharp corner, 0.5 = maximum rounding.
+ * Configurable via `RouteCurveRadiusFraction` in config.json; clamped to a
+ * safe range with a sensible fallback.
+ */
+const CURVE_RADIUS_FRACTION = (() => {
+  const raw = (config as { RouteCurveRadiusFraction?: number }).RouteCurveRadiusFraction;
+  return typeof raw === 'number' && Number.isFinite(raw)
+    ? Math.min(0.5, Math.max(0, raw))
+    : 0.25;
+})();
+
+/**
+ * How far along the outgoing leg an Exit Curve Route takes to straighten out,
+ * as a fraction of that leg (0 = no curve, 1 = the whole leg). Configurable
+ * via `RouteExitCurveFraction` in config.json; clamped with a sensible
+ * fallback.
+ */
+const EXIT_CURVE_FRACTION = (() => {
+  const raw = (config as { RouteExitCurveFraction?: number }).RouteExitCurveFraction;
+  return typeof raw === 'number' && Number.isFinite(raw)
+    ? Math.min(1, Math.max(0, raw))
+    : 0.3;
+})();
+
+/**
+ * How far back along the incoming leg an Entry Curve Route starts bending, as
+ * a fraction of that leg (0 = no curve, 1 = the whole leg). Configurable via
+ * `RouteEntryCurveFraction` in config.json; clamped with a sensible fallback.
+ */
+const ENTRY_CURVE_FRACTION = (() => {
+  const raw = (config as { RouteEntryCurveFraction?: number }).RouteEntryCurveFraction;
+  return typeof raw === 'number' && Number.isFinite(raw)
+    ? Math.min(1, Math.max(0, raw))
+    : 0.3;
+})();
 
 /**
  * Map-pin marker for drawn points, inlined as an SVG data URL so there's no
@@ -30,7 +69,7 @@ export function createDrawnShapeLayers(
   selectedId: string | null,
 ): Layer[] {
   const points: Extract<MapShape, { kind: 'point' }>[] = [];
-  const lines: Extract<MapShape, { kind: 'line' | 'route' }>[] = [];
+  const lines: Extract<MapShape, { kind: 'line' | 'route' | 'curvedRoute' | 'exitCurveRoute' | 'entryCurveRoute' | 'mixedRoute' }>[] = [];
   const polygons: Extract<MapShape, { kind: 'polygon' }>[] = [];
   const areas: Extract<MapShape, { kind: 'circle' | 'ellipse' | 'sector' }>[] = [];
 
@@ -42,6 +81,10 @@ export function createDrawnShapeLayers(
         break;
       case 'line':
       case 'route':
+      case 'curvedRoute':
+      case 'exitCurveRoute':
+      case 'entryCurveRoute':
+      case 'mixedRoute':
         lines.push(s);
         break;
       case 'polygon':
@@ -88,7 +131,24 @@ export function createDrawnShapeLayers(
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 255, 120],
-      getPath: (s) => s.positions,
+      getPath: (s) => {
+        switch (s.kind) {
+          case 'curvedRoute':
+            return roundedCornerPath(s.positions, { radiusFraction: CURVE_RADIUS_FRACTION });
+          case 'exitCurveRoute':
+            return exitCurvePath(s.positions, { fraction: EXIT_CURVE_FRACTION });
+          case 'entryCurveRoute':
+            return entryCurvePath(s.positions, { fraction: ENTRY_CURVE_FRACTION });
+          case 'mixedRoute':
+            return mixedRoutePath(s.positions, s.turns, {
+              radiusFraction: CURVE_RADIUS_FRACTION,
+              exitFraction: EXIT_CURVE_FRACTION,
+              entryFraction: ENTRY_CURVE_FRACTION,
+            });
+          default:
+            return s.positions;
+        }
+      },
       getColor: [0, 200, 140, 230],
       getWidth: 3,
       widthUnits: 'pixels',
