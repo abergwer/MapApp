@@ -1,5 +1,5 @@
-import type { DrawingToolStore } from '../../../stores/DrawingToolStore';
-import type { MapShape } from '../../../types/shapes';
+import type { DrawingToolStore } from '../../stores/DrawingToolStore';
+import type { MapShape } from '../shapes';
 
 /**
  * Optional callbacks that connect the map to a host backend.
