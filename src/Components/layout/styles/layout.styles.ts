@@ -18,11 +18,13 @@ const MIN_MAP_W = 480;
 const DOCK_MIN_W = 220;
 
 export const appGrid = (
-  leftCollapsed: boolean,
   rightCollapsed: boolean,
   rightWidth: number = RIGHT_DOCK_DEFAULT_W,
 ): SxProps<Theme> => {
-  const leftPx = leftCollapsed ? LEFT_RAIL_W : LEFT_RAIL_W + 300;
+  // The left column only holds the icon rail; the open view column is an
+  // overlay on top of the map (see leftPanelContent), so the map cell
+  // always starts right after the rail.
+  const leftPx = LEFT_RAIL_W;
   // On small windows the stored dock width can swallow the whole map
   // (e.g. 1024px window: 344 + 620 left a 42px map sliver) — cap the dock
   // column so the map keeps MIN_MAP_W before the dock starts shrinking.
@@ -48,6 +50,7 @@ export const mapArea: SxProps<Theme> = {
   position: 'relative',
   minWidth: 0,
   minHeight: 0,
+   zIndex: 1,
   p: 1,
   display: 'flex',
 };
@@ -95,8 +98,9 @@ export const leftPanelRoot: SxProps<Theme> = {
   minHeight: 0,
   display: 'flex',
   flexDirection: 'row',
-  borderRight: `1px solid ${palette.border}`,
-  overflow: 'hidden',
+  // Anchor for the overlaid content column; sits above the map cell.
+  position: 'relative',
+  zIndex: 2,
 };
 
 /** Permanent vertical icon rail (reference design): one icon per view,
@@ -113,13 +117,38 @@ export const leftIconRail: SxProps<Theme> = {
   bgcolor: palette.panelHeader,
 };
 
-/** Content column next to the rail (hidden while collapsed). */
-export const leftPanelContent: SxProps<Theme> = {
-  flex: 1,
-  minWidth: 0,
-  minHeight: 0,
+/** Content column next to the rail (hidden while collapsed). Floats over
+ *  the map as an inset glass card (aligned with mapArea's padding) so the
+ *  map stays visible around and through it. Width is user-resizable and
+ *  lives in UIVisibilityStore. */
+export const leftPanelContent = (width: number): SxProps<Theme> => ({
+  position: 'absolute',
+  top: 8,
+  bottom: 8,
+  left: LEFT_RAIL_W + 8,
+  width,
   display: 'flex',
   flexDirection: 'column',
+  borderRadius: 3,
+  overflow: 'hidden',
+  border: `1px solid ${palette.border}`,
+  bgcolor: `color-mix(in srgb, ${palette.panel} 55%, transparent)`,
+  backdropFilter: 'blur(6px) saturate(1.15)',
+  // Soft drop shadow lifts the card off the map.
+  boxShadow: '0 12px 32px -12px rgba(0, 0, 0, 0.6)',
+});
+
+/** Invisible grab strip on the content column's right edge (drag = resize width). */
+export const leftPanelResizeHandle: SxProps<Theme> = {
+  position: 'absolute',
+  right: 0,
+  top: 0,
+  bottom: 0,
+  width: 6,
+  cursor: 'col-resize',
+  touchAction: 'none',
+  zIndex: 10,
+  '&:hover': { bgcolor: `color-mix(in srgb, ${palette.accent} 35%, transparent)` },
 };
 
 /** Header row: active view title (reference design). */
@@ -130,7 +159,7 @@ export const leftPanelHeader: SxProps<Theme> = {
   gap: 1,
   px: 1.5,
   py: 1,
-  bgcolor: `color-mix(in srgb, ${palette.accent} 10%, ${palette.panelHeader})`,
+  bgcolor: `color-mix(in srgb, ${palette.accent} 12%, transparent)`,
   borderBottom: `1px solid ${palette.border}`,
 };
 

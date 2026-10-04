@@ -24,17 +24,21 @@ export const engineContainer: SxProps<Theme> = {
   minHeight: 0,
 };
 
-export const toolStripWrap: SxProps<Theme> = {
+/** Toolbar strip anchored top-left of the map. `leftInset` is the width of
+ *  the left view column when it is open — that column floats over the map
+ *  (see layout.styles leftPanelContent), so the strip shifts right of it. */
+export const toolStripWrap = (leftInset: number): SxProps<Theme> => ({
   position: 'absolute',
   top: 10,
-  left: 12,
+  left: 12 + leftInset,
   zIndex: 1100,
   display: 'flex',
   flexDirection: 'column',
   alignItems: 'flex-start',
   gap: 1,
-  maxWidth: 'calc(100% - 110px)',
-};
+  maxWidth: `calc(100% - ${110 + leftInset}px)`,
+  transition: 'left 120ms ease-out',
+});
 
 /** Coordinate readout chip overlaid on the map (bottom-center). */
 export const coordChip: SxProps<Theme> = {

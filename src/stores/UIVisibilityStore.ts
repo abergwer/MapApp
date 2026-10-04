@@ -1,5 +1,8 @@
 import { makeAutoObservable } from 'mobx';
 
+/** Default left view column width in px. */
+export const LEFT_PANEL_DEFAULT_W = 300;
+
 export type RailSide = 'left' | 'right';
 
 /** Workspace (right dock) panels that can float/maximize/close. */
@@ -42,6 +45,9 @@ export class UIVisibilityStore {
 
   /** Right WORKSPACE dock width in px (user-resizable by dragging its edge). */
   rightDockWidth = 620;
+
+  /** Left view column width in px (user-resizable by dragging its right border). */
+  leftPanelWidth = LEFT_PANEL_DEFAULT_W;
 
   /** Active view in the left panel tabs. */
   activeLeftView: LeftViewId = 'entities';
@@ -110,6 +116,18 @@ export class UIVisibilityStore {
 
   setRightDockWidth(width: number) {
     this.rightDockWidth = Math.min(960, Math.max(340, Math.round(width)));
+  }
+
+  setLeftPanelWidth(width: number) {
+    this.leftPanelWidth = Math.min(720, Math.max(240, Math.round(width)));
+  }
+
+  get leftPanelWidthIsDefault() {
+    return this.leftPanelWidth === LEFT_PANEL_DEFAULT_W;
+  }
+
+  resetLeftPanelWidth() {
+    this.leftPanelWidth = LEFT_PANEL_DEFAULT_W;
   }
 
   toggleRail(side: RailSide) {

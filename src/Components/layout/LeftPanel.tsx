@@ -3,6 +3,7 @@ import Box from '@mui/material/Box';
 import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../stores/StoreContext';
 import type { LeftViewId } from '../../stores/UIVisibilityStore';
@@ -36,6 +37,19 @@ function LeftPanelImpl({ views }: { views: LeftPanelView[] }) {
     ui.setActiveLeftView(id); // switches view + expands
   };
 
+  const startResize = (e: React.PointerEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = ui.leftPanelWidth;
+    const onMove = (ev: PointerEvent) => ui.setLeftPanelWidth(startWidth + (ev.clientX - startX));
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
+
   return (
     <Box component="aside" sx={layout.leftPanelRoot}>
       <Box sx={layout.leftIconRail}>
@@ -54,13 +68,26 @@ function LeftPanelImpl({ views }: { views: LeftPanelView[] }) {
       </Box>
 
       {!collapsed && (
-        <Box sx={layout.leftPanelContent}>
+        <Box sx={layout.leftPanelContent(ui.leftPanelWidth)}>
           <Box sx={layout.leftPanelHeader}>
             <Typography component="h2" sx={layout.viewTitle}>
               {active.title}
             </Typography>
+            {!ui.leftPanelWidthIsDefault && (
+              <Tooltip title="Reset panel width" arrow>
+                <IconButton size="small" onClick={() => ui.resetLeftPanelWidth()} aria-label="Reset panel width">
+                  <RestartAltIcon fontSize="inherit" />
+                </IconButton>
+              </Tooltip>
+            )}
           </Box>
           <Box sx={layout.leftPanelBody}>{active.content}</Box>
+          <Box
+            sx={layout.leftPanelResizeHandle}
+            onPointerDown={startResize}
+            role="separator"
+            aria-label={`Resize ${active.title} view`}
+          />
         </Box>
       )}
     </Box>

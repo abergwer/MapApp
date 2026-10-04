@@ -228,7 +228,11 @@ function MapWrapperImpl({
         {/* Toolbar clusters + brightness card (top-left); the TopBar
             toolbar toggle shows/hides the whole strip. */}
         {uiVisibilityStore.toolbarVisible && (
-          <Box sx={mapStyles.toolStripWrap}>
+          <Box
+            sx={mapStyles.toolStripWrap(
+              uiVisibilityStore.railCollapsed.left ? 0 : uiVisibilityStore.leftPanelWidth,
+            )}
+          >
             <Box sx={mapStyles.toolStrip}>
             <Paper sx={mapStyles.toolCluster}>
               <ToolBar />

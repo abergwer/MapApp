@@ -132,7 +132,7 @@ function LayoutManagerImpl({
   const effectiveRightWidth =
     dockedCount <= 2 ? Math.round(ui.rightDockWidth / 2) + 4 : ui.rightDockWidth;
   return (
-    <Box sx={layout.appGrid(ui.railCollapsed.left, ui.railCollapsed.right, effectiveRightWidth)}>
+    <Box sx={layout.appGrid(ui.railCollapsed.right, effectiveRightWidth)}>
       {topBar}
       {leftNav}
       <Box component="main" sx={layout.mapArea}>
