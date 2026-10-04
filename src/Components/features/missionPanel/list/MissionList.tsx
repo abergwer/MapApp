@@ -11,7 +11,7 @@ import Typography from '@mui/material/Typography';
 import AddIcon from '@mui/icons-material/Add';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import DeleteOutlinedIcon from '@mui/icons-material/DeleteOutlined';
-import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import EditIcon from '@mui/icons-material/Edit';
 import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import ScheduleIcon from '@mui/icons-material/Schedule';
 import SearchIcon from '@mui/icons-material/Search';
@@ -61,7 +61,7 @@ function MissionCard({ mission, onOpen, onDelete }: { mission: MissionSummary; o
           disableHoverListener={!edited}
         >
           <Typography component="span" sx={styles.cardDate}>
-            {edited ? <EditOutlinedIcon /> : <ScheduleIcon />}
+            {edited ? <EditIcon sx={styles.editedIcon} /> : <ScheduleIcon sx={styles.createdIcon} />}
             {edited ? `Edited ${formatDate(mission.updatedAt!)}` : formatDate(mission.createdAt)}
           </Typography>
         </Tooltip>
