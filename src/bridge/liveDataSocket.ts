@@ -1,8 +1,10 @@
+import config from '../../config.json'
 import { createWebSocketContext } from '../network'
 import { liveDataStore } from './LiveDataStore'
 import type { Missile, Target } from './types'
 
-export const DEMO_SERVER_WS_URL = 'ws://localhost:4000/ws'
+/** WebSocket endpoint of the data server — change it in config.json. */
+export const DEMO_SERVER_WS_URL: string = config.DataServerWsURL
 
 /**
  * Server -> client WebSocket: each `incoming` key matches a frame's `type`

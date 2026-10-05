@@ -1,8 +1,10 @@
+import config from '../../config.json'
 import { createApiHooks, createRestClient } from '../network'
 import type { MapShape } from '../stores/DrawingToolStore'
 import type { AttackPointDto, MissionTargetDto, TargetDetails } from './types'
 
-export const DEMO_SERVER_URL = 'http://localhost:4000'
+/** REST base URL of the data server — change it in config.json. */
+export const DEMO_SERVER_URL: string = config.DataServerURL
 
 const client = createRestClient({ baseURL: DEMO_SERVER_URL })
 
