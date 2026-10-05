@@ -39,14 +39,22 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
   const { store, entitySources } = useMissions();
   const [values, setValues] = useState<MissionValues>(() => ({ ...emptyValues(), ...mission?.values }));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const e = validate(values);
     setErrors(e);
     if (Object.keys(e).length > 0) return;
-    if (mission) store.update(mission.id, values);
-    else store.add(values);
-    store.showList();
+    setSaving(true);
+    try {
+      if (mission) await store.update(mission.id, values);
+      else await store.add(values);
+      store.showList();
+    } catch {
+      setErrors({ _save: 'Could not save the mission' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -56,7 +64,7 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
       sx={styles.root}
       onSubmit={(e) => {
         e.preventDefault();
-        handleSave();
+        void handleSave();
       }}
     >
       <Box sx={styles.formHeader}>
@@ -102,7 +110,7 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
         {Object.keys(errors).length > 0 ? (
           <Typography component="span" role="alert" sx={styles.formError}>
             <ErrorOutlinedIcon />
-            Fill the required fields
+            {errors._save ?? 'Fill the required fields'}
           </Typography>
         ) : (
           <span />
@@ -111,9 +119,14 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
           <ButtonBase sx={styles.ghostButton} onClick={() => store.showList()} aria-label="Cancel">
             Cancel
           </ButtonBase>
-          <ButtonBase type="submit" sx={styles.primaryButton} aria-label={mission ? 'Save changes' : 'Create mission'}>
+          <ButtonBase
+            type="submit"
+            disabled={saving}
+            sx={styles.primaryButton}
+            aria-label={mission ? 'Save changes' : 'Create mission'}
+          >
             <SaveOutlinedIcon sx={{ fontSize: 16 }} />
-            {mission ? 'Save' : 'Create'}
+            {saving ? 'Saving…' : mission ? 'Save' : 'Create'}
           </ButtonBase>
         </Box>
       </Box>

@@ -1,5 +1,6 @@
-import { makeAutoObservable } from 'mobx';
-import { nameOf, type Mission, type MissionValues } from './types';
+import { makeAutoObservable, runInAction } from 'mobx';
+import type { MissionApi } from './missionApi';
+import type { Mission, MissionValues } from './types';
 
 export type MissionView = { mode: 'list' } | { mode: 'create' } | { mode: 'edit'; id: string };
 
@@ -14,19 +15,21 @@ const SORTERS: Record<MissionSort, (a: Mission, b: Mission) => number> = {
 };
 
 /**
- * Mission list + which screen is showing. In-memory for now: replace the
- * seed / `add` / `update` / `remove` bodies with API calls when a backend
- * exists — the components only talk to this class.
+ * Mission list + which screen is showing. Every write goes to the server
+ * first; the server assigns `id` / `createdAt` / `updatedAt` and the
+ * response replaces the local copy.
  */
 export class MissionStore {
+  readonly api: MissionApi;
   missions: Mission[] = [];
   search = '';
   sort: MissionSort = 'newest';
   view: MissionView = { mode: 'list' };
 
-  constructor(seed: Mission[] = []) {
+  constructor(api: MissionApi, seed: Mission[] = []) {
+    this.api = api;
     this.missions = seed;
-    makeAutoObservable(this);
+    makeAutoObservable(this, { api: false });
   }
 
   /** Filtered by name, ordered by the chosen sort (newest first by default). */
@@ -60,28 +63,32 @@ export class MissionStore {
     this.view = { mode: 'list' };
   }
 
-  add(values: MissionValues): Mission {
-    const mission: Mission = {
-      id: `msn-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-      name: nameOf(values),
-      createdAt: new Date().toISOString(),
-      values,
-    };
-    this.missions.push(mission);
+  async load() {
+    const missions = await this.api.list();
+    runInAction(() => {
+      this.missions = missions;
+    });
+  }
+
+  async add(values: MissionValues): Promise<Mission> {
+    const mission = await this.api.create(values);
+    runInAction(() => this.missions.push(mission));
     return mission;
   }
 
-  update(id: string, values: MissionValues) {
-    const mission = this.missions.find((x) => x.id === id);
-    if (mission) {
-      mission.name = nameOf(values);
-      mission.values = values;
-      mission.updatedAt = new Date().toISOString();
-    }
+  async update(id: string, values: MissionValues) {
+    const mission = await this.api.update(id, values);
+    runInAction(() => {
+      const i = this.missions.findIndex((m) => m.id === id);
+      if (i >= 0) this.missions[i] = mission;
+    });
   }
 
-  remove(id: string) {
-    this.missions = this.missions.filter((m) => m.id !== id);
-    if (this.view.mode === 'edit' && this.view.id === id) this.showList();
+  async remove(id: string) {
+    await this.api.remove(id);
+    runInAction(() => {
+      this.missions = this.missions.filter((m) => m.id !== id);
+      if (this.view.mode === 'edit' && this.view.id === id) this.showList();
+    });
   }
 }

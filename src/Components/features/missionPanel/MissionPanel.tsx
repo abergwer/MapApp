@@ -6,6 +6,7 @@ import MissionForm from './form/MissionForm';
 import MissionList from './list/MissionList';
 import { MissionStore } from './MissionStore';
 import type { EntitySources } from './missionSchema';
+import { missionApi } from './missionApi';
 
 interface MissionsPanelProps {
   /** Lists backing `entity` fields in MISSION_SCHEMA, keyed by `source`. */
@@ -25,7 +26,7 @@ const Screen = observer(function Screen({ store }: { store: MissionStore }) {
  * plus a create/edit form generated from `missionSchema.ts`.
  */
 export const MissionsPanel = ({ entitySources = {}, store: injected }: MissionsPanelProps) => {
-  const [own] = useState(() => injected ?? new MissionStore(DEMO_MISSIONS));
+  const [own] = useState(() => injected ?? new MissionStore(missionApi));
   const store = injected ?? own;
   return (
     <MissionContext.Provider value={{ store, entitySources }}>

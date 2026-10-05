@@ -34,3 +34,21 @@ export interface TargetDetails {
   status: string
 }
 
+/* Mission planning tree: targets → components → attack points, exactly as
+ * the server returns it from `GET /api/mission-targets`. */
+export interface AttackPointDto {
+  id: string
+  name: string
+  position: [number, number]
+}
+export interface ComponentDto {
+  id: string
+  name: string
+  attackPoints: AttackPointDto[]
+}
+export interface MissionTargetDto {
+  id: string
+  name: string
+  components: ComponentDto[]
+}
+

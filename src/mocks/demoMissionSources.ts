@@ -8,6 +8,8 @@ import {
 } from '../Components/features/missionPanel';
 import { getEntityDef } from '../Components/features/entities/entityDefinitions';
 import EntityIcon from '../Components/features/entities/EntityIcon';
+import { liveDataApi } from '../bridge/liveDataApi';
+import type { MissionTargetDto } from '../bridge/types';
 import type { RootStore } from '../stores/RootStore';
 
 /** Demo-only list behind the `commander` source; supports `Add "…"`. */
@@ -31,62 +33,16 @@ const iconFor = (defId?: string) => {
 const componentIcon = () => createElement(WidgetsIcon, { sx: { fontSize: 16, flex: 'none' }, htmlColor: '#40c4ff' });
 
 /* ------------------------------------------------------------------ *
- *  Targets → components → attack points, exactly as the DB sends them.
- *  Replace DB_TARGETS with the real fetch; everything else stays.
+ *  Targets → components → attack points, exactly as the server sends them
+ *  (GET /api/mission-targets). Observable so a newly added attack point
+ *  shows up in the dropdown as soon as the server acks it.
  * ------------------------------------------------------------------ */
 
-interface AttackPointDto {
-  id: string;
-  name: string;
-}
-interface ComponentDto {
-  id: string;
-  name: string;
-  attackPoints: AttackPointDto[];
-}
-interface TargetDto {
-  id: string;
-  name: string;
-  components: ComponentDto[];
-}
+const targets = observable.array<MissionTargetDto>([]);
+let targetsLoaded = false;
 
-/** Mock of the DB response (observable so newly added attack points show up live). */
-const DB_TARGETS = observable<TargetDto>([
-  {
-    id: 'target-1',
-    name: 'Radar Station North',
-    components: [
-      {
-        id: 'component-1',
-        name: 'Antenna array',
-        attackPoints: [
-          { id: 'ap-1', name: 'Attack point 1' },
-          { id: 'ap-2', name: 'Attack point 2' },
-        ],
-      },
-      {
-        id: 'component-2',
-        name: 'Power supply',
-        attackPoints: [
-          { id: 'ap-3', name: 'Attack point 3' },
-          { id: 'ap-4', name: 'Attack point 4' },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'target-2',
-    name: 'Launch Site East',
-    components: [
-      { id: 'component-3', name: 'Launch pad', attackPoints: [{ id: 'ap-5', name: 'Attack point 5' }] },
-      { id: 'component-4', name: 'Fuel depot', attackPoints: [] },
-    ],
-  },
-  { id: 'target-3', name: 'Comms Hub West', components: [] },
-]);
-
-const findTarget = (id?: string) => DB_TARGETS.find((t) => t.id === id);
-const findComponent = (id?: string) => DB_TARGETS.flatMap((t) => t.components).find((c) => c.id === id);
+const findTarget = (id?: string) => targets.find((t) => t.id === id);
+const findComponent = (id?: string) => targets.flatMap((t) => t.components).find((c) => c.id === id);
 
 /**
  * DEMO wiring for the mission schema's `entity` fields. Each key matches a
@@ -95,6 +51,14 @@ const findComponent = (id?: string) => DB_TARGETS.flatMap((t) => t.components).f
  * stores here (and implement `add` where the schema sets `allowCreate`).
  */
 export function demoMissionEntitySources(stores: RootStore): EntitySources {
+  if (!targetsLoaded) {
+    targetsLoaded = true;
+    liveDataApi
+      .getMissionTargets()
+      .then((list) => targets.replace(list))
+      .catch((err) => console.error('[missions] failed to load targets:', err));
+  }
+
   /** Disarm the map tool when the user cancels a map-drawn `add`. */
   const stopDrawing = () => {
     stores.mapEngineStore.engine?.cancelDrawing();
@@ -102,9 +66,9 @@ export function demoMissionEntitySources(stores: RootStore): EntitySources {
   };
 
   return {
-    /** Targets exactly as the DB sends them (no create — schema has allowCreate: false). */
+    /** Targets exactly as the server sends them (no create — schema has allowCreate: false). */
     target: {
-      options: () => DB_TARGETS.map((t) => ({ id: t.id, label: t.name, icon: iconFor('target') })),
+      options: () => targets.map((t) => ({ id: t.id, label: t.name, icon: iconFor('target') })),
     },
 
     /** Components of the chosen target (parentId = target id). No create. */
@@ -114,8 +78,9 @@ export function demoMissionEntitySources(stores: RootStore): EntitySources {
     },
 
     /** Attack points of the chosen component (parentId = component id).
-     *  `add` arms the map's point tool; once the user clicks, the point entity
-     *  is created and appended to the component (a real app would POST it). */
+     *  `add` arms the map's point tool; on click the point is POSTed under
+     *  the component (server assigns the id), inserted into the tree and
+     *  shown on the map, so the mission always stores the server id. */
     attackPoint: {
       options: (componentId) =>
         findComponent(componentId)?.attackPoints.map((p) => ({
@@ -125,12 +90,25 @@ export function demoMissionEntitySources(stores: RootStore): EntitySources {
         })) ?? [],
       addHint: 'Click the map to place the attack point.',
       add: (label, componentId) =>
-        new Promise((resolve) => {
+        new Promise((resolve, reject) => {
+          if (!componentId) return reject(new Error('Choose a component first'));
           stores.drawingToolStore.setActiveDrawTool('point', 'attackPoint');
-          stores.mapEngineStore.engine?.startDrawPoint((id, position) => {
-            stores.entityService.create({ id, kind: 'point', defId: 'attackPoint', name: label, position });
-            findComponent(componentId)?.attackPoints.push({ id, name: label });
-            resolve({ id, label });
+          stores.mapEngineStore.engine?.startDrawPoint((_tempId, position) => {
+            liveDataApi
+              .createAttackPoint({ componentId, body: { name: label, position } })
+              .then((saved) => {
+                findComponent(componentId)?.attackPoints.push(saved);
+                stores.entityService.create({
+                  id: saved.id,
+                  kind: 'point',
+                  defId: 'attackPoint',
+                  name: saved.name,
+                  position: saved.position,
+                  parentId: componentId,
+                });
+                resolve({ id: saved.id, label: saved.name });
+              })
+              .catch(reject);
           });
         }),
       cancelAdd: stopDrawing,

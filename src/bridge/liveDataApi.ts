@@ -1,6 +1,6 @@
 import { createApiHooks, createRestClient } from '../network'
 import type { MapShape } from '../stores/DrawingToolStore'
-import type { TargetDetails } from './types'
+import type { AttackPointDto, MissionTargetDto, TargetDetails } from './types'
 
 export const DEMO_SERVER_URL = 'http://localhost:4000'
 
@@ -18,6 +18,11 @@ export const liveDataApi = {
   createShape: (shape: MapShape) => client.post<MapShape>('/api/shapes', shape),
   updateShape: (shape: MapShape) => client.put<MapShape>(`/api/shapes/${shape.id}`, shape),
   deleteShape: (id: string) => client.delete<{ ok: boolean }>(`/api/shapes/${id}`),
+  /** Mission planning tree (targets → components → attack points). */
+  getMissionTargets: () => client.get<MissionTargetDto[]>('/api/mission-targets'),
+  /** Adds an attack point under a component; the server assigns the id. */
+  createAttackPoint: ({ componentId, body }: { componentId: string; body: Omit<AttackPointDto, 'id'> }) =>
+    client.post<AttackPointDto>(`/api/components/${componentId}/attack-points`, body),
 }
 
 // Hooks locked to the methods above — a typo'd or undeclared method name

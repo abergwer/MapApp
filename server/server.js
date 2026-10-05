@@ -6,6 +6,12 @@
  *   POST   /api/shapes          -> MapShape           create (SERVER assigns the id; response carries it)
  *   PUT    /api/shapes/:id      -> MapShape           update
  *   DELETE /api/shapes/:id      -> { ok }             remove
+ *   GET    /api/missions        -> Mission[]          flat: { id, createdAt, updatedAt?, ...fields }
+ *   POST   /api/missions        -> Mission            create (SERVER assigns id + createdAt)
+ *   PUT    /api/missions/:id    -> Mission            update (SERVER sets updatedAt)
+ *   DELETE /api/missions/:id    -> { ok }             remove
+ *   GET    /api/mission-targets               -> MissionTarget[]  targets → components → attackPoints
+ *   POST   /api/components/:id/attack-points  -> AttackPoint      create under a component (SERVER assigns id)
  *   POST   /api/definitions     -> EntityDefinition   create (client supplies the id)
  *   PUT    /api/definitions/:id -> EntityDefinition   update
  *   DELETE /api/definitions/:id -> { ok }             remove
@@ -41,6 +47,68 @@ const MISSILE_TICK_MS = 100
 // ---------------------------------------------------------------------------
 // Data
 // ---------------------------------------------------------------------------
+
+/**
+ * Missions, stored FLAT: server-owned `id` / `createdAt` / `updatedAt` plus
+ * one key per field of the client's MISSION_SCHEMA. The server does not
+ * interpret the fields — it only requires a non-empty `name`.
+ */
+const missions = [
+  {
+    id: randomUUID(),
+    createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
+    updatedAt: new Date(Date.now() - 86_400_000).toISOString(),
+    name: 'Northern Corridor Surveillance',
+    description: 'Persistent ISR coverage over the northern approach corridor.',
+    commander: 'Maj. R. Halvorsen',
+    status: 'Active',
+  },
+  {
+    id: randomUUID(),
+    createdAt: new Date(Date.now() - 86_400_000).toISOString(),
+    name: 'Harbor Perimeter Sweep',
+    commander: 'Capt. L. Okafor',
+    status: 'Planned',
+  },
+]
+
+/**
+ * Mission planning tree: targets → components → attack points. Attack
+ * points are created through POST /api/components/:id/attack-points.
+ */
+const missionTargets = [
+  {
+    id: 'target-1',
+    name: 'Radar Station North',
+    components: [
+      {
+        id: 'component-1',
+        name: 'Antenna array',
+        attackPoints: [
+          { id: 'ap-1', name: 'Attack point 1', position: [34.97, 32.77] },
+          { id: 'ap-2', name: 'Attack point 2', position: [35.02, 32.8] },
+        ],
+      },
+      {
+        id: 'component-2',
+        name: 'Power supply',
+        attackPoints: [
+          { id: 'ap-3', name: 'Attack point 3', position: [34.8, 32.03] },
+          { id: 'ap-4', name: 'Attack point 4', position: [34.87, 32.08] },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'target-2',
+    name: 'Launch Site East',
+    components: [
+      { id: 'component-3', name: 'Launch pad', attackPoints: [{ id: 'ap-5', name: 'Attack point 5', position: [35.82, 32.05] }] },
+      { id: 'component-4', name: 'Fuel depot', attackPoints: [] },
+    ],
+  },
+  { id: 'target-3', name: 'Comms Hub West', components: [] },
+]
 
 /**
  * Editable drawn shapes (`MapShape` union from the app's DrawingToolStore),
@@ -341,6 +409,56 @@ const server = createServer(async (req, res) => {
     }
   }
 
+  if (url.pathname === '/api/missions' && req.method === 'GET') {
+    return json(200, missions)
+  }
+
+  if (url.pathname === '/api/missions' && req.method === 'POST') {
+    const body = await readJsonBody(req)
+    if (!isValidMission(body)) return json(400, { error: 'Invalid mission' })
+    // Server is the authority for id and timestamps.
+    const mission = { ...missionFields(body), id: randomUUID(), createdAt: new Date().toISOString() }
+    missions.push(mission)
+    console.log(`[rest] mission created: ${mission.id} (${mission.name})`)
+    return json(201, mission)
+  }
+
+  const missionMatch = url.pathname.match(/^\/api\/missions\/([^/]+)$/)
+  if (missionMatch) {
+    const index = missions.findIndex((m) => m.id === missionMatch[1])
+    if (index === -1) return json(404, { error: 'Mission not found' })
+
+    if (req.method === 'PUT') {
+      const body = await readJsonBody(req)
+      if (!isValidMission(body)) return json(400, { error: 'Invalid mission' })
+      const { id, createdAt } = missions[index]
+      missions[index] = { ...missionFields(body), id, createdAt, updatedAt: new Date().toISOString() }
+      console.log(`[rest] mission updated: ${id} (${missions[index].name})`)
+      return json(200, missions[index])
+    }
+    if (req.method === 'DELETE') {
+      const [removed] = missions.splice(index, 1)
+      console.log(`[rest] mission deleted: ${removed.id}`)
+      return json(200, { ok: true })
+    }
+  }
+
+  if (url.pathname === '/api/mission-targets' && req.method === 'GET') {
+    return json(200, missionTargets)
+  }
+
+  const attackPointMatch = url.pathname.match(/^\/api\/components\/([^/]+)\/attack-points$/)
+  if (attackPointMatch && req.method === 'POST') {
+    const component = missionTargets.flatMap((t) => t.components).find((c) => c.id === attackPointMatch[1])
+    if (!component) return json(404, { error: 'Component not found' })
+    const body = await readJsonBody(req)
+    if (!isValidAttackPoint(body)) return json(400, { error: 'Invalid attack point' })
+    const attackPoint = { id: randomUUID(), name: body.name.trim(), position: body.position }
+    component.attackPoints.push(attackPoint)
+    console.log(`[rest] attack point created: ${attackPoint.id} under ${component.id}`)
+    return json(201, attackPoint)
+  }
+
   if (url.pathname === '/api/definitions' && req.method === 'POST') {
     const body = await readJsonBody(req)
     if (!isValidDefinition(body)) return json(400, { error: 'Invalid definition' })
@@ -388,6 +506,33 @@ function readJsonBody(req) {
 
 function isValidShape(body) {
   return body && typeof body.id === 'string' && typeof body.kind === 'string'
+}
+
+/** Flat object of string fields with a non-empty `name`. */
+function isValidMission(body) {
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return false
+  if (typeof body.name !== 'string' || !body.name.trim()) return false
+  return Object.values(body).every((v) => typeof v === 'string')
+}
+
+/** Client-sent mission minus the server-owned fields. */
+function missionFields(body) {
+  const fields = { ...body }
+  for (const key of ['id', 'createdAt', 'updatedAt']) delete fields[key]
+  fields.name = fields.name.trim()
+  return fields
+}
+
+/** `{ name, position: [lng, lat] }`. */
+function isValidAttackPoint(body) {
+  return (
+    body &&
+    typeof body.name === 'string' &&
+    body.name.trim() &&
+    Array.isArray(body.position) &&
+    body.position.length === 2 &&
+    body.position.every((n) => typeof n === 'number')
+  )
 }
 
 function isValidDefinition(body) {
@@ -459,6 +604,8 @@ setInterval(() => {
 server.listen(PORT, () => {
   console.log(`Demo server listening on http://localhost:${PORT}`)
   console.log(`  REST: GET/POST /api/shapes | PUT/DELETE /api/shapes/:id`)
+  console.log(`  REST: GET/POST /api/missions | PUT/DELETE /api/missions/:id`)
+  console.log(`  REST: GET /api/mission-targets | POST /api/components/:id/attack-points`)
   console.log(
     `  WS:   ws://localhost:${PORT}/ws (` +
       `${NUM_DRONES} drones + ${NUM_AIRCRAFT} aircraft every ${TARGET_TICK_MS}ms | ` +
