@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import { DEMO_MISSIONS } from './demoMissions';
 import { MissionContext } from './MissionContext';
 import MissionForm from './form/MissionForm';
 import MissionList from './list/MissionList';
@@ -11,7 +10,9 @@ import { missionApi } from './missionApi';
 interface MissionsPanelProps {
   /** Lists backing `entity` fields in MISSION_SCHEMA, keyed by `source`. */
   entitySources?: EntitySources;
-  /** Inject a store (API-backed or for tests). Defaults to a demo-seeded one. */
+  /** Inject a store (API-backed or for tests). Pass one that outlives this
+   *  panel so an in-progress form is resumed when the panel is reopened;
+   *  the default is created per mount and resets with it. */
   store?: MissionStore;
 }
 

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import IconButton from '@mui/material/IconButton'
 import Tooltip from '@mui/material/Tooltip'
 import Box from '@mui/material/Box'
@@ -37,7 +37,8 @@ import { DEMO_LAYERS } from './mocks/demoLayers'
 import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
 import airCraftIcon from './assets/aircraft.png'
 import droneIcon from './assets/drone.png'
-import { MissionsPanel } from './Components/features/missionPanel'
+import { MissionsPanel, MissionStore } from './Components/features/missionPanel'
+import { missionApi } from './Components/features/missionPanel/missionApi'
 import { demoMissionEntitySources } from './mocks/demoMissionSources'
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 
@@ -77,6 +78,10 @@ function App() {
   // then go to the server over REST (see src/bridge/useLiveShapes.ts).
   const liveShapes = useLiveShapes(liveDataStore)
 
+  // Owned here (not by the panel) so a half-filled mission form is resumed
+  // when the Missions panel is closed and reopened.
+  const [missionStore] = useState(() => new MissionStore(missionApi))
+
   // The top bar renders whatever the host declares — swap/extend freely.
   const topBarItems: TopBarItem[] = [
     {
@@ -104,7 +109,7 @@ function App() {
       title: 'Missions',
       Icon: AssignmentOutlinedIcon,
       // Entity pickers in the mission form read from these lists (see missionSchema.ts).
-      content: <MissionsPanel entitySources={demoMissionEntitySources(stores)}  />,
+      content: <MissionsPanel store={missionStore} entitySources={demoMissionEntitySources(stores)} />,
     },
   ]
 

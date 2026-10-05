@@ -1,6 +1,6 @@
 import { makeAutoObservable, runInAction } from 'mobx';
 import type { MissionApi } from './missionApi';
-import type { Mission, MissionValues } from './types';
+import { emptyValues, type Mission, type MissionValues } from './types';
 
 export type MissionView = { mode: 'list' } | { mode: 'create' } | { mode: 'edit'; id: string };
 
@@ -18,6 +18,10 @@ const SORTERS: Record<MissionSort, (a: Mission, b: Mission) => number> = {
  * Mission list + which screen is showing. Every write goes to the server
  * first; the server assigns `id` / `createdAt` / `updatedAt` and the
  * response replaces the local copy.
+ *
+ * The form's in-progress values live here (`draft`) rather than in the
+ * form component, so closing and reopening the panel resumes where the
+ * user left off. Nothing reaches the server until Save.
  */
 export class MissionStore {
   readonly api: MissionApi;
@@ -25,6 +29,8 @@ export class MissionStore {
   search = '';
   sort: MissionSort = 'newest';
   view: MissionView = { mode: 'list' };
+  /** Unsaved form values while `view` is create/edit; null on the list. */
+  draft: MissionValues | null = null;
 
   constructor(api: MissionApi, seed: Mission[] = []) {
     this.api = api;
@@ -53,14 +59,21 @@ export class MissionStore {
 
   openCreate() {
     this.view = { mode: 'create' };
+    this.draft = emptyValues();
   }
 
   openEdit(id: string) {
     this.view = { mode: 'edit', id };
+    this.draft = { ...emptyValues(), ...this.missions.find((m) => m.id === id)?.values };
   }
 
   showList() {
     this.view = { mode: 'list' };
+    this.draft = null;
+  }
+
+  setDraft(values: MissionValues) {
+    this.draft = values;
   }
 
   async load() {

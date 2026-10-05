@@ -32,12 +32,14 @@ const clearDependents = (values: MissionValues, key: string): MissionValues => {
 };
 
 /**
- * Create / edit form generated from MISSION_SCHEMA. Edits a local copy of
- * the values; nothing reaches the store until Save.
+ * Create / edit form generated from MISSION_SCHEMA. Edits `store.draft`
+ * (so the form survives closing the panel); nothing reaches the mission
+ * list or the server until Save.
  */
 function MissionFormImpl({ mission }: { mission: Mission | null }) {
   const { store, entitySources } = useMissions();
-  const [values, setValues] = useState<MissionValues>(() => ({ ...emptyValues(), ...mission?.values }));
+  const values: MissionValues = store.draft ?? { ...emptyValues(), ...mission?.values };
+  const setValues = (update: (v: MissionValues) => MissionValues) => store.setDraft(update(values));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
