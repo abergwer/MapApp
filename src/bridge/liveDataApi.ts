@@ -20,9 +20,15 @@ export const liveDataApi = {
   deleteShape: (id: string) => client.delete<{ ok: boolean }>(`/api/shapes/${id}`),
   /** Mission planning tree (targets → components → attack points). */
   getMissionTargets: () => client.get<MissionTargetDto[]>('/api/mission-targets'),
-  /** Adds an attack point under a component; the server assigns the id. */
-  createAttackPoint: ({ componentId, body }: { componentId: string; body: Omit<AttackPointDto, 'id'> }) =>
-    client.post<AttackPointDto>(`/api/components/${componentId}/attack-points`, body),
+  /** Adds an attack point under a component; the server assigns the id
+   *  and stamps `parentId` from the component in the URL. */
+  createAttackPoint: ({
+    componentId,
+    body,
+  }: {
+    componentId: string
+    body: Omit<AttackPointDto, 'id' | 'parentId'>
+  }) => client.post<AttackPointDto>(`/api/components/${componentId}/attack-points`, body),
 }
 
 // Hooks locked to the methods above — a typo'd or undeclared method name

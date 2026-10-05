@@ -38,6 +38,8 @@ export interface TargetDetails {
  * the server returns it from `GET /api/mission-targets`. */
 export interface AttackPointDto {
   id: string
+  /** Owning component id. */
+  parentId: string
   name: string
   position: [number, number]
 }

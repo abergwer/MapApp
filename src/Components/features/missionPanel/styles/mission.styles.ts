@@ -155,7 +155,11 @@ const fieldBase = {
   '& .MuiInputAdornment-root': { color: 'text.secondary' },
   '& .MuiInputLabel-root': { fontSize: 12, letterSpacing: 0.2 },
   '& .MuiInputLabel-root.Mui-focused': { color: palette.accentBright },
-  '& .MuiFormHelperText-root': { mx: 0.75, mt: 0.5, fontSize: 10.5 },
+  // Compact helper/hint row: tight line-height and a negative bottom margin so
+  // it sits inside the form gap instead of pushing the next field down.
+  '& .MuiFormHelperText-root': { mx: 0.75, mt: 0.25, mb: -0.75, fontSize: 10.5, lineHeight: 1.2 },
+  // Hints under disabled (dependsOn) pickers must stay legible.
+  '& .MuiFormHelperText-root.Mui-disabled': { color: 'text.secondary' },
 } as const;
 
 export const field: SxProps<Theme> = fieldBase;
@@ -197,7 +201,7 @@ export const card: SxProps<Theme> = {
   position: 'relative',
   overflow: 'hidden',
   isolation: 'isolate',
-  bgcolor: glass(60),
+  bgcolor: glass(45),
   border: `1px solid ${palette.border}`,
   // Hairline top highlight gives the surface a subtle "lit" edge.
   boxShadow: `inset 0 1px 0 color-mix(in srgb, ${palette.textPrimary} 6%, transparent)`,
@@ -277,7 +281,21 @@ export const cardDate: SxProps<Theme> = {
   letterSpacing: 0.2,
   color: 'text.secondary',
   lineHeight: 1.4,
+  whiteSpace: 'nowrap',
   '& svg': { fontSize: 11, opacity: 0.8 },
+};
+
+/** Pencil shown in place of the clock once a mission has been edited. */
+export const editedIcon: SxProps<Theme> = {
+  color: palette.warn,
+  opacity: '1 !important',
+  filter: `drop-shadow(0 0 4px color-mix(in srgb, ${palette.warn} 60%, transparent))`,
+};
+
+/** Clock next to the creation date. */
+export const createdIcon: SxProps<Theme> = {
+  color: 'text.primary',
+  opacity: '1 !important',
 };
 
 /** Row actions: hidden until the card is hovered / focused. */

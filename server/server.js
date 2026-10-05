@@ -85,16 +85,16 @@ const missionTargets = [
         id: 'component-1',
         name: 'Antenna array',
         attackPoints: [
-          { id: 'ap-1', name: 'Attack point 1', position: [34.97, 32.77] },
-          { id: 'ap-2', name: 'Attack point 2', position: [35.02, 32.8] },
+          { id: 'ap-1', parentId: 'component-1', name: 'Attack point 1', position: [34.97, 32.77] },
+          { id: 'ap-2', parentId: 'component-1', name: 'Attack point 2', position: [35.02, 32.8] },
         ],
       },
       {
         id: 'component-2',
         name: 'Power supply',
         attackPoints: [
-          { id: 'ap-3', name: 'Attack point 3', position: [34.8, 32.03] },
-          { id: 'ap-4', name: 'Attack point 4', position: [34.87, 32.08] },
+          { id: 'ap-3', parentId: 'component-2', name: 'Attack point 3', position: [34.8, 32.03] },
+          { id: 'ap-4', parentId: 'component-2', name: 'Attack point 4', position: [34.87, 32.08] },
         ],
       },
     ],
@@ -103,7 +103,11 @@ const missionTargets = [
     id: 'target-2',
     name: 'Launch Site East',
     components: [
-      { id: 'component-3', name: 'Launch pad', attackPoints: [{ id: 'ap-5', name: 'Attack point 5', position: [35.82, 32.05] }] },
+      {
+        id: 'component-3',
+        name: 'Launch pad',
+        attackPoints: [{ id: 'ap-5', parentId: 'component-3', name: 'Attack point 5', position: [35.82, 32.05] }],
+      },
       { id: 'component-4', name: 'Fuel depot', attackPoints: [] },
     ],
   },
@@ -453,7 +457,8 @@ const server = createServer(async (req, res) => {
     if (!component) return json(404, { error: 'Component not found' })
     const body = await readJsonBody(req)
     if (!isValidAttackPoint(body)) return json(400, { error: 'Invalid attack point' })
-    const attackPoint = { id: randomUUID(), name: body.name.trim(), position: body.position }
+    // Server stamps the parent from the route — never trust a client-sent one.
+    const attackPoint = { id: randomUUID(), parentId: component.id, name: body.name.trim(), position: body.position }
     component.attackPoints.push(attackPoint)
     console.log(`[rest] attack point created: ${attackPoint.id} under ${component.id}`)
     return json(201, attackPoint)

@@ -104,7 +104,7 @@ export function demoMissionEntitySources(stores: RootStore): EntitySources {
                   defId: 'attackPoint',
                   name: saved.name,
                   position: saved.position,
-                  parentId: componentId,
+                  parentId: saved.parentId,
                 });
                 resolve({ id: saved.id, label: saved.name });
               })
