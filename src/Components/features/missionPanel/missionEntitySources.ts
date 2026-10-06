@@ -1,27 +1,18 @@
 import { createElement } from 'react';
 import { observable } from 'mobx';
 import WidgetsIcon from '@mui/icons-material/Widgets';
-import {
-  ImpactDataDialog,
-  type EntitySources,
-  type ImpactDataValues,
-} from '../Components/features/missionPanel';
-import { getEntityDef } from '../Components/features/entities/entityDefinitions';
-import EntityIcon from '../Components/features/entities/EntityIcon';
-import { liveDataApi } from '../bridge/liveDataApi';
-import type { MissionTargetDto } from '../bridge/types';
-import type { RootStore } from '../stores/RootStore';
+import { ImpactDataDialog } from './impactData';
+import type { EntitySources } from './missionSchema';
+import { getEntityDef } from '../entities/entityDefinitions';
+import EntityIcon from '../entities/EntityIcon';
+import { liveDataApi } from '../../../bridge/liveDataApi';
+import type { ImpactDataDto, MissionTargetDto } from '../../../bridge/types';
+import type { RootStore } from '../../../stores/RootStore';
 
-/** Demo-only list behind the `commander` source; supports `Add "…"`. */
-const commanders = observable.array(['Maj. R. Halvorsen', 'Capt. L. Okafor', 'Lt. Col. S. Brandt']);
-
-/** Demo-only list behind the `impactData` source. Replace with the DB fetch;
- *  new items are created through the ImpactDataDialog form. */
-type ImpactDataRecord = { id: string } & ImpactDataValues;
-const impactDataList = observable.array<ImpactDataRecord>([
-  { id: 'impact-1', name: 'Blast profile A', radius: '250', speed: '340', details: 'Standard HE warhead' },
-  { id: 'impact-2', name: 'Blast profile B', radius: '600', speed: '290', details: 'Thermobaric' },
-]);
+/** Impact data records as the server sends them (GET /api/impact-data);
+ *  new ones are created through the ImpactDataDialog form and POSTed. */
+const impactDataList = observable.array<ImpactDataDto>([]);
+let impactDataLoaded = false;
 
 /** The definition's icon (tinted) for a shape, or nothing for untyped shapes. */
 const iconFor = (defId?: string) => {
@@ -45,18 +36,26 @@ const findTarget = (id?: string) => targets.find((t) => t.id === id);
 const findComponent = (id?: string) => targets.flatMap((t) => t.components).find((c) => c.id === id);
 
 /**
- * DEMO wiring for the mission schema's `entity` fields. Each key matches a
+ * Wiring for the mission schema's `entity` fields. Each key matches a
  * `source` in missionSchema.ts. `options` runs inside the form's render, so
- * live-store subscriptions belong to the form. Real projects map their own
- * stores here (and implement `add` where the schema sets `allowCreate`).
+ * live-store subscriptions belong to the form. Server-backed lists
+ * (targets, impact data) are fetched lazily on first use; map-drawn
+ * sources read from the drawing/entity stores.
  */
-export function demoMissionEntitySources(stores: RootStore): EntitySources {
+export function createMissionEntitySources(stores: RootStore): EntitySources {
   if (!targetsLoaded) {
     targetsLoaded = true;
     liveDataApi
       .getMissionTargets()
       .then((list) => targets.replace(list))
       .catch((err) => console.error('[missions] failed to load targets:', err));
+  }
+  if (!impactDataLoaded) {
+    impactDataLoaded = true;
+    liveDataApi
+      .getImpactData()
+      .then((list) => impactDataList.replace(list))
+      .catch((err) => console.error('[missions] failed to load impact data:', err));
   }
 
   /** Disarm the map tool when the user cancels a map-drawn `add`. */
@@ -141,25 +140,19 @@ export function demoMissionEntitySources(stores: RootStore): EntitySources {
           icon: iconFor(s.defId),
         })),
     },
-    commander: {
-      options: () => commanders.map((name) => ({ id: name, label: name })),
-      add: (label) => {
-        if (!commanders.includes(label)) commanders.push(label);
-        return { id: label, label };
-      },
-    },
 
     /** Impact data: pick an existing record, or `Add "…"` opens a form to
-     *  fill a whole new record which is then appended to the list and selected. */
+     *  fill a whole new record which is POSTed (server assigns the id),
+     *  appended to the list and selected. */
     impactData: {
       options: () => impactDataList.map((d) => ({ id: d.id, label: `${d.name} · r ${d.radius} m` })),
       createDialog: ({ initialLabel, onClose }) =>
         createElement(ImpactDataDialog, {
           initialName: initialLabel,
-          onSave: (values) => {
-            const record: ImpactDataRecord = { id: `impact-${crypto.randomUUID()}`, ...values };
-            impactDataList.push(record);
-            onClose({ id: record.id, label: record.name });
+          onSave: async (values) => {
+            const saved = await liveDataApi.createImpactData(values as Omit<ImpactDataDto, 'id'>);
+            impactDataList.push(saved);
+            onClose({ id: saved.id, label: saved.name });
           },
           onCancel: () => onClose(null),
         }),

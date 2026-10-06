@@ -39,7 +39,7 @@ import airCraftIcon from './assets/aircraft.png'
 import droneIcon from './assets/drone.png'
 import { MissionsPanel, MissionStore } from './Components/features/missionPanel'
 import { missionApi } from './Components/features/missionPanel/missionApi'
-import { demoMissionEntitySources } from './mocks/demoMissionSources'
+import { createMissionEntitySources } from './Components/features/missionPanel/missionEntitySources'
 import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined'
 
 function App() {
@@ -109,7 +109,7 @@ function App() {
       title: 'Missions',
       Icon: AssignmentOutlinedIcon,
       // Entity pickers in the mission form read from these lists (see missionSchema.ts).
-      content: <MissionsPanel store={missionStore} entitySources={demoMissionEntitySources(stores)} />,
+      content: <MissionsPanel store={missionStore} entitySources={createMissionEntitySources(stores)} />,
     },
   ]
 

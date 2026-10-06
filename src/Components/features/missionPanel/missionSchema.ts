@@ -77,7 +77,6 @@ export const NAME_KEY = 'name';
 export const MISSION_SCHEMA: readonly FieldDef[] = [
   { key: NAME_KEY, type: 'text', label: 'Mission name', required: true },
   { key: 'description', type: 'textarea', label: 'Description' },
-  { key: 'commander', type: 'entity', label: 'Commander', source: 'commander', allowCreate: true },
   {key : 'areaOfOperation', type: 'text', label: 'Area of Operation'},
   { key: 'status', type: 'select', label: 'Status', options: ['Planned', 'Active', 'Completed'], required: true },
   { key: 'target', type: 'entity', label: 'Primary target', source: 'target', allowCreate: false },

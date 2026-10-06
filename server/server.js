@@ -114,6 +114,12 @@ const missionTargets = [
   { id: 'target-3', name: 'Comms Hub West', components: [] },
 ]
 
+/** Impact data records (flat string fields), created via POST /api/impact-data. */
+const impactData = [
+  { id: 'impact-1', name: 'Blast profile A', radius: '250', speed: '340', details: 'Standard HE warhead' },
+  { id: 'impact-2', name: 'Blast profile B', radius: '600', speed: '290', details: 'Thermobaric' },
+]
+
 /**
  * Editable drawn shapes (`MapShape` union from the app's DrawingToolStore),
  * managed via the CRUD /api/shapes REST routes. The initial seed is a few
@@ -464,6 +470,19 @@ const server = createServer(async (req, res) => {
     return json(201, attackPoint)
   }
 
+  if (url.pathname === '/api/impact-data' && req.method === 'GET') {
+    return json(200, impactData)
+  }
+
+  if (url.pathname === '/api/impact-data' && req.method === 'POST') {
+    const body = await readJsonBody(req)
+    if (!isValidImpactData(body)) return json(400, { error: 'Invalid impact data' })
+    const record = { ...body, id: randomUUID(), name: body.name.trim() }
+    impactData.push(record)
+    console.log(`[rest] impact data created: ${record.id} (${record.name})`)
+    return json(201, record)
+  }
+
   if (url.pathname === '/api/definitions' && req.method === 'POST') {
     const body = await readJsonBody(req)
     if (!isValidDefinition(body)) return json(400, { error: 'Invalid definition' })
@@ -519,6 +538,9 @@ function isValidMission(body) {
   if (typeof body.name !== 'string' || !body.name.trim()) return false
   return Object.values(body).every((v) => typeof v === 'string')
 }
+
+/** Same rule as missions: flat string fields with a non-empty `name`. */
+const isValidImpactData = isValidMission
 
 /** Client-sent mission minus the server-owned fields. */
 function missionFields(body) {

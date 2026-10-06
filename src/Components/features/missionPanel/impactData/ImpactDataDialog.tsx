@@ -23,7 +23,8 @@ const validate = (values: ImpactDataValues) => {
 /**
  * "New impact data" form shown over the mission form. Fields come from
  * IMPACT_DATA_SCHEMA. Nothing is stored here — `onSave` receives the
- * values and the caller decides where they go.
+ * values and the caller decides where they go. If it returns a promise the
+ * dialog shows "Saving…" and reports a rejection inline.
  */
 export default function ImpactDataDialog({
   initialName,
@@ -32,17 +33,25 @@ export default function ImpactDataDialog({
 }: {
   /** Pre-fills the `name` field (what the user typed in the picker). */
   initialName: string;
-  onSave: (values: ImpactDataValues) => void;
+  onSave: (values: ImpactDataValues) => void | Promise<void>;
   onCancel: () => void;
 }) {
   const [values, setValues] = useState<ImpactDataValues>(() => ({ ...emptyImpactDataValues(), name: initialName }));
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const e = validate(values);
     setErrors(e);
     if (Object.keys(e).length > 0) return;
-    onSave(values);
+    setSaving(true);
+    try {
+      await onSave(values);
+    } catch {
+      setErrors({ _save: 'Could not save the impact data' });
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -54,7 +63,7 @@ export default function ImpactDataDialog({
         onSubmit={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          handleSave();
+          void handleSave();
         }}
       >
         <Box sx={styles.formHeading}>
@@ -92,7 +101,7 @@ export default function ImpactDataDialog({
           {Object.keys(errors).length > 0 ? (
             <Typography component="span" role="alert" sx={styles.formError}>
               <ErrorOutlinedIcon />
-              Check the highlighted fields
+              {errors._save ?? 'Check the highlighted fields'}
             </Typography>
           ) : (
             <span />
@@ -101,9 +110,9 @@ export default function ImpactDataDialog({
             <ButtonBase sx={styles.ghostButton} onClick={onCancel} aria-label="Cancel">
               Cancel
             </ButtonBase>
-            <ButtonBase type="submit" sx={styles.primaryButton} aria-label="Add impact data">
+            <ButtonBase type="submit" disabled={saving} sx={styles.primaryButton} aria-label="Add impact data">
               <SaveOutlinedIcon sx={{ fontSize: 16 }} />
-              Add
+              {saving ? 'Saving…' : 'Add'}
             </ButtonBase>
           </Box>
         </Box>

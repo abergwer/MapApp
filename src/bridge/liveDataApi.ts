@@ -1,7 +1,7 @@
 import config from '../../config.json'
 import { createApiHooks, createRestClient } from '../network'
 import type { MapShape } from '../stores/DrawingToolStore'
-import type { AttackPointDto, MissionTargetDto, TargetDetails } from './types'
+import type { AttackPointDto, ImpactDataDto, MissionTargetDto, TargetDetails } from './types'
 
 /** REST base URL of the data server — change it in config.json. */
 export const DEMO_SERVER_URL: string = config.DataServerURL
@@ -31,6 +31,9 @@ export const liveDataApi = {
     componentId: string
     body: Omit<AttackPointDto, 'id' | 'parentId'>
   }) => client.post<AttackPointDto>(`/api/components/${componentId}/attack-points`, body),
+  /** Impact data records; the server assigns the id. */
+  getImpactData: () => client.get<ImpactDataDto[]>('/api/impact-data'),
+  createImpactData: (body: Omit<ImpactDataDto, 'id'>) => client.post<ImpactDataDto>('/api/impact-data', body),
 }
 
 // Hooks locked to the methods above — a typo'd or undeclared method name
