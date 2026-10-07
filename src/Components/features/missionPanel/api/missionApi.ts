@@ -1,7 +1,6 @@
-import { DEMO_SERVER_URL } from '../../../bridge/liveDataApi';
-import { createRestClient } from '../../../network';
-import { MISSION_SCHEMA } from './missionSchema';
-import { nameOf, type Mission, type MissionValues } from './types';
+import { api } from './client';
+import { MISSION_SCHEMA } from '../missionSchema';
+import { nameOf, type Mission, type MissionValues } from '../types';
 
 /**
  * Wire format is FLAT: the server-owned header fields plus one key per
@@ -23,13 +22,23 @@ const fromWire = ({ id, createdAt, updatedAt, ...values }: MissionDto): Mission 
   values,
 });
 
-const client = createRestClient({ baseURL: DEMO_SERVER_URL });
-
 export const missionApi = {
-  list: () => client.get<MissionDto[]>('/api/missions').then((list) => list.map(fromWire)),
-  create: (values: MissionValues) => client.post<MissionDto>('/api/missions', values).then(fromWire),
-  update: (id: string, values: MissionValues) => client.put<MissionDto>(`/api/missions/${id}`, values).then(fromWire),
-  remove: (id: string) => client.delete<{ ok: boolean }>(`/api/missions/${id}`),
+  list: async () => {
+    const response = await api.get<MissionDto[]>('/missions');
+    return response.data.map(fromWire);
+  },
+  create: async (values: MissionValues) => {
+    const response = await api.post<MissionDto>('/missions', values);
+    return fromWire(response.data);
+  },
+  update: async (id: string, values: MissionValues) => {
+    const response = await api.put<MissionDto>(`/missions/${id}`, values);
+    return fromWire(response.data);
+  },
+  remove: async (id: string) => {
+    const response = await api.delete<{ ok: boolean }>(`/missions/${id}`);
+    return response.data;
+  },
 };
 
 export type MissionApi = typeof missionApi;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type HTMLAttributes } from 'react';
+import { observer } from 'mobx-react-lite';
 import Autocomplete, { createFilterOptions } from '@mui/material/Autocomplete';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
@@ -30,8 +31,10 @@ export interface EntityFieldProps {
  *  the user e.g. clicks the map) or, if the source has a `createDialog`,
  *  opens it and selects whatever the dialog returns.
  *  When the field `dependsOn` another one, it is disabled until `parentId`
- *  exists and forwards it to the source's `options` / `add`. */
-export default function EntityField({
+ *  exists and forwards it to the source's `options` / `add`.
+ *  An `observer` so lists backed by MobX (server tree, drawn shapes)
+ *  refresh the dropdown as soon as they change. */
+function EntityFieldImpl({
   label,
   required,
   value,
@@ -55,14 +58,23 @@ export default function EntityField({
 
   const startAdd = (typed: string) => {
     const result = source!.add!(typed, parentId);
+    if (!result) return;
     if (!(result instanceof Promise)) return onChange(result.id);
     setPending(typed);
     cancelRef.current = () => source?.cancelAdd?.();
-    result.then((created) => {
-      cancelRef.current = null;
-      setPending(null);
-      onChange(created.id);
-    });
+    result
+      .then((created) => {
+        cancelRef.current = null;
+        setPending(null);
+        // No entity yet (e.g. the user still has to save it in the entity
+        // window) — leave the field empty; they pick it once it is listed.
+        if (created) onChange(created.id);
+      })
+      .catch(() => {
+        // Source gave up (e.g. the draft was removed) — just leave the field empty.
+        cancelRef.current = null;
+        setPending(null);
+      });
   };
   const cancelAdd = () => {
     cancelRef.current?.();
@@ -143,3 +155,6 @@ export default function EntityField({
     </>
   );
 }
+
+const EntityField = observer(EntityFieldImpl);
+export default EntityField;

@@ -1,5 +1,5 @@
 import { makeAutoObservable, runInAction } from 'mobx';
-import type { MissionApi } from './missionApi';
+import type { MissionApi } from './api/missionApi';
 import { emptyValues, type Mission, type MissionValues } from './types';
 
 export type MissionView = { mode: 'list' } | { mode: 'create' } | { mode: 'edit'; id: string };

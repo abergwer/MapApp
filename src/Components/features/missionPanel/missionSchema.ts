@@ -60,10 +60,13 @@ export interface CreateDialogProps {
  *  `add` may return a Promise when the user has to do something first
  *  (e.g. click the map); `addHint` is shown under the field meanwhile and
  *  `cancelAdd` is called if they press Cancel or leave the form.
+ *  Resolve (or return) nothing when there is no entity to select yet —
+ *  e.g. the user still has to save it elsewhere; they pick it from the
+ *  list once it exists.
  *  For `dependsOn` fields the callbacks receive the parent field's value. */
 export interface EntitySource {
   options: (parentId?: string) => EntityOption[];
-  add?: (label: string, parentId?: string) => EntityOption | Promise<EntityOption>;
+  add?: (label: string, parentId?: string) => EntityOption | Promise<EntityOption | void> | void;
   addHint?: string;
   cancelAdd?: () => void;
   createDialog?: (props: CreateDialogProps) => ReactNode;
@@ -82,6 +85,7 @@ export const MISSION_SCHEMA: readonly FieldDef[] = [
   { key: 'target', type: 'entity', label: 'Primary target', source: 'target', allowCreate: false },
   { key: 'component', type: 'entity', label: 'Component', source: 'component', dependsOn: 'target' },
   { key: 'attackPoint', type: 'entity', label: 'Attack point', source: 'attackPoint', dependsOn: 'component', allowCreate: true },
+  { key: 'munition', type: 'entity', label: 'Munition', source: 'munition' },
   {key: 'route', type: 'entity', label : 'Route', source: 'route', allowCreate: true},
   { key: 'impactData', type: 'entity', label: 'Impact data', source: 'impactData', allowCreate: true },
   { key: 'startAt', type: 'datetime', label: 'Start' },

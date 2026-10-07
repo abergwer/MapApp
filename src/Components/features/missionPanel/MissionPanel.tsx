@@ -5,7 +5,7 @@ import MissionForm from './form/MissionForm';
 import MissionList from './list/MissionList';
 import { MissionStore } from './MissionStore';
 import type { EntitySources } from './missionSchema';
-import { missionApi } from './missionApi';
+import { missionApi } from './api';
 
 interface MissionsPanelProps {
   /** Lists backing `entity` fields in MISSION_SCHEMA, keyed by `source`. */

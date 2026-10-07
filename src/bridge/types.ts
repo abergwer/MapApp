@@ -1,6 +1,9 @@
 /**
- * Wire-format types shared with the demo server (`server/server.js`).
- * All coordinates are GeoJSON-compatible [lng, lat].
+ * Wire-format types for live telemetry shared with the demo server
+ * (`server/server.js`). All coordinates are GeoJSON-compatible [lng, lat].
+ *
+ * Mission planning types (targets, components, attack points, impact data,
+ * munitions) live in `src/Components/features/missionPanel`.
  */
 
 /** Airborne target (drone or aircraft). */
@@ -25,41 +28,3 @@ export interface Missile {
   speedKts: number
   altitudeFt: number
 }
-
-/** Static intel for one target, fetched on demand via `GET /api/targets/:id`. */
-export interface TargetDetails {
-  id: string
-  callsign: string
-  operator: string
-  status: string
-}
-
-/* Mission planning tree: targets → components → attack points, exactly as
- * the server returns it from `GET /api/mission-targets`. */
-export interface AttackPointDto {
-  id: string
-  /** Owning component id. */
-  parentId: string
-  name: string
-  position: [number, number]
-}
-export interface ComponentDto {
-  id: string
-  name: string
-  attackPoints: AttackPointDto[]
-}
-export interface MissionTargetDto {
-  id: string
-  name: string
-  components: ComponentDto[]
-}
-
-/** Impact data record as stored by the server (`GET/POST /api/impact-data`). */
-export interface ImpactDataDto {
-  id: string
-  name: string
-  radius: string
-  speed: string
-  details: string
-}
-

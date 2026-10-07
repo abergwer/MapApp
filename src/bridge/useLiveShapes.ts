@@ -13,10 +13,13 @@ const logError = (err: unknown) =>
  *           to `MapWrapper`'s `shapes` prop. The array reference then stays
  *           stable so the map hydrates exactly once; after that the map is
  *           authoritative.
- * Outbound: the map is draft-until-save — `onShapeSave` fires when the user
+ * Outbound: the map is draft-until-save — `onSave` fires when the user
  *           saves (POST for a first save, PUT for a re-save); deletes go
  *           out immediately. No re-hydration on success — the map already
  *           holds the change.
+ *
+ * The result is `EntityHooks` + `shapes`, so a feature can wrap it to route
+ * its own entity types elsewhere (see missionPanel's `useMissionShapes`).
  */
 export function useLiveShapes(store: LiveDataStore) {
   // One-time hydration read; the store ignores later refetches.
@@ -34,13 +37,13 @@ export function useLiveShapes(store: LiveDataStore) {
     /** First save POSTs (server assigns the real id — resolves with the
      *  stored shape so the map re-keys), re-saves PUT. Resolves undefined
      *  on failure so the shape stays a draft. */
-    onShapeSave: (shape: MapShape, isNew: boolean): Promise<MapShape | undefined> =>
+    onSave: (shape: MapShape, isNew: boolean): Promise<MapShape | undefined> =>
       (isNew ? create : update).mutateAsync(shape).catch((err) => {
         logError(err)
         return undefined
       }),
     // Plain call — no request state needed, so no hook.
-    onShapeDelete: (id: string) => {
+    onDelete: (id: string) => {
       liveDataApi.deleteShape(id).catch(logError)
     },
   }

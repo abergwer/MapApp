@@ -10,8 +10,8 @@
  *   POST   /api/missions        -> Mission            create (SERVER assigns id + createdAt)
  *   PUT    /api/missions/:id    -> Mission            update (SERVER sets updatedAt)
  *   DELETE /api/missions/:id    -> { ok }             remove
- *   GET    /api/mission-targets               -> MissionTarget[]  targets → components → attackPoints
- *   POST   /api/components/:id/attack-points  -> AttackPoint      create under a component (SERVER assigns id)
+ *   GET    /api/mission-targets               -> TargetDto[]      targets → components → attackPoints (src/bridge/types.ts)
+ *   POST   /api/components/:id/attack-points  -> AttackPointDto   body = { name, position, accuracy }; SERVER assigns id + parentId
  *   POST   /api/definitions     -> EntityDefinition   create (client supplies the id)
  *   PUT    /api/definitions/:id -> EntityDefinition   update
  *   DELETE /api/definitions/:id -> { ok }             remove
@@ -73,51 +73,73 @@ const missions = [
 ]
 
 /**
- * Mission planning tree: targets → components → attack points. Attack
- * points are created through POST /api/components/:id/attack-points.
+ * Mission planning tree: targets → components → attack points. Shapes
+ * mirror `src/bridge/types.ts` (TargetDto / ComponentDto / AttackPointDto).
+ * NOTE: `postion` on a target is the contract's spelling — keep it.
+ * Attack points are created through POST /api/components/:id/attack-points.
  */
+const geoPosition = (latitude, longitude, heightMeters = 0) => ({
+  location: { latitude, longitude },
+  heightMeters,
+  verticalSystemReference: 'MeanSeaLevel',
+})
+
+const attackPointSeed = (id, parentId, name, latitude, longitude) => ({
+  id,
+  parentId,
+  name,
+  position: geoPosition(latitude, longitude),
+  accuracy: { ce90meters: 10, le90meters: 10 },
+})
+
+const componentSeed = (id, name, description, latitude, longitude, attackPoints = []) => ({
+  id,
+  name,
+  description,
+  location: { latitude, longitude },
+  attackPoints,
+})
+
+const targetSeed = (id, name, region, description, latitude, longitude, components = []) => ({
+  id,
+  name,
+  region,
+  postion: geoPosition(latitude, longitude),
+  description,
+  components,
+})
+
 const missionTargets = [
-  {
-    id: 'target-1',
-    name: 'Radar Station North',
-    components: [
-      {
-        id: 'component-1',
-        name: 'Antenna array',
-        attackPoints: [
-          { id: 'ap-1', parentId: 'component-1', name: 'Attack point 1', position: [34.97, 32.77] },
-          { id: 'ap-2', parentId: 'component-1', name: 'Attack point 2', position: [35.02, 32.8] },
-        ],
-      },
-      {
-        id: 'component-2',
-        name: 'Power supply',
-        attackPoints: [
-          { id: 'ap-3', parentId: 'component-2', name: 'Attack point 3', position: [34.8, 32.03] },
-          { id: 'ap-4', parentId: 'component-2', name: 'Attack point 4', position: [34.87, 32.08] },
-        ],
-      },
-    ],
-  },
-  {
-    id: 'target-2',
-    name: 'Launch Site East',
-    components: [
-      {
-        id: 'component-3',
-        name: 'Launch pad',
-        attackPoints: [{ id: 'ap-5', parentId: 'component-3', name: 'Attack point 5', position: [35.82, 32.05] }],
-      },
-      { id: 'component-4', name: 'Fuel depot', attackPoints: [] },
-    ],
-  },
-  { id: 'target-3', name: 'Comms Hub West', components: [] },
+  targetSeed('target-1', 'Radar Station North', 'North', 'Early-warning radar complex.', 32.78, 35.0, [
+    componentSeed('component-1', 'Antenna array', 'Primary rotating array.', 32.785, 34.995, [
+      attackPointSeed('ap-1', 'component-1', 'Attack point 1', 32.77, 34.97),
+      attackPointSeed('ap-2', 'component-1', 'Attack point 2', 32.8, 35.02),
+    ]),
+    componentSeed('component-2', 'Power supply', 'Generator building.', 32.05, 34.83, [
+      attackPointSeed('ap-3', 'component-2', 'Attack point 3', 32.03, 34.8),
+      attackPointSeed('ap-4', 'component-2', 'Attack point 4', 32.08, 34.87),
+    ]),
+  ]),
+  targetSeed('target-2', 'Launch Site East', 'East', 'Fixed launch infrastructure.', 32.06, 35.8, [
+    componentSeed('component-3', 'Launch pad', 'Hardened pad.', 32.05, 35.82, [
+      attackPointSeed('ap-5', 'component-3', 'Attack point 5', 32.05, 35.82),
+    ]),
+    componentSeed('component-4', 'Fuel depot', 'Underground storage.', 32.07, 35.78),
+  ]),
+  targetSeed('target-3', 'Comms Hub West', 'West', 'Relay and switching node.', 32.1, 34.78),
 ]
 
 /** Impact data records (flat string fields), created via POST /api/impact-data. */
 const impactData = [
   { id: 'impact-1', name: 'Blast profile A', radius: '250', speed: '340', details: 'Standard HE warhead' },
   { id: 'impact-2', name: 'Blast profile B', radius: '600', speed: '290', details: 'Thermobaric' },
+]
+
+/** Munitions (read-only list), served by GET /api/munitions. */
+const munitions = [
+  { id: 'mun-1', name: 'GBU-12 Paveway II' },
+  { id: 'mun-2', name: 'AGM-114 Hellfire' },
+  { id: 'mun-3', name: 'Mk 82' },
 ]
 
 /**
@@ -284,17 +306,6 @@ function wireTarget({ id, position, heading, speedKts, altitudeFt }) {
   return { id, position, heading, speedKts, altitudeFt }
 }
 
-/** Static intel details, derived from the id so they are stable per target. */
-function targetDetails(id) {
-  const n = [...id].reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
-  return {
-    id,
-    callsign: `${id.startsWith('drone') ? 'UAV' : 'ACFT'}-${(n % 900) + 100}`,
-    operator: ['Alpha Squadron', 'Bravo Wing', 'Charlie Group'][n % 3],
-    status: ['On patrol', 'Returning to base', 'In transit'][n % 3],
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Missile simulation: each missile is a sliding window over a precomputed
 // straight trajectory; the window advances every MISSILE_TICK_MS and loops.
@@ -378,14 +389,6 @@ const server = createServer(async (req, res) => {
 
   const url = new URL(req.url, `http://${req.headers.host}`)
 
-  const targetMatch = url.pathname.match(/^\/api\/targets\/([^/]+)$/)
-  if (targetMatch && req.method === 'GET') {
-    const id = decodeURIComponent(targetMatch[1])
-    const known = drones.some((t) => t.id === id) || aircraft.some((t) => t.id === id)
-    if (!known) return json(404, { error: `Unknown target ${id}` })
-    return json(200, targetDetails(id))
-  }
-
   if (url.pathname === '/api/shapes' && req.method === 'GET') {
     return json(200, shapes)
   }
@@ -464,7 +467,13 @@ const server = createServer(async (req, res) => {
     const body = await readJsonBody(req)
     if (!isValidAttackPoint(body)) return json(400, { error: 'Invalid attack point' })
     // Server stamps the parent from the route — never trust a client-sent one.
-    const attackPoint = { id: randomUUID(), parentId: component.id, name: body.name.trim(), position: body.position }
+    const attackPoint = {
+      id: randomUUID(),
+      parentId: component.id,
+      name: body.name.trim(),
+      position: body.position,
+      accuracy: body.accuracy,
+    }
     component.attackPoints.push(attackPoint)
     console.log(`[rest] attack point created: ${attackPoint.id} under ${component.id}`)
     return json(201, attackPoint)
@@ -472,6 +481,10 @@ const server = createServer(async (req, res) => {
 
   if (url.pathname === '/api/impact-data' && req.method === 'GET') {
     return json(200, impactData)
+  }
+
+  if (url.pathname === '/api/munitions' && req.method === 'GET') {
+    return json(200, munitions)
   }
 
   if (url.pathname === '/api/impact-data' && req.method === 'POST') {
@@ -550,15 +563,34 @@ function missionFields(body) {
   return fields
 }
 
-/** `{ name, position: [lng, lat] }`. */
+const VERTICAL_SYSTEM_REFERENCES = ['MeanSeaLevel', 'OrthometricHeight', 'AboveGroundHeight']
+const isNum = (n) => typeof n === 'number' && Number.isFinite(n)
+
+/** `{ name, position: { location: { latitude, longitude }, heightMeters, verticalSystemReference }, accuracy: { ce90meters, le90meters } }`. */
 function isValidAttackPoint(body) {
-  return (
+  const p = body?.position
+  const a = body?.accuracy
+  return Boolean(
     body &&
-    typeof body.name === 'string' &&
-    body.name.trim() &&
-    Array.isArray(body.position) &&
-    body.position.length === 2 &&
-    body.position.every((n) => typeof n === 'number')
+      typeof body.name === 'string' &&
+      body.name.trim() &&
+      p &&
+      p.location &&
+      isNum(p.location.latitude) &&
+      p.location.latitude >= -90 &&
+      p.location.latitude <= 90 &&
+      isNum(p.location.longitude) &&
+      p.location.longitude >= -180 &&
+      p.location.longitude <= 180 &&
+      isNum(p.heightMeters) &&
+      p.heightMeters >= -400 &&
+      p.heightMeters <= 4000 &&
+      VERTICAL_SYSTEM_REFERENCES.includes(p.verticalSystemReference) &&
+      a &&
+      isNum(a.ce90meters) &&
+      a.ce90meters >= 0 &&
+      isNum(a.le90meters) &&
+      a.le90meters >= 0,
   )
 }
 

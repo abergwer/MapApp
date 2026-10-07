@@ -5,14 +5,21 @@ import { ImpactDataDialog } from './impactData';
 import type { EntitySources } from './missionSchema';
 import { getEntityDef } from '../entities/entityDefinitions';
 import EntityIcon from '../entities/EntityIcon';
-import { liveDataApi } from '../../../bridge/liveDataApi';
-import type { ImpactDataDto, MissionTargetDto } from '../../../bridge/types';
+import { createImpactData, getImpactData, getMunitions } from './api';
+import { ATTACK_POINT_DEF_ID, defaultAttackPointValues } from './attackPoints';
+import { targets, loadTargets, findTarget, findComponent } from './targets';
+import type { ImpactDataDto, NewImpactData } from './impactData/types';
+import type { MunitionDto } from './munitions/types';
 import type { RootStore } from '../../../stores/RootStore';
 
 /** Impact data records as the server sends them (GET /api/impact-data);
  *  new ones are created through the ImpactDataDialog form and POSTed. */
 const impactDataList = observable.array<ImpactDataDto>([]);
 let impactDataLoaded = false;
+
+/** Munitions as the server sends them (GET /api/munitions); pick-only list. */
+const munitionList = observable.array<MunitionDto>([]);
+let munitionsLoaded = false;
 
 /** The definition's icon (tinted) for a shape, or nothing for untyped shapes. */
 const iconFor = (defId?: string) => {
@@ -23,17 +30,9 @@ const iconFor = (defId?: string) => {
 /** Components aren't map entities — they get a plain MUI icon. */
 const componentIcon = () => createElement(WidgetsIcon, { sx: { fontSize: 16, flex: 'none' }, htmlColor: '#40c4ff' });
 
-/* ------------------------------------------------------------------ *
- *  Targets → components → attack points, exactly as the server sends them
- *  (GET /api/mission-targets). Observable so a newly added attack point
- *  shows up in the dropdown as soon as the server acks it.
- * ------------------------------------------------------------------ */
-
-const targets = observable.array<MissionTargetDto>([]);
+/** Targets → components → attack points come from `./targets`
+ *  (GET /api/mission-targets); fetched once on first use. */
 let targetsLoaded = false;
-
-const findTarget = (id?: string) => targets.find((t) => t.id === id);
-const findComponent = (id?: string) => targets.flatMap((t) => t.components).find((c) => c.id === id);
 
 /**
  * Wiring for the mission schema's `entity` fields. Each key matches a
@@ -45,17 +44,19 @@ const findComponent = (id?: string) => targets.flatMap((t) => t.components).find
 export function createMissionEntitySources(stores: RootStore): EntitySources {
   if (!targetsLoaded) {
     targetsLoaded = true;
-    liveDataApi
-      .getMissionTargets()
-      .then((list) => targets.replace(list))
-      .catch((err) => console.error('[missions] failed to load targets:', err));
+    void loadTargets();
   }
   if (!impactDataLoaded) {
     impactDataLoaded = true;
-    liveDataApi
-      .getImpactData()
+    getImpactData()
       .then((list) => impactDataList.replace(list))
       .catch((err) => console.error('[missions] failed to load impact data:', err));
+  }
+  if (!munitionsLoaded) {
+    munitionsLoaded = true;
+    getMunitions()
+      .then((list) => munitionList.replace(list))
+      .catch((err) => console.error('[missions] failed to load munitions:', err));
   }
 
   /** Disarm the map tool when the user cancels a map-drawn `add`. */
@@ -77,40 +78,46 @@ export function createMissionEntitySources(stores: RootStore): EntitySources {
     },
 
     /** Attack points of the chosen component (parentId = component id).
-     *  `add` arms the map's point tool; on click the point is POSTed under
-     *  the component (server assigns the id), inserted into the tree and
-     *  shown on the map, so the mission always stores the server id. */
+     *
+     *  Creating one is a normal map entity flow:
+     *   1. `Add "…"` arms the point tool (hint + Cancel shown under the
+     *      field, like a route); the map click opens the entity window with
+     *      the component as parent and the attack-point fields pre-filled.
+     *   2. Save there POSTs the whole AttackPointDto (`useLiveShapes`); the
+     *      server assigns the id and the mission tree is refreshed.
+     *   3. The new point appears in this dropdown — pick it.
+     *  Nothing is selected automatically, so no temp id ever reaches the mission. */
     attackPoint: {
       options: (componentId) =>
         findComponent(componentId)?.attackPoints.map((p) => ({
           id: p.id,
           label: p.name,
-          icon: iconFor('attackPoint'),
+          icon: iconFor(ATTACK_POINT_DEF_ID),
         })) ?? [],
-      addHint: 'Click the map to place the attack point.',
+      addHint: 'Click the map to place the attack point, then fill in the form and press Save.',
       add: (label, componentId) =>
-        new Promise((resolve, reject) => {
-          if (!componentId) return reject(new Error('Choose a component first'));
-          stores.drawingToolStore.setActiveDrawTool('point', 'attackPoint');
-          stores.mapEngineStore.engine?.startDrawPoint((_tempId, position) => {
-            liveDataApi
-              .createAttackPoint({ componentId, body: { name: label, position } })
-              .then((saved) => {
-                findComponent(componentId)?.attackPoints.push(saved);
-                stores.entityService.create({
-                  id: saved.id,
-                  kind: 'point',
-                  defId: 'attackPoint',
-                  name: saved.name,
-                  position: saved.position,
-                  parentId: saved.parentId,
-                });
-                resolve({ id: saved.id, label: saved.name });
-              })
-              .catch(reject);
+        new Promise<void>((resolve) => {
+          if (!componentId) return resolve();
+          stores.drawingToolStore.setActiveDrawTool('point', ATTACK_POINT_DEF_ID);
+          stores.mapEngineStore.engine?.startDrawPoint((id, position) => {
+            stores.entityService.create({
+              id,
+              kind: 'point',
+              defId: ATTACK_POINT_DEF_ID,
+              name: label,
+              position,
+              parentId: componentId,
+              customValues: defaultAttackPointValues(),
+            });
+            resolve(); // placed — the entity window takes it from here
           });
         }),
       cancelAdd: stopDrawing,
+    },
+
+    /** Munitions exactly as the server sends them (no create). */
+    munition: {
+      options: () => munitionList.map((m) => ({ id: m.id, label: m.name })),
     },
 
     /** Routes drawn on the map (defId `attackRoute`). `add` arms the map's
@@ -150,7 +157,7 @@ export function createMissionEntitySources(stores: RootStore): EntitySources {
         createElement(ImpactDataDialog, {
           initialName: initialLabel,
           onSave: async (values) => {
-            const saved = await liveDataApi.createImpactData(values as Omit<ImpactDataDto, 'id'>);
+            const saved = await createImpactData(values as NewImpactData);
             impactDataList.push(saved);
             onClose({ id: saved.id, label: saved.name });
           },
