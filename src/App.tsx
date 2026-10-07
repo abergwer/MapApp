@@ -30,6 +30,7 @@ import LazyMissileView3D from './Components/features/view-3d/LazyMissileView3D'
 import MiniMap from './Components/features/mini-map/MiniMap'
 import MiniVideo, { VideoMuteButton } from './Components/features/mini-video/MiniVideo'
 import { useStores } from './stores/StoreContext'
+import MessageDialog from './Components/features/MessageDialog'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
 import { LiveDataSocketProvider, liveDataStore, useLiveShapes } from './bridge'
 import { NetworkProvider } from './network'
@@ -163,6 +164,13 @@ function App() {
     floatHeaderAction: floatHeaderActions[id],
   }))
 
+
+ 
+
+
+  // Built once. Layer updates flow through a MobX reaction inside
+  // LayerManager — App no longer re-renders when layer data changes.
+
   return (
     <LayoutManager
       topBar={<TopBar items={topBarItems} />}
@@ -170,6 +178,18 @@ function App() {
       rightPanels={rightPanels}
       showFloatingWindows
     >
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
+        {/* <Typography variant="h3" component="h1">
+          {t('app.title')}
+        </Typography>
+        <LanguageSwitcher /> */}
+      </Box>
+      {/* <Typography color="text.secondary">
+        {t('app.subtitle', {
+          engine: mapEngineLabel[stores.mapEngineStore.selectedEngine],
+        })}
+      </Typography> */}
+
       {/*
         Data contract with the map:
         • Inbound:  `shapes` — hydrated once from the server's WS
@@ -192,6 +212,8 @@ function App() {
         */}
         <LayersWrapper groups={DEMO_LAYERS} />
       </MapWrapper>
+      {/* Global message popup — drive it from anywhere via showMessage(...). */}
+      <MessageDialog />
     </LayoutManager>
   )
 }

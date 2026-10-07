@@ -7,6 +7,8 @@ import { EntityService } from '../Components/features/entities/EntityService';
 import { MapStyleStore } from './MapStyleStore';
 import { UIVisibilityStore } from './UIVisibilityStore';
 import { ThemeStore } from './ThemeStore';
+import { LOSStore } from '../los/LOSStore';
+import { AreaLOSStore } from '../los/AreaLOSStore';
 
 export class RootStore {
   droneStore = new DroneStore();
@@ -17,6 +19,9 @@ export class RootStore {
   mapStyleStore = new MapStyleStore();
   uiVisibilityStore = new UIVisibilityStore();
   themeStore = new ThemeStore();
+  losStore = new LOSStore();
+  // Shares observer/target heights with the line feature via losStore.
+  areaLOSStore = new AreaLOSStore(this.losStore);
 
   // Single writer for drawn-entity CRUD. Every create / edit / delete goes
   // through here so external consumers can subscribe via `setHooks(...)` and

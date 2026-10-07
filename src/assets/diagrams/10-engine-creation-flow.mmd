@@ -1,0 +1,55 @@
+%% 10 - Engine + LayerManager creation flow
+%% MapWrapper mount -> async engine creation -> store publish -> LayerManager Deck.gl init
+sequenceDiagram
+    autonumber
+    participant App as App (React)
+    participant MW as MapWrapper
+    participant EF as EngineFactory
+    participant ENG as MapEngine (MapLibre/Leaflet/Cesium)
+    participant MES as MapEngineStore (MobX)
+    participant ES as EntityService
+    participant LM as LayerManager
+    participant DECK as Deck.gl
+
+    App->>MW: render (shapes, onShape* hooks)
+    MW->>ES: setHooks(onCreate/onUpdate/onDelete)
+    MW->>ES: hydrate(shapes) - silent inbound path
+    MW->>MW: useEffect - containerRef ready
+
+    MW->>EF: createMapEngine()
+    Note over EF: switch(selectedMapEngine)<br/>dynamic import() keeps<br/>engines out of main bundle
+    EF-->>ENG: await import + new Engine()
+    EF-->>MW: Promise resolves (engine)
+
+    alt unmounted / StrictMode double-invoke
+        MW->>ENG: destroy() and abort
+    else still mounted
+        MW->>ENG: initialize(container, {center, zoom})
+        MW->>MES: setEngine(engine)
+        MW->>MES: setViewState(engine.getViewState())
+        MW->>ENG: onViewChange(vs => MES.setViewState(vs))
+        MW->>ENG: setOnShapeEdited(shape => ES.update)
+        MW->>ENG: setOnShapeDeleted(id => ES.remove)
+        MW->>ENG: setOnDeselect(() => setSelectedId(null))
+        MW->>MW: reaction(selectedId) - edit handoff<br/>endEdit(prev) / beginEdit(next)
+    end
+
+    Note over LM: observer() - re-renders when<br/>MES.engine becomes non-null
+
+    LM->>LM: useEffect [engine]
+    LM->>LM: create canvas (pointer-events:none, z-index 400)
+    LM->>DECK: new Deck({canvas, controller:false, layers:[]})
+    LM->>LM: container click -> pickMultipleObjects<br/>-> setSelectedId(top drawn shape)
+    LM->>LM: ResizeObserver -> deck.setProps(size)
+    LM->>DECK: reaction(MES.viewState) -> setProps + redraw
+    LM->>DECK: reaction(buildLayers()) fireImmediately<br/>-> setProps({layers})
+
+    Note over MES,DECK: steady state: engine pan/zoom -> onViewChange ->
+    Note over MES,DECK: MES.viewState -> reaction -> deck viewport sync (no React render)
+    Note over MES,DECK: store change -> buildLayers reaction -> deck layers (no React render)
+
+    opt teardown (unmount / engine swap)
+        MW->>MES: setEngine(null)
+        MW->>ENG: destroy()
+        LM->>DECK: finalize() + canvas.remove()
+    end

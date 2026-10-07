@@ -1,7 +1,13 @@
-import { observer } from 'mobx-react-lite';
+import { useMemo } from 'react';
 import LayerManager from './LayerManager';
 import { buildLayers, type LayerGroupDef } from './index';
 import { useStores } from '../../stores/StoreContext';
+
+interface LayersWrapperProps {
+  /** The host's layer-group list — the SAME list it passes to
+   *  `<LayersPanel layers={...} />` (single source for toggles + layers). */
+  groups: LayerGroupDef[];
+}
 
 interface LayersWrapperProps {
   /** The host's layer-group list — the SAME list it passes to
@@ -20,5 +26,4 @@ function LayersWrapperImpl({ groups }: LayersWrapperProps) {
   return <LayerManager layers={buildLayers(stores, groups)} />;
 }
 
-const LayersWrapper = observer(LayersWrapperImpl);
 export default LayersWrapper;

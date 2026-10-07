@@ -10,6 +10,7 @@ import AccessTimeIcon from '@mui/icons-material/AccessTime';
 import HandymanOutlinedIcon from '@mui/icons-material/HandymanOutlined';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../stores/StoreContext';
+import { LanguageSwitcher } from '../../i18n';
 import { palette } from './styles/tokens';
 import * as layout from './styles/layout.styles';
 
@@ -71,6 +72,8 @@ export const ToolbarToggleButton = observer(function ToolbarToggleButton() {
         <HandymanOutlinedIcon fontSize="small" />
       </IconButton>
     </Tooltip>
+
+      <LanguageSwitcher />
   );
 });
 

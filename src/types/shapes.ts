@@ -36,7 +36,10 @@ export type MapShape =
       radius: number;
       startBearing: number;
       endBearing: number;
-    });
+    })
+  | (ShapeBase & { kind: 'curvedRoute'; positions: [number, number][] })
+  | (ShapeBase & { kind: 'exitCurveRoute'; positions: [number, number][] })
+  | (ShapeBase & { kind: 'entryCurveRoute'; positions: [number, number][] })
 
 /** A MapShape carrying entity identity. Same object at runtime — a type
  *  refinement, not a wrapper. Plain graphics (no defId) stay plain MapShapes. */

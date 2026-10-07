@@ -4,12 +4,18 @@ import PentagonOutlinedIcon from '@mui/icons-material/PentagonOutlined';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import PanoramaFishEyeIcon from '@mui/icons-material/PanoramaFishEye';
 import PieChartOutlinedIcon from '@mui/icons-material/PieChartOutlined';
+import RoundedCornerIcon from '@mui/icons-material/RoundedCorner';
+import TurnSlightRightIcon from '@mui/icons-material/TurnSlightRight';
+import TurnSlightLeftIcon from '@mui/icons-material/TurnSlightLeft';
+import AltRouteIcon from '@mui/icons-material/AltRoute';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import SquareFootIcon from '@mui/icons-material/SquareFoot';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import type { DrawTool, DrawingToolStore, MeasureTool } from '../../stores/DrawingToolStore';
 import type { EntityDefinition } from '../../Components/features/entities/entityDefinitions';
 import type { EntityService } from '../../Components/features/entities/EntityService';
+import type { MapShape } from '../../stores/DrawingToolStore';
+
 
 /**
  * Shared draw/measure tool definitions + engine wiring, used by both the
@@ -24,6 +30,10 @@ export const DRAW_TOOLS: { id: DrawTool; label: string; Icon: typeof FiberManual
   { id: 'circle', label: 'Draw circle', Icon: RadioButtonUncheckedIcon },
   { id: 'ellipse', label: 'Draw ellipse', Icon: PanoramaFishEyeIcon },
   { id: 'sector', label: 'Draw sector', Icon: PieChartOutlinedIcon },
+  { id: 'curvedRoute', label: 'Draw curved route', Icon: RoundedCornerIcon },
+  { id: 'exitCurveRoute', label: 'Draw exit curve route', Icon: TurnSlightRightIcon },
+  { id: 'entryCurveRoute', label: 'Draw entry curve route', Icon: TurnSlightLeftIcon },
+  { id: 'mixedRoute', label: 'Draw mixed route', Icon: AltRouteIcon },
 ];
 
 export const MEASURE_TOOLS: { id: MeasureTool; label: string; Icon: typeof StraightenIcon }[] = [
@@ -42,9 +52,13 @@ export const MEASURE_TOOLS: { id: MeasureTool; label: string; Icon: typeof Strai
 export function startDraw(
   engine: MapEngine,
   tool: DrawTool,
-  entities: EntityService,
+  entities: EntityService, drawingToolStore: DrawingToolStore,
   def?: EntityDefinition,
 ) {
+   const done = (shape: MapShape) => {
+    entities.create(shape);
+    drawingToolStore.setActiveDrawTool(null);
+  };
   const data = def ? { defId: def.id } : {};
   switch (tool) {
     case 'point':
@@ -71,6 +85,38 @@ export function startDraw(
       return engine.startDrawSector?.((id, center, radius, startBearing, endBearing) =>
         entities.create({ ...data, id, kind: 'sector', center, radius, startBearing, endBearing }),
       );
+    case 'route':
+      return engine.startDrawRoute?.((id, positions) =>
+        done({ id, kind: 'route', positions }),
+      );
+    case 'curvedRoute':
+      // Draw straight waypoints and store them as-is. The rounded curve is
+      // generated at render time, so editing shows only the waypoints (like
+      // ellipse handles) instead of every sampled curve point.
+      return engine.startDrawLine((id, positions) =>
+        done({ id, kind: 'curvedRoute', positions }),
+      );
+    case 'exitCurveRoute':
+      // Straight into each waypoint, then curve *after* it until aligned with
+      // the next leg. Waypoints are stored as-is; the curve is generated at
+      // render time.
+      return engine.startDrawLine((id, positions) =>
+        done({ id, kind: 'exitCurveRoute', positions }),
+      );
+    case 'entryCurveRoute':
+      // Opposite of exitCurveRoute: curve *before* each waypoint so the route
+      // leaves it already straight along the next leg. Waypoints are stored
+      // as-is; the curve is generated at render time.
+      return engine.startDrawLine((id, positions) =>
+        done({ id, kind: 'entryCurveRoute', positions }),
+      );
+    case 'mixedRoute':
+      // Every waypoint starts sharp; the turn style per waypoint is picked
+      // afterwards in RouteTurnsPanel while the route is selected.
+      return engine.startDrawLine((id, positions) =>
+        done({ id, kind: 'mixedRoute', positions, turns: positions.map(() => 'sharp') }),
+      );
+  }
   }
 }
 

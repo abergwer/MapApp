@@ -13,7 +13,11 @@ export type DrawTool =
   | 'polygon'
   | 'circle'
   | 'ellipse'
-  | 'sector';
+  | 'sector'
+  | 'curvedRoute'
+  | 'exitCurveRoute'
+  | 'entryCurveRoute'
+  | 'mixedRoute';
 
 export type MeasureTool = 'distance' | 'area';
 
