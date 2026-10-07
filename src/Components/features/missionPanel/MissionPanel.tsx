@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { MissionContext } from './MissionContext';
 import MissionForm from './form/MissionForm';
@@ -29,6 +29,12 @@ const Screen = observer(function Screen({ store }: { store: MissionStore }) {
 export const MissionsPanel = ({ entitySources = {}, store: injected }: MissionsPanelProps) => {
   const [own] = useState(() => injected ?? new MissionStore(missionApi));
   const store = injected ?? own;
+
+  // Pull the server's missions when the panel opens (store starts empty).
+  useEffect(() => {
+    void store.load().catch((err) => console.error('[missions] load failed', err));
+  }, [store]);
+
   return (
     <MissionContext.Provider value={{ store, entitySources }}>
       <Screen store={store} />
