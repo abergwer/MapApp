@@ -38,3 +38,13 @@ export interface ComponentDto {
   location: Cooridnate
   attackPoints: AttackPointDto[]
 }
+
+export interface Pagination <T>
+{
+  items: T[]
+  pageNumber: number
+  pageSize: number
+  totalCount: number
+  hasNextPage: boolean
+  hasPreviousPage: boolean
+}
