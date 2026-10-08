@@ -15,9 +15,10 @@ const SORTERS: Record<MissionSort, (a: Mission, b: Mission) => number> = {
 };
 
 /**
- * Mission list + which screen is showing. Every write goes to the server
- * first; the server assigns `id` / `createdAt` / `updatedAt` and the
- * response replaces the local copy.
+ * Mission list + which screen is showing. The list holds summaries (header
+ * fields); opening a mission fetches the full record by id into `editing`.
+ * Every write goes to the server first; the server assigns `id` /
+ * `createdAt` / `updatedAt` and the response replaces the local copy.
  *
  * The form's in-progress values live here (`draft`) rather than in the
  * form component, so closing and reopening the panel resumes where the
@@ -29,6 +30,8 @@ export class MissionStore {
   search = '';
   sort: MissionSort = 'newest';
   view: MissionView = { mode: 'list' };
+  /** Full mission loaded by id while `view` is edit; null otherwise. */
+  editing: Mission | null = null;
   /** Unsaved form values while `view` is create/edit; null on the list. */
   draft: MissionValues | null = null;
 
@@ -42,11 +45,6 @@ export class MissionStore {
   get filtered(): Mission[] {
     const q = this.search.trim().toLowerCase();
     return this.missions.filter((m) => !q || m.name.toLowerCase().includes(q)).sort(SORTERS[this.sort]);
-  }
-
-  get editing(): Mission | null {
-    const view = this.view;
-    return view.mode === 'edit' ? this.missions.find((m) => m.id === view.id) ?? null : null;
   }
 
   setSearch(search: string) {
@@ -64,11 +62,20 @@ export class MissionStore {
 
   openEdit(id: string) {
     this.view = { mode: 'edit', id };
-    this.draft = { ...emptyValues(), ...this.missions.find((m) => m.id === id)?.values };
+    this.editing = null;
+    this.draft = null;
+    return this.api.get(id).then((mission) =>
+      runInAction(() => {
+        if (this.view.mode !== 'edit' || this.view.id !== id) return;
+        this.editing = mission;
+        this.draft = { ...emptyValues(), ...mission.values };
+      }),
+    );
   }
 
   showList() {
     this.view = { mode: 'list' };
+    this.editing = null;
     this.draft = null;
   }
 
@@ -94,6 +101,7 @@ export class MissionStore {
     runInAction(() => {
       const i = this.missions.findIndex((m) => m.id === id);
       if (i >= 0) this.missions[i] = mission;
+      if (this.editing?.id === id) this.editing = mission;
     });
   }
 

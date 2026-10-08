@@ -4,28 +4,37 @@ import { nameOf, type Mission, type MissionValues } from '../types';
 
 /**
  * Wire format is FLAT: the server-owned header fields plus one key per
- * schema field. The server assigns `id` / `createdAt` / `updatedAt`, so the
- * client never sends them and schema keys must not reuse those names.
+ * schema field. The server assigns `id` / `createdAtUtc` / `updatedAtUtc`,
+ * so the client never sends them and schema keys must not reuse those names.
+ *
+ * `GET /missions` returns summaries (id, name, status, timestamps);
+ * `GET /missions/:id` (and POST/PUT responses) return the full record with
+ * entity fields (target, component, …) embedded as objects.
  */
-export type MissionDto = { id: string; createdAt: string; updatedAt?: string } & MissionValues;
+export type MissionDto = { id: string; createdAtUtc: string; updatedAtUtc?: string } & Record<string, unknown>;
 
-const RESERVED = ['id', 'createdAt', 'updatedAt'];
+const RESERVED = ['id', 'createdAtUtc', 'updatedAtUtc'];
 for (const f of MISSION_SCHEMA) {
   if (RESERVED.includes(f.key)) throw new Error(`MISSION_SCHEMA key "${f.key}" is reserved for the server`);
 }
 
-const fromWire = ({ id, createdAt, updatedAt, ...values }: MissionDto): Mission => ({
-  id,
-  createdAt,
-  updatedAt,
-  name: nameOf(values),
-  values,
-});
+/** Embedded entity objects collapse to their id — the form only stores ids. */
+const fromWire = ({ id, createdAtUtc, updatedAtUtc, ...rest }: MissionDto): Mission => {
+  const values: MissionValues = {};
+  for (const [key, v] of Object.entries(rest)) {
+    values[key] = v && typeof v === 'object' ? String((v as { id?: unknown }).id ?? '') : String(v ?? '');
+  }
+  return { id, createdAt: createdAtUtc, updatedAt: updatedAtUtc, name: nameOf(values), values };
+};
 
 export const missionApi = {
   list: async () => {
     const response = await api.get<MissionDto[]>('/missions');
     return response.data.map(fromWire);
+  },
+  get: async (id: string) => {
+    const response = await api.get<MissionDto>(`/missions/${id}`);
+    return fromWire(response.data);
   },
   create: async (values: MissionValues) => {
     const response = await api.post<MissionDto>('/missions', values);
