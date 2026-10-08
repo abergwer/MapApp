@@ -110,13 +110,7 @@ export function startDraw(
       return engine.startDrawLine((id, positions) =>
         done({ id, kind: 'entryCurveRoute', positions }),
       );
-    case 'mixedRoute':
-      // Every waypoint starts sharp; the turn style per waypoint is picked
-      // afterwards in RouteTurnsPanel while the route is selected.
-      return engine.startDrawLine((id, positions) =>
-        done({ id, kind: 'mixedRoute', positions, turns: positions.map(() => 'sharp') }),
-      );
-  }
+    
   }
 }
 
@@ -139,7 +133,7 @@ export function toggleDrawEntity(
     return;
   }
   store.setActiveDrawTool(geometry, def.id);
-  startDraw(engine, geometry, entities, def);
+  startDraw(engine, geometry, entities,store, def);
 }
 
 /**
@@ -160,7 +154,7 @@ export function toggleDrawGraphic(
     return;
   }
   store.setActiveDrawTool(tool);
-  startDraw(engine, tool, entities);
+  startDraw(engine, tool, entities, store);
 }
 
 export function startMeasure(engine: MapEngine, tool: MeasureTool, store: DrawingToolStore) {

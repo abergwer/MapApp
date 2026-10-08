@@ -62,7 +62,8 @@ export const SystemStatusChip = observer(function SystemStatusChip() {
 export const ToolbarToggleButton = observer(function ToolbarToggleButton() {
   const { uiVisibilityStore: ui } = useStores();
   return (
-    <Tooltip title={ui.toolbarVisible ? 'Hide map toolbar' : 'Show map toolbar'} arrow>
+    <>
+      <Tooltip title={ui.toolbarVisible ? 'Hide map toolbar' : 'Show map toolbar'} arrow>
       <IconButton
         size="small"
         onClick={() => ui.toggleToolbar()}
@@ -74,6 +75,8 @@ export const ToolbarToggleButton = observer(function ToolbarToggleButton() {
     </Tooltip>
 
       <LanguageSwitcher />
+    </>
+  
   );
 });
 
