@@ -1,5 +1,5 @@
 import type { LayerGroupDef } from '../Components/layerManager';
-import { DRAWN_SHAPES_GROUP } from '../Components/layerManager';
+import { DRAWN_SHAPES_GROUP, LOS_GROUP } from '../Components/layerManager';
 import { createMissilesLayer } from './Layers/MissileLayer';
 import { createDroneLayer } from './Layers/DroneLayer';
 import { createAirCraftLayer } from './Layers/AirCraftLayer';
@@ -13,6 +13,7 @@ import { palette } from '../Components/layout/styles/tokens';
  * the reference composition used by the demo App.
  */
 export const DEMO_LAYERS: LayerGroupDef[] = [
+  LOS_GROUP,
   DRAWN_SHAPES_GROUP,
   {
     id: 'droneGroup',

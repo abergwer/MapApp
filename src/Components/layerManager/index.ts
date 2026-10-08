@@ -2,6 +2,7 @@ import type { Layer } from '@deck.gl/core';
 import { createDrawnShapeLayers } from '../../mocks/Layers/DrawnShapeLayers';
 import { getEntityDef } from '../features/entities/entityDefinitions';
 import { createLOSLayers, createAreaLOSLayers } from '../../los/LOSLayers';
+import { LOS_COLORS } from '../../los/constants';
 import type { RootStore } from '../../stores/RootStore';
 import { isEntity, type MapShape } from '../../types/shapes';
 import { palette } from '../layout/styles/tokens';
@@ -64,6 +65,21 @@ export const shapeLayerKey = (s: MapShape): string =>
 
 /** Visibility key of one individual drawn shape (per-instance panel row). */
 export const shapeInstanceKey = (s: MapShape): string => `drawnShapes:shape:${s.id}`;
+
+/**
+ * Built-in group for line-of-sight results: the area viewshed fills (bottom
+ * of the stack — large fills everything else should render above) and the
+ * observer→target sightline with its endpoint markers.
+ */
+export const LOS_GROUP: LayerGroupDef = {
+  id: 'los',
+  label: 'Line of Sight',
+  color: `rgb(${LOS_COLORS.VISIBLE_LINE.slice(0, 3).join(',')})`,
+  build: (stores) => [
+    ...createAreaLOSLayers(stores.areaLOSStore),
+    ...createLOSLayers(stores.losStore),
+  ],
+};
 
 /**
  * Built-in group for user-drawn shapes (the core draw/edit feature).
