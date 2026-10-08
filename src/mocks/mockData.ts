@@ -3,7 +3,7 @@ import type { DroneTarget } from '../stores/DroneStore';
 import type { Missile } from '../stores/MissileStore';
 import type { PolygonFeature } from '../stores/PolygonStore';
 import type { RootStore } from '../stores/RootStore';
-import { newShapeId, type MapShape } from '../stores/shapes';
+import { newShapeId, type MapShape } from '../types/shapes';
 import airCraftIcon from '../assets/aircraft.png';
 import droneIcon from '../assets/drone.png';
 

@@ -21,11 +21,9 @@ const KM_TO_M = 1000;
 const DRAGGABLE_KINDS: ReadonlySet<MapShape['kind']> = new Set([
   'polygon',
   'line',
-  'route',
   'curvedRoute',
   'exitCurveRoute',
   'entryCurveRoute',
-  'mixedRoute',
 ]);
 
 /** Tags we stamp on every drawn layer so edit events can rebuild the shape. */
@@ -176,10 +174,10 @@ export class LeafletDrawingManager {
     // stamp our id/kind tags on it before releasing it to Deck.gl.
     this.ellipseTool.startDraw(({ center, radiusX, radiusY }, layer) => {
       const id = this.tag(layer, 'ellipse');
-      onComplete(id, center, radiusX / KM_TO_M, radiusY / KM_TO_M);
-      // Hand off to Deck.gl: the shape is in the store now, so drop the
-      // engine's native copy to avoid a double-render (see onceCreate).
+      // Drop the native copy before the handoff — the auto-select re-adds
+      // its own editable layer with the same id (see onceCreate).
       layer.remove();
+      queueMicrotask(() => onComplete(id, center, radiusX / KM_TO_M, radiusY / KM_TO_M));
     });
   }
 
@@ -195,20 +193,10 @@ export class LeafletDrawingManager {
     this.cancelDrawing();
     this.sectorTool.startDraw(({ center, radius, startBearing, endBearing }, layer) => {
       const id = this.tag(layer, 'sector');
-      onComplete(id, center, radius / KM_TO_M, startBearing, endBearing);
-      // Hand off to Deck.gl: the shape is in the store now, so drop the
-      // engine's native copy to avoid a double-render (see onceCreate).
+      // Drop the native copy before the handoff — the auto-select re-adds
+      // its own editable layer with the same id (see onceCreate).
       layer.remove();
-    });
-  }
-
-  startDrawRoute(onComplete: (id: string, positions: [number, number][]) => void): void {
-    // Alias for line drawing with a different `MapShape.kind` tag.
-    this.cancelDrawing();
-    this.map.pm.enableDraw('Line', { hideMiddleMarkers: true });
-    this.onceCreate((layer) => {
-      const id = this.tag(layer, 'route');
-      onComplete(id, latLngsToCoords(layer as L.Polyline));
+      queueMicrotask(() => onComplete(id, center, radius / KM_TO_M, startBearing, endBearing));
     });
   }
 
@@ -251,7 +239,8 @@ export class LeafletDrawingManager {
     if (!layer) return;
 
     this.selectedLayer = layer;
-    this.map.scrollWheelZoom.disable();
+    // Wheel zoom stays on — handles are lat/lng-anchored and reposition fine.
+    // Double-click zoom would fire on rapid vertex-handle clicks, so park it.
     this.map.doubleClickZoom.disable();
 
     if (shape.kind === 'ellipse') {
@@ -270,7 +259,6 @@ export class LeafletDrawingManager {
     this.disarmBackgroundClickDeselect();
     this.ellipseTool.disableEdit();
     this.sectorTool.disableEdit();
-    this.map.scrollWheelZoom.enable();
     this.map.doubleClickZoom.enable();
 
     this.dragCleanup?.();
@@ -397,13 +385,14 @@ export class LeafletDrawingManager {
     const wrapped = (e: { layer: L.Layer }) => {
       const layer = e.layer;
       this.pendingCreate = undefined;
-      handler(layer);
       this.map.off('pm:create', wrapped);
-      // In the deck-render-only model the engine keeps no native copy of a
-      // finished shape — it now lives in the store and is painted by Deck.gl.
-      // Remove Geoman's layer, or the shape is drawn twice and edit/delete
-      // act on a stale duplicate.
+      // Remove Geoman's native copy BEFORE the handoff — the handler's
+      // auto-select re-adds the shape as an editable layer with the same id,
+      // and removing after would act on / strand a stale duplicate. The
+      // detached layer object still serves geometry reads (getLatLng etc.).
       layer.remove();
+      // Defer past Geoman's own draw-mode teardown before entering edit mode.
+      queueMicrotask(() => handler(layer));
     };
     this.pendingCreate = wrapped;
     this.map.on('pm:create', wrapped);
@@ -467,17 +456,11 @@ export class LeafletDrawingManager {
         return { id, kind, position: [lng, lat] };
       }
       case 'line':
-      case 'route':
       case 'curvedRoute':
       case 'exitCurveRoute':
       case 'entryCurveRoute':
         return { id, kind, positions: latLngsToCoords(layer as L.Polyline) };
-      case 'mixedRoute': {
-        // The engine only edits geometry; the store owns the per-waypoint turn
-        // styles and MapWrapper re-applies them. Emit a placeholder list.
-        const positions = latLngsToCoords(layer as L.Polyline);
-        return { id, kind, positions, turns: fitTurns(undefined, positions.length) };
-      }
+     
       case 'polygon':
         return { id, kind, positions: polygonRingToCoords(layer as L.Polygon) };
       case 'circle': {
@@ -520,11 +503,9 @@ export class LeafletDrawingManager {
         return L.marker([shape.position[1], shape.position[0]]);
 
       case 'line':
-      case 'route':
       case 'curvedRoute':
       case 'exitCurveRoute':
       case 'entryCurveRoute':
-      case 'mixedRoute':
         return L.polyline(shape.positions.map(([lng, lat]) => [lat, lng]));
 
       case 'polygon':

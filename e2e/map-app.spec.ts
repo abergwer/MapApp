@@ -84,6 +84,11 @@ test('toggles the drones layer group and its child layers together', async ({ pa
 })
 
 test('moves the video panel through floating, maximized, restored, and docked modes', async ({ page }) => {
+  // The workspace dock starts collapsed; expand it first (and move the
+  // mouse away so the open tooltip doesn't swallow the next click).
+  await page.getByRole('button', { name: 'Expand workspace' }).click()
+  await page.mouse.move(10, 10)
+
   const dockedHeading = page.getByRole('heading', { name: 'Video Feed' })
   await expect(dockedHeading).toBeVisible()
 

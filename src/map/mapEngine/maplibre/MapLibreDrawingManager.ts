@@ -330,6 +330,7 @@ export class MapLibreDrawingManager {
       // position because the store only catches up on `draw.update` (mouseup).
       // `draw.delete(id)` is silent (no round-trip), so no onShapeDeleted fires.
       if (feature?.id != null) this.draw.delete(String(feature.id));
+      queueMicrotask(() => handler(feature));
     };
       this.currentCreateHandler = wrapped;
     this.map.on('draw.create', wrapped);
@@ -338,7 +339,7 @@ export class MapLibreDrawingManager {
   /** Stamp a freshly-drawn feature with its `shapeKind`. Returns the id. */
   private tag(feature: any, kind: MapShape['kind']): string {
     const id = String(feature.id);
-    this.draw.setFeatureProperty(id, KIND_PROP, kind);
+    if (this.draw.get(id)) this.draw.setFeatureProperty(id, KIND_PROP, kind);
     return id;
   }
 }
@@ -360,16 +361,15 @@ function shapeToFeature(shape: MapShape): GeoJSON.Feature | null {
       };
 
     case 'line':
-    case 'route':
     case 'curvedRoute':
     case 'exitCurveRoute':
     case 'entryCurveRoute':
-    case 'mixedRoute':
-      return {
+       return {
         type: 'Feature',
         properties: {},
         geometry: { type: 'LineString', coordinates: shape.positions },
       };
+    
 
     case 'polygon': {
       // GeoJSON polygon rings must be closed.
@@ -452,17 +452,10 @@ function featureToShape(feature: any): MapShape | null {
     case 'point':
       return { id, kind, position: feature.geometry.coordinates };
     case 'line':
-    case 'route':
     case 'curvedRoute':
     case 'exitCurveRoute':
     case 'entryCurveRoute':
       return { id, kind, positions: feature.geometry.coordinates };
-    case 'mixedRoute': {
-      // The engine only edits geometry; the store owns the per-waypoint turn
-      // styles and MapWrapper re-applies them. Emit a placeholder list.
-      const positions = feature.geometry.coordinates;
-      return { id, kind, positions, turns: fitTurns(undefined, positions.length) };
-    }
     case 'polygon':
       return { id, kind, positions: feature.geometry.coordinates[0] };
     case 'circle':

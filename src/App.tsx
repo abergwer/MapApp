@@ -12,22 +12,29 @@ import { reaction } from 'mobx'
 import { observer } from 'mobx-react-lite'
 import LayersWrapper from './Components/layerManager/LayersWrapper'
 import MapWrapper from './map/mapWrapper/MapWrapper'
-import TopBar from './Components/layout/TopBar'
-import StatusBar from './Components/layout/StatusBar'
+import TopBar, {
+  SystemStatusChip,
+  ThemeToggleButton,
+  ToolbarToggleButton,
+  TopBarBrand,
+  TopBarClock,
+  type TopBarItem,
+} from './Components/layout/TopBar'
 import LayoutManager, { type PanelDef } from './Components/layout/LayoutManager'
 import LeftPanel, { type LeftPanelView } from './Components/layout/LeftPanel'
-import LayersPanel from './Components/features/layers/LayersPanel'
-import MissilesPanel from './Components/features/missiles/MissilesPanel'
+import LayersPanel from './Components/systemUI/layers/LayersPanel'
+import MissilesPanel from './Components/systemUI/missiles/MissilesPanel'
 import EntitiesPanel from './Components/features/entities/EntitiesPanel'
-import IntelFeedPanel from './Components/features/intel/IntelFeedPanel'
-import LazyMissileView3D from './Components/features/view3d/LazyMissileView3D'
-import MiniMap from './Components/features/MiniMap'
-import MiniVideo from './Components/features/MiniVideo'
+import IntelFeedPanel from './Components/systemUI/intel/IntelFeedPanel'
+import LazyMissileView3D from './Components/features/view-3d/LazyMissileView3D'
+import MiniMap from './Components/features/mini-map/MiniMap'
+import MiniVideo, { VideoMuteButton } from './Components/features/mini-video/MiniVideo'
 import { useStores } from './stores/StoreContext'
 import MessageDialog from './Components/features/MessageDialog'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
 import { LiveDataSocketProvider, liveDataStore, useLiveShapes } from './bridge'
-import { DEMO_LAYER_TOGGLES } from './mocks/demoLayerToggles'
+import { NetworkProvider } from './network'
+import { DEMO_LAYERS } from './mocks/demoLayers'
 import { DEMO_INTEL_KINDS, demoIntelTargets } from './mocks/demoIntelFeed'
 import airCraftIcon from './assets/aircraft.png'
 import droneIcon from './assets/drone.png'
@@ -63,16 +70,31 @@ function App() {
     return () => disposers.forEach((dispose) => dispose())
   }, [stores])
 
-  // Drawn shapes: hydrated once from the server's WS snapshot; user edits
-  // are pushed back over REST.
+  // Drawn shapes: hydrated once from the server; user drawings/edits stay
+  // local drafts until saved (editor save button / Entities panel Save All),
+  // then go to the server over REST (see src/bridge/useLiveShapes.ts).
   const liveShapes = useLiveShapes(liveDataStore)
+
+  // The top bar renders whatever the host declares — swap/extend freely.
+  const topBarItems: TopBarItem[] = [
+    {
+      id: 'brand',
+      align: 'start',
+      node: <TopBarBrand title="Map Engine Orchestrator" subtitle="INTEGRATED OPERATIONS SYSTEM" />,
+    },
+    { id: 'status', node: <SystemStatusChip /> },
+    { id: 'toolbar-toggle', node: <ToolbarToggleButton /> },
+    { id: 'theme-toggle', node: <ThemeToggleButton /> },
+    { id: 'clock', node: <TopBarClock /> },
+  ]
+
   const leftViews: LeftPanelView[] = [
     { id: 'entities', title: 'Entities', Icon: FmdGoodOutlinedIcon, content: <EntitiesPanel /> },
     {
       id: 'layers',
-      title: 'Layers',
+      title: 'Filter',
       Icon: LayersOutlinedIcon,
-      content: <LayersPanel layers={DEMO_LAYER_TOGGLES} />,
+      content: <LayersPanel layers={DEMO_LAYERS} />,
     },
     { id: 'missiles', title: 'Missiles', Icon: RocketLaunchOutlinedIcon, content: <MissilesPanel /> },
   ]
@@ -127,6 +149,11 @@ function App() {
 
   const workspaceIds: WorkspacePanelId[] = ['view3d', 'video', 'minimap', 'intel']
 
+  /** Panel-specific extras for the floating/maximized window header. */
+  const floatHeaderActions: Partial<Record<WorkspacePanelId, React.ReactNode>> = {
+    video: [<VideoMuteButton />]
+  }
+
   const rightPanels: PanelDef[] = workspaceIds.map((id) => ({
     id,
     title: panelContent[id].title,
@@ -134,6 +161,7 @@ function App() {
     headerAction: panelActions(id, panelContent[id].title),
     content: id === 'view3d' ? <LazyMissileView3D /> : panelContent[id].node,
     floatContent: panelContent[id].node,
+    floatHeaderAction: floatHeaderActions[id],
   }))
 
 
@@ -145,8 +173,7 @@ function App() {
 
   return (
     <LayoutManager
-      topBar={<TopBar />}
-      statusBar={<StatusBar />}
+      topBar={<TopBar items={topBarItems} />}
       leftNav={<LeftPanel views={leftViews} />}
       rightPanels={rightPanels}
       showFloatingWindows
@@ -172,18 +199,18 @@ function App() {
       */}
       <MapWrapper
         shapes={liveShapes.shapes}
-        onShapeCreate={liveShapes.onShapeCreate}
-        onShapeUpdate={liveShapes.onShapeUpdate}
+        onShapeSave={liveShapes.onShapeSave}
         onShapeDelete={liveShapes.onShapeDelete}
       >
         {/*
-          Layer injection point: real projects pass their own deck.gl layer
-          array here (`<LayerManager layers={...} />`). LayersWrapper is the
-          demo composition: a small observer child that builds the reference
-          layer set inside its own render, so live-feed ticks re-render only
-          it — not the whole App tree.
+          Layer injection point: real projects declare their own layer-group
+          list (one entry = panel toggle + deck.gl builder, see
+          mocks/demoLayers.ts) and pass it to BOTH LayersWrapper and
+          LayersPanel. LayersWrapper is a small observer child that builds
+          the layers inside its own render, so live-feed ticks re-render
+          only it — not the whole App tree.
         */}
-        <LayersWrapper />
+        <LayersWrapper groups={DEMO_LAYERS} />
       </MapWrapper>
       {/* Global message popup — drive it from anywhere via showMessage(...). */}
       <MessageDialog />
@@ -196,8 +223,10 @@ const ObservedApp = observer(App)
 /** Mounts the bridge's WS connection above the app (server → UI live feed). */
 export default function AppWithLiveData() {
   return (
-    <LiveDataSocketProvider>
-      <ObservedApp />
-    </LiveDataSocketProvider>
+    <NetworkProvider>
+      <LiveDataSocketProvider>
+        <ObservedApp />
+      </LiveDataSocketProvider>
+    </NetworkProvider>
   )
 }

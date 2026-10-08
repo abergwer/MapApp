@@ -1,5 +1,5 @@
 import { DrawingToolStore } from '../src/stores/DrawingToolStore';
-import type { MapShape } from '../src/stores/shapes';
+import type { MapShape } from '../src/types/shapes';
 
 const makePoint = (id: string): MapShape => ({
   id,

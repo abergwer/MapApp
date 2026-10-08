@@ -10,12 +10,13 @@ import { MapContext } from '../MapContext';
 import type { MapEngine } from '../mapEngine/MapEngine';
 import { useStores } from '../../stores/StoreContext';
 import './MapWrapper.css';
-import ToolBar from '../../Components/features/ToolBar';
-import MeasuringTools from '../../Components/features/MeasuringTools';
-import MapStyleBar from '../../Components/features/MapStyleBar';
-import MapControls from '../../Components/features/MapControls';
-import * as mapStyles from '../../styles/features/map.styles';
-import type { MapShape } from '../../stores/shapes';
+import ToolBar from '../ui/ToolBar';
+import MeasuringTools from '../ui/MeasuringTools';
+import MapStyleBar from '../ui/MapStyleBar';
+import MapControls from '../ui/MapControls';
+import EntityEditWindow from '../../Components/features/entities/EntityEditWindow';
+import * as mapStyles from '../ui/styles/map.styles';
+import type { MapShape } from '../../types/shapes';
 import LOSControls from '../../los/LOSControls';
 import LOSProfileChart from '../../los/LOSProfileChart';
 import RouteTurnsPanel from '../../Components/features/RouteTurnsPanel';
@@ -25,6 +26,23 @@ const defaultOptions = {
   center: [32.2, 34.95] as [number, number],
   zoom: 8,
 };
+
+/**
+ * Leaf observer for the coordinate readout. `viewState` ticks on every
+ * drag/zoom frame — reading it inside MapWrapper's render would re-render
+ * the entire map subtree per frame and freeze dragging.
+ */
+const CoordinateChip = observer(() => {
+  const { mapEngineStore } = useStores();
+  const click = mapEngineStore.lastClick;
+  const vs = mapEngineStore.viewState;
+  const c = click ?? (vs ? { lat: vs.latitude, lng: vs.longitude } : null);
+  return (
+    <Typography sx={mapStyles.coordChip}>
+      {c ? `${c.lat.toFixed(5)}, ${c.lng.toFixed(5)}` : '—'}
+    </Typography>
+  );
+});
 
 interface MapWrapperProps {
   children?: ReactNode;
@@ -37,19 +55,19 @@ interface MapWrapperProps {
    * when the server actually sent one.
    */
   shapes?: MapShape[];
-  /** Notified after a new shape is drawn by the user. */
-  onShapeCreate?: (shape: MapShape) => void;
-  /** Notified after an existing shape is edited (drag/resize/rotate). */
-  onShapeUpdate?: (shape: MapShape) => void;
-  /** Notified after a shape is deleted. */
+  /** Called when the user saves an entity (editor save button / Save All).
+   *  `isNew` is true for a first save. May return (a promise of) the
+   *  authoritative shape — e.g. with a server-assigned id — and the map
+   *  re-keys the local shape to it; resolving undefined keeps it a draft. */
+  onShapeSave?: (shape: MapShape, isNew: boolean) => void | Promise<MapShape | undefined>;
+  /** Notified after a server-known shape is deleted. */
   onShapeDelete?: (id: string) => void;
 }
 
 function MapWrapperImpl({
   children,
   shapes,
-  onShapeCreate,
-  onShapeUpdate,
+  onShapeSave,
   onShapeDelete,
 }: MapWrapperProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -74,19 +92,17 @@ function MapWrapperImpl({
     };
   }, [brightness]);
 
-  // Register outbound notification callbacks. `EntityService` fires these
-  // *after* every successful create / update / delete so the host app can
-  // mirror the change (persist, log, sync to a server, …) without touching
-  // the internal store. Hooks are strictly outbound — nothing here writes
-  // back into the map.
+  // Register the host's persistence callbacks. Writes are draft-until-save:
+  // `EntityService` fires `onSave` only when the user saves, `onDelete` when
+  // a server-known shape is removed. Hooks are strictly outbound — nothing
+  // here writes back into the map.
   useEffect(() => {
     entityService.setHooks({
-      onCreate: onShapeCreate,
-      onUpdate: onShapeUpdate,
+      onSave: onShapeSave,
       onDelete: onShapeDelete,
     });
     return () => entityService.setHooks({});
-  }, [entityService, onShapeCreate, onShapeUpdate, onShapeDelete]);
+  }, [entityService, onShapeSave, onShapeDelete]);
 
   // Hydrate from the host-provided shape array. Uses the silent inbound
   // path so it doesn't fire `onShape*` back at the host. Re-runs whenever
@@ -102,7 +118,7 @@ function MapWrapperImpl({
 
     let eng: MapEngine | undefined;
     let cancelled = false;
-    let handleResize: (() => void) | undefined;
+    let resizeObserver: ResizeObserver | undefined;
     let unsubscribeViewChange: (() => void) | undefined;
     let stopEditHandoff: (() => void) | undefined;
 
@@ -128,18 +144,15 @@ function MapWrapperImpl({
 
       // Round-trip user edits/deletes back through the entity service —
       // the single writer that also fans out to any hook subscribers.
-      //
-      // Engines only know geometry. A mixed route's per-waypoint `turns` live
-      // in the store (edited via RouteTurnsPanel), so re-apply the stored
-      // turns to whatever the engine hands back — otherwise a vertex drag
-      // would overwrite them with the copy the engine got at selection time.
-      const withStoredTurns = (shape: MapShape): MapShape => {
-        if (shape.kind !== 'mixedRoute') return shape;
-        const stored = entityService.get(shape.id);
-        const turns = stored?.kind === 'mixedRoute' ? stored.turns : undefined;
-        return { ...shape, turns: fitTurns(turns, shape.positions.length) };
-      };
-      eng.setOnShapeEdited?.((shape: MapShape) => entityService.update(withStoredTurns(shape)));
+      // Engines rebuild shapes from feature geometry only, so re-attach the
+      // entity metadata (defId/name/parentId) or edits demote entities to
+      // raw shapes.
+      eng.setOnShapeEdited?.((shape: MapShape) => {
+        const prev = entityService.get(shape.id);
+        entityService.update(
+          prev ? { ...shape, defId: prev.defId, name: prev.name, parentId: prev.parentId } : shape,
+        );
+      });
       eng.setOnShapeDeleted?.((id: string) => entityService.remove(id));
 
       // Clicking empty map background (Leaflet) exits edit mode by clearing
@@ -164,15 +177,18 @@ function MapWrapperImpl({
         { fireImmediately: true },
       );
 
-      handleResize = () => eng?.resize?.();
-      window.addEventListener('resize', handleResize);
+      // Track the container's own size, not just `window` resize — panel
+      // dock/undock and rail collapse change the map's box without any
+      // window event. Leaflet in particular keeps a stale internal size
+      // (gray unrendered strip + projection out of sync with the deck
+      // overlay) until resize()/invalidateSize() runs.
+      resizeObserver = new ResizeObserver(() => eng?.resize?.());
+      resizeObserver.observe(containerRef.current!);
     });
 
     return () => {
       cancelled = true;
-      if (handleResize) {
-        window.removeEventListener('resize', handleResize);
-      }
+      resizeObserver?.disconnect();
       unsubscribeViewChange?.();
       stopEditHandoff?.();
       mapEngineStore.setEngine(null);
@@ -263,6 +279,12 @@ function MapWrapperImpl({
 
         {/* Compass + zoom/3D/fullscreen stack (top-right, reference design). */}
         <MapControls />
+
+        {/* Live coordinate readout: last map click, else the view center. */}
+        <CoordinateChip />
+
+        {/* Floating inspector for the selected entity (name / attributes). */}
+        <EntityEditWindow />
       </Box>
       {children}
     </MapContext.Provider>
