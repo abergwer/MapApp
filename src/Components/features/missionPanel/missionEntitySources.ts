@@ -139,15 +139,6 @@ export function createMissionEntitySources(stores: RootStore): EntitySources {
       cancelAdd: stopDrawing,
     },
 
-    shape: {
-      options: () =>
-        stores.drawingToolStore.completedShapes.map((s) => ({
-          id: s.id,
-          label: s.name ?? `${s.kind} ${s.id.slice(0, 8)}`,
-          icon: iconFor(s.defId),
-        })),
-    },
-
     /** Impact data: pick an existing record, or `Add "…"` opens a form to
      *  fill a whole new record which is POSTed (server assigns the id),
      *  appended to the list and selected. */

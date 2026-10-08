@@ -41,5 +41,3 @@ export const MissionsPanel = ({ entitySources = {}, store: injected }: MissionsP
     </MissionContext.Provider>
   );
 };
-
-export default MissionsPanel;
