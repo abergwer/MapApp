@@ -9,7 +9,7 @@ import Panel from '../common/Panel';
 import FloatingPanelWindow from '../common/FloatingPanelWindow';
 import { useStores } from '../../stores/StoreContext';
 import type { WorkspacePanelId } from '../../stores/UIVisibilityStore';
-import * as layout from '../../styles/system-ui/layout.styles';
+import * as layout from './styles/layout.styles';
 
 /** A panel that can be injected into the right WORKSPACE dock. */
 export interface PanelDef {
@@ -21,13 +21,15 @@ export interface PanelDef {
   floatContent?: ReactNode;
   /** Optional element rendered on the right side of the panel header. */
   headerAction?: ReactNode;
+  /** Extra buttons for the floating/maximized window header, rendered
+   *  before the standard window actions (full view / dock / close). */
+  floatHeaderAction?: ReactNode;
   /** When true the panel is not rendered. */
   hidden?: boolean;
 }
 
 interface LayoutManagerProps {
   topBar: ReactNode;
-  statusBar: ReactNode;
   /** Left tabbed panel (see LeftPanel). */
   leftNav: ReactNode;
   rightPanels: PanelDef[];
@@ -37,15 +39,16 @@ interface LayoutManagerProps {
   children: ReactNode;
 }
 
-/** Right WORKSPACE dock: header + 2-column panel grid; arrow-only collapse.
+/** Right WORKSPACE dock: header + panel grid; arrow-only collapse.
  *  Dragging the left edge resizes the dock width (persisted in the store).
- *  With ≤1 docked panel the grid drops to a single column (and the shell
- *  halves the dock width — drag deltas are doubled so resizing stays 1:1). */
+ *  With ≤2 docked panels the grid is a single column — 2 panels stack half
+ *  height each — and the shell halves the dock width (drag deltas are
+ *  doubled so resizing stays 1:1). 3+ panels use the 2-column grid. */
 const WorkspaceDockImpl = ({ panels }: { panels: PanelDef[] }) => {
   const { uiVisibilityStore: ui } = useStores();
   const collapsed = ui.railCollapsed.right;
   const visible = panels.filter((p) => !p.hidden);
-  const single = visible.length <= 1;
+  const single = visible.length <= 2;
 
   const startResize = (e: React.PointerEvent) => {
     e.preventDefault();
@@ -117,18 +120,17 @@ const WorkspaceDock = observer(WorkspaceDockImpl);
  */
 function LayoutManagerImpl({
   topBar,
-  statusBar,
   leftNav,
   rightPanels,
   showFloatingWindows = true,
   children,
 }: LayoutManagerProps) {
   const { uiVisibilityStore: ui } = useStores();
-  // With ≤1 docked panel the dock shrinks to one column: half the stored
-  // 2-column width (+ half the grid gap/padding so the panel keeps its size).
+  // With ≤2 docked panels the dock shrinks to one column: half the stored
+  // 2-column width (+ half the grid gap/padding so the panels keep their size).
   const dockedCount = rightPanels.filter((p) => !p.hidden).length;
   const effectiveRightWidth =
-    dockedCount <= 1 ? Math.round(ui.rightDockWidth / 2) + 4 : ui.rightDockWidth;
+    dockedCount <= 2 ? Math.round(ui.rightDockWidth / 2) + 4 : ui.rightDockWidth;
   return (
     <Box sx={layout.appGrid(ui.railCollapsed.left, ui.railCollapsed.right, effectiveRightWidth)}>
       {topBar}
@@ -139,13 +141,12 @@ function LayoutManagerImpl({
           rightPanels
             .filter((p) => ui.isPanelVisible(p.id) && ui.panels[p.id].mode !== 'docked')
             .map((p) => (
-              <FloatingPanelWindow key={p.id} id={p.id} title={p.title}>
+              <FloatingPanelWindow key={p.id} id={p.id} title={p.title} headerAction={p.floatHeaderAction}>
                 {p.floatContent ?? p.content}
               </FloatingPanelWindow>
             ))}
       </Box>
       <WorkspaceDock panels={rightPanels} />
-      {statusBar}
     </Box>
   );
 }

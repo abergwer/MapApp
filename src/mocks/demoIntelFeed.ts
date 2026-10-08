@@ -1,9 +1,9 @@
 import type { ComponentType } from 'react';
 import FlightIcon from '@mui/icons-material/Flight';
 import SensorsIcon from '@mui/icons-material/Sensors';
-import type { IntelKindDef, IntelTarget } from '../Components/features/intel/IntelFeedPanel';
+import type { IntelKindDef, IntelTarget } from '../Components/systemUI/intel/IntelFeedPanel';
 import type { RootStore } from '../stores/RootStore';
-import { palette } from '../styles/system-ui/tokens';
+import { palette } from '../Components/layout/styles/tokens';
 
 /**
  * DEMO intel-feed wiring for the reference/demo entity stores. Real

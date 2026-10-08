@@ -160,10 +160,6 @@ export class LeafletEngine implements MapEngine {
     this.drawing?.startDrawSector(onComplete);
   }
 
-  startDrawRoute(onComplete: (id: string, positions: [number, number][]) => void): void {
-    this.drawing?.startDrawRoute(onComplete);
-  }
-
   cancelDrawing(): void {
     this.drawing?.cancelDrawing();
     this.measure?.cancel();

@@ -6,19 +6,14 @@ import { observer } from 'mobx-react-lite';
 import { useMapContext } from '../../map/MapContext';
 import { useStores } from '../../stores/StoreContext';
 import type { MapShape } from '../../stores/DrawingToolStore';
-import { DRAWN_SHAPE_LAYER_IDS } from '../Layers/DrawnShapeLayers';
+import { DRAWN_SHAPE_LAYER_IDS } from '../../mocks/Layers/DrawnShapeLayers';
 
 interface LayerManagerProps {
-  /**
-   * Builds the Deck.gl layer array from store state. Called inside a MobX
-   * `reaction()`, so observable reads are tracked and layers refresh
-   * automatically — without re-rendering any React component.
-   * Create it once with `createLayerBuilder(stores)`.
-   */
-  buildLayers: () => Layer[];
+  /** Deck.gl layer array to render on top of the map. */
+  layers: Layer[];
 }
 
-function LayerManagerImpl({ buildLayers }: LayerManagerProps) {
+function LayerManagerImpl({ layers }: LayerManagerProps) {
   const { containerRef } = useMapContext();
   const stores = useStores();
   const { mapEngineStore } = stores;
@@ -56,8 +51,7 @@ function LayerManagerImpl({ buildLayers }: LayerManagerProps) {
       height: Math.max(1, height),
       controller: false,
       viewState,
-      // Layers arrive via the layer-sync reaction below (fireImmediately).
-      layers: [],
+      layers,
       onLoad: () => {
         deckReady = true;
       },
@@ -85,9 +79,6 @@ function LayerManagerImpl({ buildLayers }: LayerManagerProps) {
     // are ignored so they don't fight the engine's edit handles — deselect is
     // via Escape (see MapWrapper).
     const handlePick = (ev: MouseEvent) => {
-      // No drawn shapes means no possible hit target; skip the GPU picking
-      // readback (a synchronous stall) entirely — this is the common state
-      // before the user has drawn anything.
       if (stores.drawingToolStore.completedShapes.length === 0) return;
       const info = pickAt(ev);
       if (info?.object) {
@@ -125,21 +116,11 @@ function LayerManagerImpl({ buildLayers }: LayerManagerProps) {
       },
     );
 
-    // Bridge MobX -> Deck.gl directly. `buildLayers` reads observables
-    // (shape arrays, stress buffers, ...); this reaction re-runs it when
-    // any of them changes and pushes the fresh array into Deck. React
-    // never re-renders for a layer update — data flows
-    // store -> reaction -> deck.setProps.
-    const stopLayerSync = reaction(
-      () => buildLayers(),
-      (layers) => {
-        deckRef.current?.setProps({ layers });
-      },
-      { fireImmediately: true },
-    );
+    // Bridge MobX -> Deck.gl. Layer array is owned by the parent (typically
+    // via `buildLayers(stores)`), so layer refresh is handled by the `layers`
+    // prop effect below — no reaction is needed here.
 
     return () => {
-      stopLayerSync();
       stopViewReaction();
       resizeObserver.disconnect();
       container.removeEventListener('click', handlePick);
@@ -150,9 +131,15 @@ function LayerManagerImpl({ buildLayers }: LayerManagerProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [engine]);
 
+  // Push updated layer arrays into the already-initialized Deck instance.
+  useEffect(() => {
+    if (deckRef.current) {
+      deckRef.current.setProps({ layers });
+    }
+  }, [layers]);
+
   return null;
 }
 
 const LayerManager = observer(LayerManagerImpl);
 export default LayerManager;
-

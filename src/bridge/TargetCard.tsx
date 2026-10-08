@@ -12,6 +12,7 @@ import CloseIcon from '@mui/icons-material/Close'
 import droneIcon from '../assets/drone.png'
 import aircraftIcon from '../assets/aircraft.png'
 import { useMapContext } from '../map/MapContext'
+import { useRequest } from './liveDataApi'
 import type { LiveDataStore, TargetKind } from './LiveDataStore'
 
 const TARGET_META: Record<TargetKind, { label: string; image: string }> = {
@@ -30,6 +31,34 @@ function Detail({ label, value }: { label: string; value: string }) {
         {value}
       </Typography>
     </Stack>
+  )
+}
+
+/**
+ * Static intel fetched on demand — live position streams over the WS, but
+ * these details are read once per selection. Mounted with `key={id}` so
+ * picking another target runs a fresh request.
+ */
+function TargetIntel({ id }: { id: string }) {
+  const { data, isLoading, isError } = useRequest('getTargetDetails', id)
+  if (isLoading)
+    return (
+      <Typography variant="body2" color="text.secondary">
+        Loading intel…
+      </Typography>
+    )
+  if (isError || !data)
+    return (
+      <Typography variant="body2" color="error">
+        Intel unavailable
+      </Typography>
+    )
+  return (
+    <>
+      <Detail label="Callsign" value={data.callsign} />
+      <Detail label="Operator" value={data.operator} />
+      <Detail label="Status" value={data.status} />
+    </>
   )
 }
 
@@ -101,6 +130,7 @@ export const TargetCard = observer(function TargetCard({
           <Detail label="Longitude" value={lng.toFixed(5)} />
           <Detail label="Heading" value={`${Math.round(target.heading)}°`} />
           <Detail label="Speed" value={`${target.speedKts} kts`} />
+          <TargetIntel key={target.id} id={target.id} />
         </Stack>
       </CardContent>
     </Card>,

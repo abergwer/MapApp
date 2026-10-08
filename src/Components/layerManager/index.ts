@@ -1,69 +1,133 @@
 import type { Layer } from '@deck.gl/core';
-import { createPolygonLayer } from '../Layers/PolygonLayer';
-import { createMissilesLayer } from '../Layers/MissileLayer';
-import { createDroneLayer } from '../Layers/DroneLayer';
-import { createAirCraftLayer } from '../Layers/AirCraftLayer';
-import { createRangeRingsLayer } from '../Layers/RangeRingsLayer';
-import { createDrawnShapeLayers } from '../Layers/DrawnShapeLayers';
+import { createDrawnShapeLayers } from '../../mocks/Layers/DrawnShapeLayers';
+import { getEntityDef } from '../features/entities/entityDefinitions';
 import { createLOSLayers, createAreaLOSLayers } from '../../los/LOSLayers';
+import { LOS_COLORS } from '../../los/constants';
 import type { RootStore } from '../../stores/RootStore';
+import { isEntity, type MapShape } from '../../types/shapes';
+import { palette } from '../layout/styles/tokens';
 
 /**
- * DEMO/TESTING layer set. The base project treats layers as an injection
- * point: real projects build their own deck.gl layer array and pass it to
- * `<LayerManager layers={...} />` — this builder (and the entity stores it
- * reads) is the reference composition used by the demo App only.
+ * One entry = one layer group, declared ONCE and consumed by BOTH:
+ *  - `LayersPanel` (renders a toggle row per entry, sub-rows per child)
+ *  - `buildLayers` (builds the deck.gl layers of every visible entry)
  *
- * To add a layer here: create a factory in `../Layers` and call it below.
- * Visibility ids are free-form strings checked against
- * `uiVisibilityStore.isLayerVisible` (pair them with the toggle defs the
- * host passes to LayersPanel — see mocks/demoLayerToggles.ts).
+ * So adding a map layer is a single list entry (id + label + color +
+ * `build`) — no separate panel wiring, no extra visibility plumbing.
+ * `id` doubles as the `uiVisibilityStore` visibility key.
  */
-export function buildLayers(stores: RootStore): Layer[] {
-  const { drawingToolStore, uiVisibilityStore: vis } = stores;
-  const layers: Layer[] = [];
-
-  // Line-of-sight coverage. Bottom of the stack: large area fills that
-  // everything else should render above.
-  layers.push(...createAreaLOSLayers(stores.areaLOSStore));
-  layers.push(...createLOSLayers(stores.losStore));
-
-  // User-drawn shapes. The map engine's native edit tools drive the same
-  // store via `entityService`; deck.gl only renders and picks here.
-  // Per-kind visibility: LayersPanel writes `drawnShapes:<kind>` keys
-  // (unknown keys default to visible).
-  if (vis.isLayerVisible('drawnShapes')) {
-    const visibleShapes = drawingToolStore.completedShapes.filter((s) =>
-      vis.isLayerVisible(`drawnShapes:${s.kind}`),
-    );
-    layers.push(...createDrawnShapeLayers(visibleShapes, drawingToolStore.selectedId));
-  }
-  if (vis.isLayerVisible('polygons')) {
-    layers.push(createPolygonLayer(stores.polygonStore.polygons));
-  }
-  if (vis.isLayerVisible('rangeRings')) {
-    layers.push(createRangeRingsLayer(stores.droneStore.targets));
-  }
-  if (vis.isLayerVisible('missiles')) {
-    layers.push(
-      ...createMissilesLayer(stores.missileStore.missiles, stores.missileStore.selectedId),
-    );
-  }
-  if (vis.isLayerVisible('drones')) {
-    layers.push(...createDroneLayer(stores.droneStore.targets));
-  }
-  if (vis.isLayerVisible('aircraft')) {
-    layers.push(...createAirCraftLayer(stores.airCraftStore.targets));
-  }
-  return layers;
+export interface LayerGroupDef {
+  /** Visibility key read/written via `uiVisibilityStore.isLayerVisible`. */
+  id: string;
+  label: string;
+  /** Swatch color for the panel row. */
+  color: string;
+  /**
+   * deck.gl layers for this entry. Omit on pure rows: a parent with
+   * children only (its switch toggles the children), or a filter row whose
+   * key a parent's `build` reads back (see the drawn-shapes children).
+   */
+  build?: (stores: RootStore) => Layer[];
+  /** Optional count badge for the panel row. */
+  count?: (stores: RootStore) => number | undefined;
+  /** Sub-rows; a function so entries can derive rows from store state. */
+  children?: (stores: RootStore) => LayerGroupDef[];
 }
 
 /**
- * Adapter for LayerManager's `buildLayers` prop. Create it once (e.g. with
- * `useMemo`); LayerManager calls it inside a MobX reaction so observable
- * reads in `buildLayers` are tracked without React re-renders.
+ * Flatten a layer-group list into deck.gl layers. ONE visibility rule for
+ * the whole tree: every def is gated by its own key, and a hidden def
+ * hides its entire subtree — so a panel row always toggles exactly its
+ * own key. Call inside an observer render (see LayersWrapper) so the
+ * store reads are tracked.
  */
-export function createLayerBuilder(stores: RootStore): () => Layer[] {
-  return () => buildLayers(stores);
+export function buildLayers(stores: RootStore, groups: LayerGroupDef[]): Layer[] {
+  const vis = stores.uiVisibilityStore;
+  const out: Layer[] = [];
+  const visit = (defs: LayerGroupDef[]) => {
+    for (const def of defs) {
+      if (!vis.isLayerVisible(def.id)) continue;
+      if (def.build) out.push(...def.build(stores));
+      if (def.children) visit(def.children(stores));
+    }
+  };
+  visit(groups);
+  return out;
 }
+
+const kindLabel = (kind: string) => kind.charAt(0).toUpperCase() + kind.slice(1);
+
+/** The single visibility key of a drawn shape — per entity type when the
+ *  shape carries a known defId, per raw geometry kind otherwise. Shared by
+ *  the layer filter and the panel rows so the two can never disagree. */
+export const shapeLayerKey = (s: MapShape): string =>
+  isEntity(s) && getEntityDef(s.defId) ? `drawnShapes:def:${s.defId}` : `drawnShapes:${s.kind}`;
+
+/** Visibility key of one individual drawn shape (per-instance panel row). */
+export const shapeInstanceKey = (s: MapShape): string => `drawnShapes:shape:${s.id}`;
+
+/**
+ * Built-in group for line-of-sight results: the area viewshed fills (bottom
+ * of the stack — large fills everything else should render above) and the
+ * observer→target sightline with its endpoint markers.
+ */
+export const LOS_GROUP: LayerGroupDef = {
+  id: 'los',
+  label: 'Line of Sight',
+  color: `rgb(${LOS_COLORS.VISIBLE_LINE.slice(0, 3).join(',')})`,
+  build: (stores) => [
+    ...createAreaLOSLayers(stores.areaLOSStore),
+    ...createLOSLayers(stores.losStore),
+  ],
+};
+
+/**
+ * Built-in group for user-drawn shapes (the core draw/edit feature).
+ * Children are dynamic filter rows — one per `shapeLayerKey` present in
+ * the shape list — whose keys `build` reads back to filter the shapes.
+ * Include it in the host's layer-group list (see mocks/demoLayers.ts).
+ */
+export const DRAWN_SHAPES_GROUP: LayerGroupDef = {
+  id: 'drawnShapes',
+  label: 'Drawn Shapes',
+  color: palette.accent,
+  count: (stores) => stores.drawingToolStore.completedShapes.length,
+  build: (stores) => {
+    const { drawingToolStore, uiVisibilityStore: vis } = stores;
+    const visibleShapes = drawingToolStore.completedShapes.filter(
+      (s) => vis.isLayerVisible(shapeLayerKey(s)) && vis.isLayerVisible(shapeInstanceKey(s)),
+    );
+    return createDrawnShapeLayers(visibleShapes, drawingToolStore.selectedId, getEntityDef);
+  },
+  children: (stores) => {
+    // One row per key present; the key's shapes become per-instance
+    // sub-rows so the panel can list and search entities by name.
+    const rows = new Map<string, MapShape[]>();
+    for (const s of stores.drawingToolStore.completedShapes) {
+      const key = shapeLayerKey(s);
+      const list = rows.get(key);
+      if (list) list.push(s);
+      else rows.set(key, [s]);
+    }
+    return [...rows.entries()].map(([key, shapes]) => {
+      const def = getEntityDef(shapes[0].defId);
+      const label = def?.name ?? kindLabel(shapes[0].kind);
+      const color = def?.color ?? palette.accent;
+      return {
+        id: key,
+        label,
+        color,
+        count: () => shapes.length,
+        children: () =>
+          shapes.map((s, i) => ({
+            // Unnamed shapes fall back to the same "<Type> <n>" label the
+            // Entities panel shows, so the two panels agree.
+            id: shapeInstanceKey(s),
+            label: s.name ?? `${label} ${i + 1}`,
+            color,
+          })),
+      };
+    });
+  },
+};
 
