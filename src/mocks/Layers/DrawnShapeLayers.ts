@@ -5,7 +5,7 @@ import {
   entityIconUrl,
   type EntityDefinition,
 } from '../../Components/features/entities/entityDefinitions';
-import { ellipseRing, sectorRing, roundedCornerPath, exitCurvePath, entryCurvePath, mixedRoutePath } from '../../map/utils/geo';
+import { ellipseRing, sectorRing, roundedCornerPath, exitCurvePath, entryCurvePath } from '../../map/utils/geo';
 import config from '../../../config.json';
 
 /**
@@ -96,7 +96,7 @@ export function createDrawnShapeLayers(
   getDef: GetEntityDefinition = () => undefined,
 ): Layer[] {
   const points: Extract<MapShape, { kind: 'point' }>[] = [];
-  const lines: Extract<MapShape, { kind: 'line' | 'curvedRoute' | 'exitCurveRoute' | 'entryCurveRoute' | 'mixedRoute' }>[] = [];
+  const lines: Extract<MapShape, { kind: 'line' | 'curvedRoute' | 'exitCurveRoute' | 'entryCurveRoute' }>[] = [];
   const polygons: Extract<MapShape, { kind: 'polygon' }>[] = [];
   const areas: Extract<MapShape, { kind: 'circle' | 'ellipse' | 'sector' }>[] = [];
 
@@ -110,7 +110,6 @@ export function createDrawnShapeLayers(
       case 'curvedRoute':
       case 'exitCurveRoute':
       case 'entryCurveRoute':
-      case 'mixedRoute':
         lines.push(s);
         break;
       case 'polygon':
@@ -168,12 +167,6 @@ export function createDrawnShapeLayers(
             return exitCurvePath(s.positions, { fraction: EXIT_CURVE_FRACTION });
           case 'entryCurveRoute':
             return entryCurvePath(s.positions, { fraction: ENTRY_CURVE_FRACTION });
-          case 'mixedRoute':
-            return mixedRoutePath(s.positions, s.turns, {
-              radiusFraction: CURVE_RADIUS_FRACTION,
-              exitFraction: EXIT_CURVE_FRACTION,
-              entryFraction: ENTRY_CURVE_FRACTION,
-            });
           default:
             return s.positions;
         }

@@ -110,7 +110,7 @@ export const ENTITY_DEFINITIONS: EntityDefinition[] = [
     name: 'Attack Route',
     color: '#40c4ff',
     icon: RouteIcon,
-    geometries: ['line'],
+    geometries: ['curvedRoute', 'exitCurveRoute', 'entryCurveRoute'],
   },
   {
     id: 'noFlyZone',

@@ -19,8 +19,6 @@ import * as mapStyles from '../ui/styles/map.styles';
 import type { MapShape } from '../../types/shapes';
 import LOSControls from '../../los/LOSControls';
 import LOSProfileChart from '../../los/LOSProfileChart';
-import RouteTurnsPanel from '../../Components/features/RouteTurnsPanel';
-import { fitTurns } from '../utils/geo';
 
 const defaultOptions = {
   center: [32.2, 34.95] as [number, number],
@@ -240,10 +238,6 @@ function MapWrapperImpl({
             <Paper sx={mapStyles.toolCluster}>
               <MeasuringTools />
             </Paper>
-             {/* Under the toolbar: per-waypoint turn editor for a selected mixed route. */}
-          <Box sx={{ position: 'absolute', top: 64, left: 12, zIndex: 1100 }}>
-            <RouteTurnsPanel />
-          </Box>
             <Paper sx={mapStyles.toolCluster}>
               <MapStyleBar />
             </Paper>

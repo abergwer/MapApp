@@ -7,7 +7,6 @@ import PieChartOutlinedIcon from '@mui/icons-material/PieChartOutlined';
 import RoundedCornerIcon from '@mui/icons-material/RoundedCorner';
 import TurnSlightRightIcon from '@mui/icons-material/TurnSlightRight';
 import TurnSlightLeftIcon from '@mui/icons-material/TurnSlightLeft';
-import AltRouteIcon from '@mui/icons-material/AltRoute';
 import StraightenIcon from '@mui/icons-material/Straighten';
 import SquareFootIcon from '@mui/icons-material/SquareFoot';
 import type { MapEngine } from '../mapEngine/MapEngine';
@@ -33,7 +32,6 @@ export const DRAW_TOOLS: { id: DrawTool; label: string; Icon: typeof FiberManual
   { id: 'curvedRoute', label: 'Draw curved route', Icon: RoundedCornerIcon },
   { id: 'exitCurveRoute', label: 'Draw exit curve route', Icon: TurnSlightRightIcon },
   { id: 'entryCurveRoute', label: 'Draw entry curve route', Icon: TurnSlightLeftIcon },
-  { id: 'mixedRoute', label: 'Draw mixed route', Icon: AltRouteIcon },
 ];
 
 export const MEASURE_TOOLS: { id: MeasureTool; label: string; Icon: typeof StraightenIcon }[] = [
@@ -55,7 +53,7 @@ export function startDraw(
   entities: EntityService, drawingToolStore: DrawingToolStore,
   def?: EntityDefinition,
 ) {
-   const done = (shape: MapShape) => {
+  const done = (shape: MapShape) => {
     entities.create(shape);
     drawingToolStore.setActiveDrawTool(null);
   };
@@ -85,10 +83,6 @@ export function startDraw(
       return engine.startDrawSector?.((id, center, radius, startBearing, endBearing) =>
         entities.create({ ...data, id, kind: 'sector', center, radius, startBearing, endBearing }),
       );
-    case 'route':
-      return engine.startDrawRoute?.((id, positions) =>
-        done({ id, kind: 'route', positions }),
-      );
     case 'curvedRoute':
       // Draw straight waypoints and store them as-is. The rounded curve is
       // generated at render time, so editing shows only the waypoints (like
@@ -110,7 +104,7 @@ export function startDraw(
       return engine.startDrawLine((id, positions) =>
         done({ id, kind: 'entryCurveRoute', positions }),
       );
-    
+
   }
 }
 
@@ -133,7 +127,7 @@ export function toggleDrawEntity(
     return;
   }
   store.setActiveDrawTool(geometry, def.id);
-  startDraw(engine, geometry, entities,store, def);
+  startDraw(engine, geometry, entities, store, def);
 }
 
 /**

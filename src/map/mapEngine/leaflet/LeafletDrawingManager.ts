@@ -12,7 +12,6 @@ import {
 } from '../../utils/leafletSectorTool';
 import type { MapShape } from '../../../stores/DrawingToolStore';
 import { newShapeId } from '../../../stores/DrawingToolStore';
-import { fitTurns } from '../../utils/geo';
 
 /** Leaflet primitives work in metres; the store is unit-canonical in km. */
 const KM_TO_M = 1000;
@@ -460,7 +459,6 @@ export class LeafletDrawingManager {
       case 'exitCurveRoute':
       case 'entryCurveRoute':
         return { id, kind, positions: latLngsToCoords(layer as L.Polyline) };
-     
       case 'polygon':
         return { id, kind, positions: polygonRingToCoords(layer as L.Polygon) };
       case 'circle': {
