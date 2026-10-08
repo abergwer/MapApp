@@ -80,7 +80,7 @@ export const NAME_KEY = 'name';
 export const MISSION_SCHEMA: readonly FieldDef[] = [
   { key: NAME_KEY, type: 'text', label: 'Mission name', required: true },
   { key: 'description', type: 'textarea', label: 'Description' },
-  {key : 'areaOfOperation', type: 'text', label: 'Area of Operation'},
+  {key : 'region', type: 'select', label: 'Region', options: ["Gaza", "Iran", "Syria"]},
   { key: 'status', type: 'select', label: 'Status', options: ['Planned', 'Active', 'Completed'], required: true },
   { key: 'target', type: 'entity', label: 'Primary target', source: 'target', allowCreate: false },
   { key: 'component', type: 'entity', label: 'Component', source: 'component', dependsOn: 'target' },
