@@ -5,6 +5,7 @@ export interface ImpactDataDto {
   radius: string
   speed: string
   details: string
+  munitionId: string
 }
 
 /** POST body — the server assigns `id`. */

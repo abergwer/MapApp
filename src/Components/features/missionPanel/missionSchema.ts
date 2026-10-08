@@ -85,8 +85,8 @@ export const MISSION_SCHEMA: readonly FieldDef[] = [
   { key: 'target', type: 'entity', label: 'Primary target', source: 'target', allowCreate: false },
   { key: 'component', type: 'entity', label: 'Component', source: 'component', dependsOn: 'target' },
   { key: 'attackPoint', type: 'entity', label: 'Attack point', source: 'attackPoint', dependsOn: 'component', allowCreate: true },
-  { key: 'munition', type: 'entity', label: 'Munition', source: 'munition' },
   {key: 'route', type: 'entity', label : 'Route', source: 'route', allowCreate: true},
-  { key: 'impactData', type: 'entity', label: 'Impact data', source: 'impactData', allowCreate: true },
+  { key: 'munition', type: 'entity', label: 'Munition', source: 'munition' },
+  { key: 'impactData', type: 'entity', label: 'Impact data', source: 'impactData', dependsOn : 'munition', allowCreate: true },
   { key: 'startAt', type: 'datetime', label: 'Start' },
 ];

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Box from '@mui/material/Box';
 import ButtonBase from '@mui/material/ButtonBase';
 import Dialog from '@mui/material/Dialog';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import ErrorOutlinedIcon from '@mui/icons-material/ErrorOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
@@ -28,15 +29,25 @@ const validate = (values: ImpactDataValues) => {
  */
 export default function ImpactDataDialog({
   initialName,
+  munitionId,
+  munitionName,
   onSave,
   onCancel,
 }: {
   /** Pre-fills the `name` field (what the user typed in the picker). */
   initialName: string;
+  /** Munition chosen in the mission form; sent with the record. */
+  munitionId: string;
+  /** Display name of that munition (shown read-only). */
+  munitionName: string;
   onSave: (values: ImpactDataValues) => void | Promise<void>;
   onCancel: () => void;
 }) {
-  const [values, setValues] = useState<ImpactDataValues>(() => ({ ...emptyImpactDataValues(), name: initialName }));
+  const [values, setValues] = useState<ImpactDataValues>(() => ({
+    ...emptyImpactDataValues(),
+    name: initialName,
+    munitionId,
+  }));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
@@ -76,6 +87,13 @@ export default function ImpactDataDialog({
         </Box>
 
         <Box sx={styles.formBody}>
+          <TextField
+            size="small"
+            label="Munition"
+            value={munitionName || munitionId}
+            sx={styles.field}
+            slotProps={{ input: { readOnly: true }, htmlInput: { 'aria-label': 'Munition' } }}
+          />
           {IMPACT_DATA_SCHEMA.map((field) => (
             <SchemaField
               key={field.key}

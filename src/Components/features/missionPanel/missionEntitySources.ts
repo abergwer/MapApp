@@ -153,9 +153,11 @@ export function createMissionEntitySources(stores: RootStore): EntitySources {
      *  appended to the list and selected. */
     impactData: {
       options: () => impactDataList.map((d) => ({ id: d.id, label: `${d.name} · r ${d.radius} m` })),
-      createDialog: ({ initialLabel, onClose }) =>
+      createDialog: ({ initialLabel, parentId, onClose }) =>
         createElement(ImpactDataDialog, {
           initialName: initialLabel,
+          munitionId: parentId ?? '',
+          munitionName: munitionList.find((m) => m.id === parentId)?.name ?? '',
           onSave: async (values) => {
             const saved = await createImpactData(values as NewImpactData);
             impactDataList.push(saved);
