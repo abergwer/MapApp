@@ -17,7 +17,7 @@
  *  - form/                     schema-driven create/edit form and its field widgets
  *  - styles/                   all sx styles for the feature
  */
-export { MissionsPanel, default } from './MissionPanel';
+export { MissionsPanel } from './MissionPanel';
 export { MissionStore, type MissionView } from './MissionStore';
 export {
   MISSION_SCHEMA,

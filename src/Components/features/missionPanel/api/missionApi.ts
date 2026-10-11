@@ -7,9 +7,11 @@ import { nameOf, type Mission, type MissionValues } from '../types';
  * schema field. The server assigns `id` / `createdAtUtc` / `updatedAtUtc`,
  * so the client never sends them and schema keys must not reuse those names.
  *
+ * Entity fields are sent as ids under `<entity>Id` (targetId, componentId, …).
+ *
  * `GET /missions` returns summaries (id, name, status, timestamps);
  * `GET /missions/:id` (and POST/PUT responses) return the full record with
- * entity fields (target, component, …) embedded as objects.
+ * the referenced entities (target, component, …) embedded as objects.
  */
 export type MissionDto = { id: string; createdAtUtc: string; updatedAtUtc?: string } & Record<string, unknown>;
 
@@ -18,11 +20,12 @@ for (const f of MISSION_SCHEMA) {
   if (RESERVED.includes(f.key)) throw new Error(`MISSION_SCHEMA key "${f.key}" is reserved for the server`);
 }
 
-/** Embedded entity objects collapse to their id — the form only stores ids. */
+/** An embedded entity object `target: { id }` collapses to `targetId` — the form only stores ids. */
 const fromWire = ({ id, createdAtUtc, updatedAtUtc, ...rest }: MissionDto): Mission => {
   const values: MissionValues = {};
   for (const [key, v] of Object.entries(rest)) {
-    values[key] = v && typeof v === 'object' ? String((v as { id?: unknown }).id ?? '') : String(v ?? '');
+    if (v && typeof v === 'object') values[`${key}Id`] = String((v as { id?: unknown }).id ?? '');
+    else values[key] = String(v ?? '');
   }
   return { id, createdAt: createdAtUtc, updatedAt: updatedAtUtc, name: nameOf(values), values };
 };
