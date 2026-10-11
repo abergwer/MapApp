@@ -6,9 +6,10 @@
  *   POST   /api/shapes          -> MapShape           create (SERVER assigns the id; response carries it)
  *   PUT    /api/shapes/:id      -> MapShape           update
  *   DELETE /api/shapes/:id      -> { ok }             remove
- *   GET    /api/missions        -> Mission[]          flat: { id, createdAt, updatedAt?, ...fields }
- *   POST   /api/missions        -> Mission            create (SERVER assigns id + createdAt)
- *   PUT    /api/missions/:id    -> Mission            update (SERVER sets updatedAt)
+ *   GET    /api/missions        -> MissionSummary[]   { id, name, status, createdAtUtc, updatedAtUtc? }
+ *   GET    /api/missions/:id    -> Mission            full record; entity fields (target, component, …) are embedded objects
+ *   POST   /api/missions        -> Mission            create (SERVER assigns id + createdAtUtc)
+ *   PUT    /api/missions/:id    -> Mission            update (SERVER sets updatedAtUtc)
  *   DELETE /api/missions/:id    -> { ok }             remove
  *   GET    /api/mission-targets               -> TargetDto[]      targets → components → attackPoints (src/bridge/types.ts)
  *   POST   /api/components/:id/attack-points  -> AttackPointDto   body = { name, position, accuracy }; SERVER assigns id + parentId
@@ -49,26 +50,80 @@ const MISSILE_TICK_MS = 100
 // ---------------------------------------------------------------------------
 
 /**
- * Missions, stored FLAT: server-owned `id` / `createdAt` / `updatedAt` plus
- * one key per field of the client's MISSION_SCHEMA. The server does not
+ * Missions, stored FLAT: server-owned `id` / `createdAtUtc` / `updatedAtUtc`
+ * plus one key per field of the client's MISSION_SCHEMA. The server does not
  * interpret the fields — it only requires a non-empty `name`.
+ *
+ * Entity fields hold ids under `<entity>Id`; `expand()` joins them into full
+ * objects (`target`, `component`, …) when a single mission is read. `route`
+ * stays empty: routes are drawn on the map and live in /api/shapes.
  */
+const daysAgo = (days) => new Date(Date.now() - days * 86_400_000).toISOString()
+const daysAhead = (days) => new Date(Date.now() + days * 86_400_000).toISOString()
+
 const missions = [
   {
     id: randomUUID(),
-    createdAt: new Date(Date.now() - 2 * 86_400_000).toISOString(),
-    updatedAt: new Date(Date.now() - 86_400_000).toISOString(),
+    createdAtUtc: daysAgo(5),
+    updatedAtUtc: daysAgo(1),
     name: 'Northern Corridor Surveillance',
     description: 'Persistent ISR coverage over the northern approach corridor.',
-    commander: 'Maj. R. Halvorsen',
+    areaOfOperation: 'North',
     status: 'Active',
+    targetId: 'target-1',
+    componentId: 'component-1',
+    attackPointId: 'ap-1',
+    munitionId: 'mun-1',
+    route: '',
+    impactDataId: 'impact-1',
+    startAt: daysAgo(1),
   },
   {
     id: randomUUID(),
-    createdAt: new Date(Date.now() - 86_400_000).toISOString(),
-    name: 'Harbor Perimeter Sweep',
-    commander: 'Capt. L. Okafor',
+    createdAtUtc: daysAgo(3),
+    name: 'Radar Power Cut',
+    description: 'Disable the generator building feeding the northern radar.',
+    areaOfOperation: 'North',
     status: 'Planned',
+    targetId: 'target-1',
+    componentId: 'component-2',
+    attackPointId: 'ap-3',
+    munitionId: 'mun-2',
+    route: '',
+    impactDataId: 'impact-1',
+    startAt: daysAhead(2),
+  },
+  {
+    id: randomUUID(),
+    createdAtUtc: daysAgo(2),
+    updatedAtUtc: daysAgo(0.5),
+    name: 'Launch Pad Strike',
+    description: 'Neutralise the hardened pad before the next launch window.',
+    areaOfOperation: 'East',
+    status: 'Planned',
+    targetId: 'target-2',
+    componentId: 'component-3',
+    attackPointId: 'ap-5',
+    munitionId: 'mun-3',
+    route: '',
+    impactDataId: 'impact-2',
+    startAt: daysAhead(5),
+  },
+  {
+    id: randomUUID(),
+    createdAtUtc: daysAgo(10),
+    updatedAtUtc: daysAgo(7),
+    name: 'Harbor Perimeter Sweep',
+    description: 'Completed sweep of the western harbor perimeter.',
+    areaOfOperation: 'West',
+    status: 'Completed',
+    targetId: 'target-3',
+    componentId: '',
+    attackPointId: '',
+    munitionId: '',
+    route: '',
+    impactDataId: '',
+    startAt: daysAgo(8),
   },
 ]
 
@@ -141,6 +196,23 @@ const munitions = [
   { id: 'mun-2', name: 'AGM-114 Hellfire' },
   { id: 'mun-3', name: 'Mk 82' },
 ]
+
+/** List view of a mission: header fields only. */
+const summary = ({ id, name, status, createdAtUtc, updatedAtUtc }) => ({ id, name, status, createdAtUtc, updatedAtUtc })
+
+/** Full view of a mission: `<entity>Id` fields replaced by the referenced objects (null when unset/unknown). */
+const expand = ({ targetId, componentId, attackPointId, munitionId, impactDataId, ...m }) => {
+  const target = missionTargets.find((t) => t.id === targetId) ?? null
+  const component = target?.components.find((c) => c.id === componentId) ?? null
+  return {
+    ...m,
+    target,
+    component,
+    attackPoint: component?.attackPoints.find((a) => a.id === attackPointId) ?? null,
+    munition: munitions.find((x) => x.id === munitionId) ?? null,
+    impactData: impactData.find((x) => x.id === impactDataId) ?? null,
+  }
+}
 
 /**
  * Editable drawn shapes (`MapShape` union from the app's DrawingToolStore),
@@ -423,17 +495,17 @@ const server = createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/missions' && req.method === 'GET') {
-    return json(200, missions)
+    return json(200, missions.map(summary))
   }
 
   if (url.pathname === '/api/missions' && req.method === 'POST') {
     const body = await readJsonBody(req)
     if (!isValidMission(body)) return json(400, { error: 'Invalid mission' })
     // Server is the authority for id and timestamps.
-    const mission = { ...missionFields(body), id: randomUUID(), createdAt: new Date().toISOString() }
+    const mission = { ...missionFields(body), id: randomUUID(), createdAtUtc: new Date().toISOString() }
     missions.push(mission)
     console.log(`[rest] mission created: ${mission.id} (${mission.name})`)
-    return json(201, mission)
+    return json(201, expand(mission))
   }
 
   const missionMatch = url.pathname.match(/^\/api\/missions\/([^/]+)$/)
@@ -441,13 +513,16 @@ const server = createServer(async (req, res) => {
     const index = missions.findIndex((m) => m.id === missionMatch[1])
     if (index === -1) return json(404, { error: 'Mission not found' })
 
+    if (req.method === 'GET') {
+      return json(200, expand(missions[index]))
+    }
     if (req.method === 'PUT') {
       const body = await readJsonBody(req)
       if (!isValidMission(body)) return json(400, { error: 'Invalid mission' })
-      const { id, createdAt } = missions[index]
-      missions[index] = { ...missionFields(body), id, createdAt, updatedAt: new Date().toISOString() }
+      const { id, createdAtUtc } = missions[index]
+      missions[index] = { ...missionFields(body), id, createdAtUtc, updatedAtUtc: new Date().toISOString() }
       console.log(`[rest] mission updated: ${id} (${missions[index].name})`)
-      return json(200, missions[index])
+      return json(200, expand(missions[index]))
     }
     if (req.method === 'DELETE') {
       const [removed] = missions.splice(index, 1)
@@ -558,7 +633,7 @@ const isValidImpactData = isValidMission
 /** Client-sent mission minus the server-owned fields. */
 function missionFields(body) {
   const fields = { ...body }
-  for (const key of ['id', 'createdAt', 'updatedAt']) delete fields[key]
+  for (const key of ['id', 'createdAtUtc', 'updatedAtUtc']) delete fields[key]
   fields.name = fields.name.trim()
   return fields
 }
@@ -663,7 +738,7 @@ setInterval(() => {
 server.listen(PORT, () => {
   console.log(`Demo server listening on http://localhost:${PORT}`)
   console.log(`  REST: GET/POST /api/shapes | PUT/DELETE /api/shapes/:id`)
-  console.log(`  REST: GET/POST /api/missions | PUT/DELETE /api/missions/:id`)
+  console.log(`  REST: GET/POST /api/missions | GET/PUT/DELETE /api/missions/:id`)
   console.log(`  REST: GET /api/mission-targets | POST /api/components/:id/attack-points`)
   console.log(
     `  WS:   ws://localhost:${PORT}/ws (` +
