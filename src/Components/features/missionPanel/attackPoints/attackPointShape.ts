@@ -68,11 +68,12 @@ const numberOr = (value: string | undefined, fallback: number) => {
 }
 
 /** Shape → POST body. `[lng, lat]` on the map becomes `{ latitude, longitude }`. */
-export function toAttackPointBody(shape: AttackPointShape): NewAttackPoint {
+export function toAttackPointBody(shape: AttackPointShape, componentId: string): NewAttackPoint {
   const [longitude, latitude] = shape.position
   const values = shape.customValues ?? {}
   const verticalRef = values[ATTACK_POINT_FIELDS.verticalRef]
   return {
+    componentId,
     name: shape.name?.trim() || 'Attack point',
     position: {
       location: { latitude, longitude },

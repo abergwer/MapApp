@@ -81,7 +81,7 @@ export const MISSION_SCHEMA: readonly FieldDef[] = [
   { key: NAME_KEY, type: 'text', label: 'Mission name', required: true },
   { key: 'description', type: 'textarea', label: 'Description' },
   {key : 'region', type: 'select', label: 'Region', options: ["Gaza", "Iran", "Syria"]},
-  { key: 'status', type: 'select', label: 'Status', options: ['Planned', 'Active', 'Completed'], required: true },
+  { key: 'status', type: 'select', label: 'Status', options: ['Draft', 'Planned', 'Active', 'Completed'], required: true },
   { key: 'targetId', type: 'entity', label: 'Primary target', source: 'target', allowCreate: false },
   { key: 'componentId', type: 'entity', label: 'Component', source: 'component', dependsOn: 'targetId' },
   { key: 'attackPointId', type: 'entity', label: 'Attack point', source: 'attackPoint', dependsOn: 'componentId', allowCreate: true },

@@ -34,7 +34,7 @@ export function useMissionShapes(base: MapShapes): MapShapes {
     onSave: async (shape, isNew) => {
       if (!isAttackPointShape(shape)) return (await base.onSave?.(shape, isNew)) ?? undefined
       if (!isNew || !shape.parentId) return shape // no update endpoint — kept locally
-      const dto = await createAttackPoint(shape.parentId, toAttackPointBody(shape))
+      const dto = await createAttackPoint(shape.parentId, toAttackPointBody(shape, shape.parentId))
       void loadTargets() // the mission form's attack-point dropdown lists it now
       return fromAttackPointDto(dto)
     },

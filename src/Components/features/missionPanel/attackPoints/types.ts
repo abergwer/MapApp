@@ -15,5 +15,5 @@ export interface AttackPointDto {
   accuracy: Accuracy
 }
 
-/** POST body — the server assigns `id` and `parentId`. */
-export type NewAttackPoint = Omit<AttackPointDto, 'id' | 'parentId'>
+/** POST body — the server assigns `id`; the owning component goes as `componentId`. */
+export type NewAttackPoint = Omit<AttackPointDto, 'id' | 'parentId'> & { componentId: string }
