@@ -42,7 +42,7 @@ const initials = (name: string) =>
     .map((w) => w[0])
     .join('') || '?';
 
-/** One mission box — shows the header fields only. Click to edit. */
+/** One mission box — shows the header fields only. Click to view. */
 function MissionCard({ mission, onOpen, onDelete }: { mission: MissionSummary; onOpen: () => void; onDelete: () => void }) {
   const name = mission.name || 'Untitled mission';
   // Show the latest event on the card; the other date lives in the tooltip.
@@ -150,7 +150,7 @@ function MissionListImpl() {
       <Box sx={styles.list} role="list" aria-label="Missions">
         {missions.map((m) => (
           <Box key={m.id} role="listitem">
-            <MissionCard mission={m} onOpen={() => store.openEdit(m.id)} onDelete={() => store.remove(m.id)} />
+            <MissionCard mission={m} onOpen={() => store.open(m.id)} onDelete={() => store.remove(m.id)} />
           </Box>
         ))}
         {missions.length === 0 &&

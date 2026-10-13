@@ -2,7 +2,8 @@ import { makeAutoObservable, runInAction } from 'mobx';
 import type { MissionApi } from './api/missionApi';
 import { emptyValues, type Mission, type MissionValues } from './types';
 
-export type MissionView = { mode: 'list' } | { mode: 'create' } | { mode: 'edit'; id: string };
+/** `view` = read-only details of one mission; `edit` = same mission, fields editable. */
+export type MissionView = { mode: 'list' } | { mode: 'create' } | { mode: 'view'; id: string } | { mode: 'edit'; id: string };
 
 /** List orderings offered in the toolbar. */
 export type MissionSort = 'newest' | 'oldest' | 'name' | 'updatedAt';
@@ -16,7 +17,8 @@ const SORTERS: Record<MissionSort, (a: Mission, b: Mission) => number> = {
 
 /**
  * Mission list + which screen is showing. The list holds summaries (header
- * fields); opening a mission fetches the full record by id into `editing`.
+ * fields); opening a mission fetches the full record by id into `current`
+ * and shows it read-only until the user presses the pencil (`startEdit`).
  * Every write goes to the server first; the server assigns `id` /
  * `createdAt` / `updatedAt` and the response replaces the local copy.
  *
@@ -30,9 +32,9 @@ export class MissionStore {
   search = '';
   sort: MissionSort = 'newest';
   view: MissionView = { mode: 'list' };
-  /** Full mission loaded by id while `view` is edit; null otherwise. */
-  editing: Mission | null = null;
-  /** Unsaved form values while `view` is create/edit; null on the list. */
+  /** Full mission loaded by id while `view` is view/edit; null otherwise. */
+  current: Mission | null = null;
+  /** Unsaved form values while `view` is create/edit; null otherwise. */
   draft: MissionValues | null = null;
 
   constructor(api: MissionApi, seed: Mission[] = []) {
@@ -60,22 +62,36 @@ export class MissionStore {
     this.draft = emptyValues();
   }
 
-  openEdit(id: string) {
-    this.view = { mode: 'edit', id };
-    this.editing = null;
+  /** Open a mission read-only. */
+  open(id: string) {
+    this.view = { mode: 'view', id };
+    this.current = null;
     this.draft = null;
     return this.api.get(id).then((mission) =>
       runInAction(() => {
-        if (this.view.mode !== 'edit' || this.view.id !== id) return;
-        this.editing = mission;
-        this.draft = { ...emptyValues(), ...mission.values };
+        if (this.view.mode === 'list' || this.view.mode === 'create' || this.view.id !== id) return;
+        this.current = mission;
       }),
     );
   }
 
+  /** Pencil: make the open mission editable. */
+  startEdit() {
+    if (this.view.mode !== 'view' || !this.current) return;
+    this.view = { mode: 'edit', id: this.view.id };
+    this.draft = { ...emptyValues(), ...this.current.values };
+  }
+
+  /** Cancel / after Save: back to read-only, dropping any unsaved draft. */
+  stopEdit() {
+    if (this.view.mode !== 'edit') return;
+    this.view = { mode: 'view', id: this.view.id };
+    this.draft = null;
+  }
+
   showList() {
     this.view = { mode: 'list' };
-    this.editing = null;
+    this.current = null;
     this.draft = null;
   }
 
@@ -101,7 +117,7 @@ export class MissionStore {
     runInAction(() => {
       const i = this.missions.findIndex((m) => m.id === id);
       if (i >= 0) this.missions[i] = mission;
-      if (this.editing?.id === id) this.editing = mission;
+      if (this.current?.id === id) this.current = mission;
     });
   }
 
@@ -109,7 +125,7 @@ export class MissionStore {
     await this.api.remove(id);
     runInAction(() => {
       this.missions = this.missions.filter((m) => m.id !== id);
-      if (this.view.mode === 'edit' && this.view.id === id) this.showList();
+      if (this.current?.id === id) this.showList();
     });
   }
 }

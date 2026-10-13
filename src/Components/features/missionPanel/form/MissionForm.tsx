@@ -42,6 +42,8 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
   const setValues = (update: (v: MissionValues) => MissionValues) => store.setDraft(update(values));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // Editing an existing mission goes back to its read-only view; creating goes back to the list.
+  const close = () => (mission ? store.stopEdit() : store.showList());
 
   const handleSave = async () => {
     const e = validate(values);
@@ -51,7 +53,7 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
     try {
       if (mission) await store.update(mission.id, values);
       else await store.add(values);
-      store.showList();
+      close();
     } catch {
       setErrors({ _save: 'Could not save the mission' });
     } finally {
@@ -70,8 +72,8 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
       }}
     >
       <Box sx={styles.formHeader}>
-        <Tooltip title="Back to missions" arrow>
-          <IconButton size="small" sx={styles.iconButton} onClick={() => store.showList()} aria-label="Back to mission list">
+        <Tooltip title={mission ? 'Back to mission' : 'Back to missions'} arrow>
+          <IconButton size="small" sx={styles.iconButton} onClick={close} aria-label={mission ? 'Back to mission' : 'Back to mission list'}>
             <ArrowBackIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Tooltip>
@@ -118,7 +120,7 @@ function MissionFormImpl({ mission }: { mission: Mission | null }) {
           <span />
         )}
         <Box sx={styles.formActions}>
-          <ButtonBase sx={styles.ghostButton} onClick={() => store.showList()} aria-label="Cancel">
+          <ButtonBase sx={styles.ghostButton} onClick={close} aria-label="Cancel">
             Cancel
           </ButtonBase>
           <ButtonBase

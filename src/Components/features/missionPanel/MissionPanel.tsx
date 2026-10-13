@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import { MissionContext } from './MissionContext';
+import MissionDetails from './form/MissionDetails';
 import MissionForm from './form/MissionForm';
 import MissionList from './list/MissionList';
 import { MissionStore } from './MissionStore';
@@ -18,13 +19,15 @@ interface MissionsPanelProps {
 
 const Screen = observer(function Screen({ store }: { store: MissionStore }) {
   if (store.view.mode === 'create') return <MissionForm key="create" mission={null} />;
-  if (store.view.mode === 'edit' && store.editing) return <MissionForm key={store.editing.id} mission={store.editing} />;
+  if (store.view.mode === 'view' && store.current) return <MissionDetails key={store.current.id} mission={store.current} />;
+  if (store.view.mode === 'edit' && store.current) return <MissionForm key={store.current.id} mission={store.current} />;
   return <MissionList />;
 });
 
 /**
- * MISSIONS view: a filterable list of mission cards (header fields only)
- * plus a create/edit form generated from `missionSchema.ts`.
+ * MISSIONS view: a filterable list of mission cards (header fields only),
+ * a read-only details screen per mission, and a create/edit form generated
+ * from `missionSchema.ts`.
  */
 export const MissionsPanel = ({ entitySources = {}, store: injected }: MissionsPanelProps) => {
   const [own] = useState(() => injected ?? new MissionStore(missionApi));

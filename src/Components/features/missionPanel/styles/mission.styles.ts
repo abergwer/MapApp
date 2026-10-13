@@ -443,6 +443,144 @@ export const formError: SxProps<Theme> = {
   '& svg': { fontSize: 14 },
 };
 
+// ── Read-only details ──────────────────────────────────────────
+
+/** Accent-tinted pencil in the details header that switches to edit mode. */
+export const editButton: SxProps<Theme> = {
+  ...iconButton,
+  color: palette.accentBright,
+  borderColor: `color-mix(in srgb, ${palette.accent} 35%, transparent)`,
+  bgcolor: `color-mix(in srgb, ${palette.accent} 12%, transparent)`,
+  '&:hover': {
+    color: '#fff',
+    borderColor: palette.accent,
+    bgcolor: palette.accent,
+    boxShadow: `0 4px 14px color-mix(in srgb, ${palette.accent} 40%, transparent)`,
+  },
+  ...focusRing,
+};
+
+/** Scrolling list of label/value rows for the read-only mission view — no
+ *  frame, just hairline dividers. Hugs its content (shrinks + scrolls only
+ *  when the panel is too short). */
+export const details: SxProps<Theme> = {
+  flex: '0 1 auto',
+  minHeight: 0,
+  overflowY: 'auto',
+  display: 'flex',
+  flexDirection: 'column',
+  pr: 0.5,
+  ...slimScrollbar,
+};
+
+/** Label column on the left, value on the right; hairline between rows. */
+export const detailRow: SxProps<Theme> = {
+  display: 'grid',
+  gridTemplateColumns: '92px minmax(0, 1fr)',
+  alignItems: 'baseline',
+  columnGap: 1.25,
+  px: 0.75,
+  py: 1.15,
+  borderRadius: 1.5,
+  transition: `background-color 160ms ${ease}`,
+  '& + &': { borderTop: `1px solid color-mix(in srgb, ${palette.border} 70%, transparent)` },
+  '&:hover': { bgcolor: `color-mix(in srgb, ${palette.accent} 5%, transparent)` },
+};
+
+export const detailLabel: SxProps<Theme> = {
+  ...microLabel,
+  fontSize: 10.5,
+  fontWeight: 700,
+  color: palette.accentBright,
+  lineHeight: 1.4,
+  overflowWrap: 'anywhere',
+};
+
+export const detailValue: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 0.75,
+  minWidth: 0,
+  fontSize: 13,
+  fontWeight: 500,
+  lineHeight: 1.45,
+  color: 'text.primary',
+  whiteSpace: 'pre-wrap',
+  overflowWrap: 'anywhere',
+  unicodeBidi: 'plaintext',
+  '& svg': { fontSize: 15, flexShrink: 0 },
+};
+
+export const detailEmpty: SxProps<Theme> = {
+  fontSize: 13,
+  lineHeight: 1.45,
+  color: 'text.disabled',
+};
+
+/** Dates / numbers in the mono face so they line up. */
+export const detailMono: SxProps<Theme> = {
+  fontFamily: fonts.mono,
+  fontSize: 12,
+  letterSpacing: 0.2,
+};
+
+/** Select values render as a small pill. */
+export const detailChip: SxProps<Theme> = {
+  display: 'inline-flex',
+  alignItems: 'center',
+  px: 1,
+  py: 0.15,
+  borderRadius: 99,
+  fontSize: 11,
+  fontWeight: 600,
+  letterSpacing: 0.2,
+  color: palette.accentBright,
+  bgcolor: `color-mix(in srgb, ${palette.accent} 12%, transparent)`,
+  border: `1px solid color-mix(in srgb, ${palette.accent} 30%, transparent)`,
+};
+
+/** Entity id whose entity is no longer in the host's list. */
+export const detailUnavailable: SxProps<Theme> = {
+  fontFamily: fonts.mono,
+  fontSize: 11.5,
+  fontWeight: 500,
+  color: palette.warn,
+};
+
+/** Created / edited timestamps under the details card, as tinted pills;
+ *  each entry stays on one line and the row wraps between entries. */
+export const detailsMeta: SxProps<Theme> = {
+  display: 'flex',
+  alignItems: 'center',
+  flexWrap: 'wrap',
+  gap: 0.75,
+  px: 0.25,
+};
+
+/** One timestamp pill; `tone` colours the icon, border and tint. */
+export const detailsMetaItem = (tone: string): SxProps<Theme> => ({
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 0.75,
+  px: 1.1,
+  py: 0.5,
+  borderRadius: 99,
+  whiteSpace: 'nowrap',
+  fontFamily: fonts.mono,
+  fontSize: 11,
+  letterSpacing: 0.2,
+  lineHeight: 1.4,
+  color: 'text.primary',
+  bgcolor: `color-mix(in srgb, ${tone} 10%, transparent)`,
+  border: `1px solid color-mix(in srgb, ${tone} 35%, transparent)`,
+  '& svg': {
+    fontSize: 13,
+    color: tone,
+    filter: `drop-shadow(0 0 4px color-mix(in srgb, ${tone} 60%, transparent))`,
+  },
+  '& b': { fontWeight: 700, color: tone, letterSpacing: 0.4, textTransform: 'uppercase', fontSize: 9.5 },
+});
+
 // ── Create-entity dialog ───────────────────────────────────────
 
 /** Paper of the "create new entity" dialog opened from an entity picker. */
