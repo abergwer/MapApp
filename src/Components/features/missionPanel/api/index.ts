@@ -6,6 +6,7 @@
  *  - attackPointsApi.ts POST /components/:id/attack-points
  *  - impactDataApi.ts   GET/POST /impact-data
  *  - munitionsApi.ts    GET /munitions
+ *  - missionLockApi.ts  POST/PUT/DELETE /mission/:id (edit lock)
  */
 export { api, SERVER_URL } from './client'
 export { missionApi, type MissionApi, type MissionDto } from './missionApi'
@@ -13,3 +14,4 @@ export { getMissionTargets } from './targetsApi'
 export { createAttackPoint } from './attackPointsApi'
 export { getImpactData, createImpactData } from './impactDataApi'
 export { getMunitions } from './munitionsApi'
+export { missionLockApi } from './missionLockApi'

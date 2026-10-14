@@ -1,5 +1,7 @@
 import { makeAutoObservable, runInAction } from 'mobx';
+import { showMessage } from '../../../stores/MessageDialogStore';
 import type { MissionApi } from './api/missionApi';
+import type { MissionLock } from './lock/MissionLock';
 import { emptyValues, type Mission, type MissionValues } from './types';
 
 /** `view` = read-only details of one mission; `edit` = same mission, fields editable. */
@@ -25,9 +27,14 @@ const SORTERS: Record<MissionSort, (a: Mission, b: Mission) => number> = {
  * The form's in-progress values live here (`draft`) rather than in the
  * form component, so closing and reopening the panel resumes where the
  * user left off. Nothing reaches the server until Save.
+ *
+ * Optional edit `lock`: `startEdit` acquires it first and stays read-only if
+ * refused; leaving edit mode by any route releases it. Renewal and idle
+ * handling live in `lock/MissionLockGuard`.
  */
 export class MissionStore {
   readonly api: MissionApi;
+  readonly lock?: MissionLock;
   missions: Mission[] = [];
   search = '';
   sort: MissionSort = 'newest';
@@ -37,10 +44,11 @@ export class MissionStore {
   /** Unsaved form values while `view` is create/edit; null otherwise. */
   draft: MissionValues | null = null;
 
-  constructor(api: MissionApi, seed: Mission[] = []) {
+  constructor(api: MissionApi, seed: Mission[] = [], lock?: MissionLock) {
     this.api = api;
+    this.lock = lock;
     this.missions = seed;
-    makeAutoObservable(this, { api: false });
+    makeAutoObservable(this, { api: false, lock: false });
   }
 
   /** Filtered by name, ordered by the chosen sort (newest first by default). */
@@ -75,24 +83,47 @@ export class MissionStore {
     );
   }
 
-  /** Pencil: make the open mission editable. */
-  startEdit() {
+  /** Pencil: make the open mission editable (after acquiring the lock, if any). */
+  async startEdit() {
     if (this.view.mode !== 'view' || !this.current) return;
-    this.view = { mode: 'edit', id: this.view.id };
-    this.draft = { ...emptyValues(), ...this.current.values };
+    const id = this.view.id;
+
+    if (this.lock && !(await this.lock.acquire(id))) {
+      showMessage({ message: 'This mission is being edited by someone else.', severity: 'warning' });
+      return;
+    }
+
+    runInAction(() => {
+      // The user may have moved on while we waited.
+      if (this.view.mode !== 'view' || this.view.id !== id || !this.current) return;
+      this.view = { mode: 'edit', id };
+      this.draft = { ...emptyValues(), ...this.current.values };
+    });
   }
 
   /** Cancel / after Save: back to read-only, dropping any unsaved draft. */
   stopEdit() {
     if (this.view.mode !== 'edit') return;
+    this.releaseLock();
     this.view = { mode: 'view', id: this.view.id };
     this.draft = null;
   }
 
   showList() {
+    this.releaseLock();
     this.view = { mode: 'list' };
     this.current = null;
     this.draft = null;
+  }
+
+  /** Lock guard: editing ended for a reason the user should see (lock lost, idle). */
+  cancelEdit(reason: string) {
+    showMessage({ message: reason, severity: 'warning' });
+    this.stopEdit();
+  }
+
+  private releaseLock() {
+    if (this.lock && this.view.mode === 'edit') void this.lock.release(this.view.id);
   }
 
   setDraft(values: MissionValues) {

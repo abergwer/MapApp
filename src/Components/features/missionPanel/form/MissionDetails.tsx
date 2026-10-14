@@ -79,7 +79,7 @@ function MissionDetailsImpl({ mission }: { mission: Mission }) {
           </Typography>
         </Box>
         <Tooltip title="Edit mission" arrow>
-          <IconButton size="small" sx={styles.editButton} onClick={() => store.startEdit()} aria-label={`Edit mission ${name}`}>
+          <IconButton size="small" sx={styles.editButton} onClick={() => void store.startEdit()} aria-label={`Edit mission ${name}`}>
             <EditOutlinedIcon sx={{ fontSize: 16 }} />
           </IconButton>
         </Tooltip>

@@ -7,13 +7,15 @@ import MissionList from './list/MissionList';
 import { MissionStore } from './MissionStore';
 import type { EntitySources } from './missionSchema';
 import { missionApi } from './api';
+import { MissionLockGuard } from './lock';
 
 interface MissionsPanelProps {
   /** Lists backing `entity` fields in MISSION_SCHEMA, keyed by `source`. */
   entitySources?: EntitySources;
   /** Inject a store (API-backed or for tests). Pass one that outlives this
    *  panel so an in-progress form is resumed when the panel is reopened;
-   *  the default is created per mount and resets with it. */
+   *  the default is created per mount and resets with it. Edit-locking is
+   *  configured on the store (`new MissionStore(api, [], lock)`). */
   store?: MissionStore;
 }
 
@@ -41,6 +43,7 @@ export const MissionsPanel = ({ entitySources = {}, store: injected }: MissionsP
   return (
     <MissionContext.Provider value={{ store, entitySources }}>
       <Screen store={store} />
+      {store.lock && <MissionLockGuard store={store} />}
     </MissionContext.Provider>
   );
 };

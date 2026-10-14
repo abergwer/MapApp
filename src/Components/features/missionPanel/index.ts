@@ -13,6 +13,7 @@
  *  - attackPoints/             AttackPointDto + map shape ⇄ DTO mapping
  *  - impactData/               ImpactDataDto, its schema + create dialog
  *  - munitions/                MunitionDto
+ *  - lock/                     optional pessimistic edit lock (acquire / renew / release + idle pause)
  *  - list/                     mission cards, search, sort
  *  - form/                     schema-driven create/edit form and its field widgets
  *  - styles/                   all sx styles for the feature
@@ -29,6 +30,7 @@ export {
 } from './missionSchema';
 export type { Mission, MissionSummary, MissionValues } from './types';
 export { missionApi, type MissionApi } from './api';
+export { createMissionLock, type MissionLock, type MissionLockTimings } from './lock';
 export * from './targets';
 export * from './attackPoints';
 export { ImpactDataDialog, IMPACT_DATA_SCHEMA, type ImpactDataValues, type ImpactDataDto } from './impactData';
