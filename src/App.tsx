@@ -30,6 +30,7 @@ import LazyMissileView3D from './Components/features/view-3d/LazyMissileView3D'
 import MiniMap from './Components/features/mini-map/MiniMap'
 import MiniVideo, { VideoMuteButton } from './Components/features/mini-video/MiniVideo'
 import { useStores } from './stores/StoreContext'
+import MessageDialog from './Components/features/MessageDialog'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
 import { LiveDataSocketProvider, liveDataStore, useLiveShapes } from './bridge'
 import { NetworkProvider } from './network'
@@ -207,6 +208,7 @@ function App() {
         */}
         <LayersWrapper groups={DEMO_LAYERS} />
       </MapWrapper>
+      <MessageDialog />
     </LayoutManager>
   )
 }
