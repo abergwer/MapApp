@@ -1,0 +1,33 @@
+flowchart TB
+  Server[("Server<br/>REST API + DataHub")]
+
+  subgraph Net["Network layer"]
+    REST["REST  ·  api/*.ts<br/>missions · lock · targets<br/>attack points · impact data · munitions"]
+    SR["SignalR  ·  realtime/<br/>hub.ts + useRealtime.ts"]
+  end
+
+  subgraph State["Client state (MobX)"]
+    MS["MissionStore"]
+    TS["targets"]
+    IS["impactData"]
+  end
+
+  UI["UI<br/>Missions panel · Map · Message dialog"]
+
+  Server <-->|"HTTP · JSON<br/>every read & write"| REST
+  Server -.->|"pushes<br/>MissionCreated / Updated / Deleted<br/>TargetsChanged · AttackPointCreated<br/>ImpactDataCreated"| SR
+  SR -.->|"on reconnect: refetch all"| REST
+
+  REST <-->|"list / get / save / delete<br/>acquire · renew · release lock"| MS
+  REST <-->|"loadTargets"| TS
+  REST <-->|"loadImpactData"| IS
+
+  SR -->|"applyRemote<br/>applyRemoteDelete"| MS
+  SR -->|"loadTargets (refetch)"| TS
+  SR -->|"upsertImpactData"| IS
+
+  MS <--> UI
+  TS <--> UI
+  IS <--> UI
+
+  style Server fill:#2d3748,color:#fff,stroke:#2d3748
