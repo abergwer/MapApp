@@ -11,6 +11,7 @@
   "VideoSignalingURL": "http://localhost:3000",
   "DataServerURL": "http://localhost:4000",
   "DataServerWsURL": "ws://localhost:4000/ws",
+  "SignalRHubURL": "http://localhost:5000/hubs/data",
   "MissionLock": {
     "enabled": true,
     "renewIntervalMs": 20000,
