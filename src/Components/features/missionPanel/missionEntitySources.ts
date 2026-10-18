@@ -1,20 +1,19 @@
 import { createElement } from 'react';
 import { observable } from 'mobx';
 import WidgetsIcon from '@mui/icons-material/Widgets';
-import { ImpactDataDialog } from './impactData';
+import { ImpactDataDialog, impactData, loadImpactData, upsertImpactData } from './impactData';
 import type { EntitySources } from './missionSchema';
 import { getEntityDef } from '../entities/entityDefinitions';
 import EntityIcon from '../entities/EntityIcon';
-import { createImpactData, getImpactData, getMunitions } from './api';
+import { createImpactData, getMunitions } from './api';
 import { ATTACK_POINT_DEF_ID, defaultAttackPointValues } from './attackPoints';
 import { targets, loadTargets, findTarget, findComponent } from './targets';
-import type { ImpactDataDto, NewImpactData } from './impactData/types';
+import type { NewImpactData } from './impactData/types';
 import type { MunitionDto } from './munitions/types';
 import type { RootStore } from '../../../stores/RootStore';
 
-/** Impact data records as the server sends them (GET /api/impact-data);
- *  new ones are created through the ImpactDataDialog form and POSTed. */
-const impactDataList = observable.array<ImpactDataDto>([]);
+/** Impact data records come from `./impactData` (GET /api/impact-data);
+ *  fetched once on first use. */
 let impactDataLoaded = false;
 
 /** Munitions as the server sends them (GET /api/munitions); pick-only list. */
@@ -48,9 +47,7 @@ export function createMissionEntitySources(stores: RootStore): EntitySources {
   }
   if (!impactDataLoaded) {
     impactDataLoaded = true;
-    getImpactData()
-      .then((list) => impactDataList.replace(list))
-      .catch((err) => console.error('[missions] failed to load impact data:', err));
+    void loadImpactData();
   }
   if (!munitionsLoaded) {
     munitionsLoaded = true;
@@ -143,7 +140,7 @@ export function createMissionEntitySources(stores: RootStore): EntitySources {
      *  fill a whole new record which is POSTed (server assigns the id),
      *  appended to the list and selected. */
     impactData: {
-      options: () => impactDataList.map((d) => ({ id: d.id, label: `${d.name} · r ${d.radius} m` })),
+      options: () => impactData.map((d) => ({ id: d.id, label: `${d.name} · r ${d.radius} m` })),
       createDialog: ({ initialLabel, parentId, onClose }) =>
         createElement(ImpactDataDialog, {
           initialName: initialLabel,
@@ -151,7 +148,7 @@ export function createMissionEntitySources(stores: RootStore): EntitySources {
           munitionName: munitionList.find((m) => m.id === parentId)?.name ?? '',
           onSave: async (values) => {
             const saved = await createImpactData(values as NewImpactData);
-            impactDataList.push(saved);
+            upsertImpactData(saved);
             onClose({ id: saved.id, label: saved.name });
           },
           onCancel: () => onClose(null),
