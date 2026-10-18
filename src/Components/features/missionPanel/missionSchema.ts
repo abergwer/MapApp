@@ -23,7 +23,7 @@
 
 import type { ReactNode } from 'react';
 
-export type FieldType = 'text' | 'textarea' | 'number' | 'datetime' | 'select' | 'entity';
+export type FieldType = 'text' | 'textarea' | 'number' | 'time' | 'select' | 'entity';
 
 interface BaseField {
   /** Key inside `mission.values`. */

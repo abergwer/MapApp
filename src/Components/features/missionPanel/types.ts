@@ -8,8 +8,8 @@ export interface MissionSummary {
   updatedAt?: string;
 }
 
-/** Field values keyed by `FieldDef.key`. Empty string = not filled. */
-export type MissionValues = Record<string, string>;
+/** Field values keyed by `FieldDef.key`. Null means not filled. */
+export type MissionValues = Record<string, string | null>;
 
 /** Full mission (loaded when opening one for edit). */
 export interface Mission extends MissionSummary {
@@ -18,6 +18,6 @@ export interface Mission extends MissionSummary {
 
 /** Blank values for every schema field. */
 export const emptyValues = (): MissionValues =>
-  Object.fromEntries(MISSION_SCHEMA.map((f) => [f.key, '']));
+  Object.fromEntries(MISSION_SCHEMA.map((f) => [f.key, null]));
 
 export const nameOf = (values: MissionValues) => (values[NAME_KEY] ?? '').trim();

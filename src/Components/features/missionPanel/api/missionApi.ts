@@ -21,11 +21,11 @@ for (const f of MISSION_SCHEMA) {
 }
 
 /** An embedded entity object `target: { id }` collapses to `targetId` — the form only stores ids. */
-const fromWire = ({ id, createdAtUtc, updatedAtUtc, ...rest }: MissionDto): Mission => {
+export const fromWire = ({ id, createdAtUtc, updatedAtUtc, ...rest }: MissionDto): Mission => {
   const values: MissionValues = {};
   for (const [key, v] of Object.entries(rest)) {
-    if (v && typeof v === 'object') values[`${key}Id`] = String((v as { id?: unknown }).id ?? '');
-    else values[key] = String(v ?? '');
+    if (v && typeof v === 'object') values[`${key}Id`] = (v as { id?: unknown }).id == null ? null : String((v as { id?: unknown }).id);
+    else values[key] = v == null ? null : String(v);
   }
   return { id, createdAt: createdAtUtc, updatedAt: updatedAtUtc, name: nameOf(values), values };
 };
