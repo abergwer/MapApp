@@ -6,14 +6,14 @@ import type { MissionStore } from '../MissionStore';
 /**
  * Keeps the edit lock alive. Rendered by `MissionsPanel` when the store has a
  * lock; renders nothing.
- *  - renews every `renewIntervalMs` while a mission is in edit mode;
+ *  - renews every `renewIntervalMs` while a mission is locked (step 2 of create, or edit);
  *    a refused renew means someone else took it → edit mode is closed
  *  - no user input for `idleTimeoutMs` → edit mode is closed, releasing the
  *    lock so an absent user doesn't hold the mission
  */
 export const MissionLockGuard = observer(function MissionLockGuard({ store }: { store: MissionStore }) {
   const { renewIntervalMs, idleTimeoutMs } = store.lock!;
-  const editingId = store.view.mode === 'edit' ? store.view.id : null;
+  const editingId = store.lockedId;
 
   useEffect(() => {
     if (!editingId) return;
