@@ -31,10 +31,12 @@ interface BaseField {
   label: string;
   required?: boolean;
   placeholder?: string;
+  /** Asked in the first "New mission" step; every other field is filled in after Create. */
+  createStep?: boolean;
 }
 
 export type FieldDef =
-  | (BaseField & { type: 'text' | 'textarea' | 'number' | 'datetime' })
+  | (BaseField & { type: 'text' | 'textarea' | 'number' | 'time' })
   | (BaseField & { type: 'select'; options: readonly string[] })
   | (BaseField & { type: 'entity'; source: string; allowCreate?: boolean; dependsOn?: string });
 
@@ -78,15 +80,18 @@ export type EntitySources = Record<string, EntitySource>;
 export const NAME_KEY = 'name';
 
 export const MISSION_SCHEMA: readonly FieldDef[] = [
-  { key: NAME_KEY, type: 'text', label: 'Mission name', required: true },
+  { key: NAME_KEY, type: 'text', label: 'Mission name', required: true, createStep: true },
   { key: 'description', type: 'textarea', label: 'Description' },
-  {key : 'region', type: 'select', label: 'Region', options: ["Gaza", "Iran", "Syria"]},
+  {key : 'region', type: 'select', label: 'Region', options: ["Gaza", "Iran", "Syria"], createStep: true},
   { key: 'status', type: 'select', label: 'Status', options: ['Draft', 'Planned', 'Active', 'Completed'], required: true },
   { key: 'targetId', type: 'entity', label: 'Primary target', source: 'target', allowCreate: false },
   { key: 'componentId', type: 'entity', label: 'Component', source: 'component', dependsOn: 'targetId' },
   { key: 'attackPointId', type: 'entity', label: 'Attack point', source: 'attackPoint', dependsOn: 'componentId', allowCreate: true },
   {key: 'route', type: 'entity', label : 'Route', source: 'route', allowCreate: true},
-  { key: 'munitionId', type: 'entity', label: 'Munition', source: 'munition' },
+  { key: 'munitionId', type: 'entity', label: 'Munition', source: 'munition', required: true, createStep: true },
   { key: 'impactDataId', type: 'entity', label: 'Impact data', source: 'impactData', dependsOn : 'munitionId', allowCreate: true },
   { key: 'startAt', type: 'time', label: 'Start' },
 ];
+
+/** Fields asked in the "New mission" step (step 2 shows the whole schema). */
+export const CREATE_FIELDS: readonly FieldDef[] = MISSION_SCHEMA.filter((f) => f.createStep);

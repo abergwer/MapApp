@@ -20,16 +20,19 @@ interface MissionsPanelProps {
 }
 
 const Screen = observer(function Screen({ store }: { store: MissionStore }) {
-  if (store.view.mode === 'create') return <MissionForm key="create" mission={null} />;
+  if (store.view.mode === 'create') return <MissionForm key="create" mission={null} step="create" />;
+  if (store.view.mode === 'complete' && store.current)
+    return <MissionForm key={`complete-${store.current.id}`} mission={store.current} step="complete" />;
   if (store.view.mode === 'view' && store.current) return <MissionDetails key={store.current.id} mission={store.current} />;
-  if (store.view.mode === 'edit' && store.current) return <MissionForm key={store.current.id} mission={store.current} />;
+  if (store.view.mode === 'edit' && store.current) return <MissionForm key={store.current.id} mission={store.current} step="edit" />;
   return <MissionList />;
 });
 
 /**
  * MISSIONS view: a filterable list of mission cards (header fields only),
- * a read-only details screen per mission, and a create/edit form generated
- * from `missionSchema.ts`.
+ * a read-only details screen per mission, and a form generated from
+ * `missionSchema.ts`. Creating is two steps: the `createStep` fields →
+ * Create (POST) → the full form on the new mission → Save (PUT).
  */
 export const MissionsPanel = ({ entitySources = {}, store: injected }: MissionsPanelProps) => {
   const [own] = useState(() => injected ?? new MissionStore(missionApi));

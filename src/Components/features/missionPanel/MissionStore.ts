@@ -4,8 +4,14 @@ import type { MissionApi } from './api/missionApi';
 import type { MissionLock } from './lock/MissionLock';
 import { emptyValues, type Mission, type MissionValues } from './types';
 
-/** `view` = read-only details of one mission; `edit` = same mission, fields editable. */
-export type MissionView = { mode: 'list' } | { mode: 'create' } | { mode: 'view'; id: string } | { mode: 'edit'; id: string };
+/** `create` = step 1 (header fields); `complete` = step 2 right after Create, all fields on the new mission;
+ *  `view` = read-only details of one mission; `edit` = same mission, fields editable (pencil). */
+export type MissionView =
+  | { mode: 'list' }
+  | { mode: 'create' }
+  | { mode: 'complete'; id: string }
+  | { mode: 'view'; id: string }
+  | { mode: 'edit'; id: string };
 
 /** List orderings offered in the toolbar. */
 export type MissionSort = 'newest' | 'oldest' | 'name' | 'updatedAt';
@@ -119,11 +125,17 @@ export class MissionStore {
   /** Lock guard: editing ended for a reason the user should see (lock lost, idle). */
   cancelEdit(reason: string) {
     showMessage({ message: reason, severity: 'warning' });
-    this.stopEdit();
+    if (this.view.mode === 'complete') this.showList();
+    else this.stopEdit();
+  }
+
+  /** Mission id we hold the edit lock for (step 2 of create, or pencil edit); null otherwise. */
+  get lockedId(): string | null {
+    return this.view.mode === 'edit' || this.view.mode === 'complete' ? this.view.id : null;
   }
 
   private releaseLock() {
-    if (this.lock && this.view.mode === 'edit') void this.lock.release(this.view.id);
+    if (this.lock && this.lockedId) void this.lock.release(this.lockedId);
   }
 
   setDraft(values: MissionValues) {
@@ -139,8 +151,25 @@ export class MissionStore {
 
   async add(values: MissionValues): Promise<Mission> {
     const mission = await this.api.create(values);
-    runInAction(() => this.missions.push(mission));
+    runInAction(() => {
+      const i = this.missions.findIndex((m) => m.id === mission.id);
+      if (i >= 0) this.missions[i] = mission;
+      else this.missions.push(mission);
+    });
     return mission;
+  }
+
+  /** Step 1 "Create": POST the header fields, lock the new mission, then open it so the rest can be filled in (step 2). */
+  async create(values: MissionValues) {
+    const mission = await this.add(values);
+    // We just created it, so this normally succeeds; if not, fall back to read-only.
+    const locked = !this.lock || (await this.lock.acquire(mission.id));
+    if (!locked) showMessage({ message: 'This mission is being edited by someone else.', severity: 'warning' });
+    runInAction(() => {
+      this.view = locked ? { mode: 'complete', id: mission.id } : { mode: 'view', id: mission.id };
+      this.current = mission;
+      this.draft = locked ? { ...emptyValues(), ...mission.values } : null;
+    });
   }
 
   async update(id: string, values: MissionValues) {
@@ -158,5 +187,20 @@ export class MissionStore {
       this.missions = this.missions.filter((m) => m.id !== id);
       if (this.current?.id === id) this.showList();
     });
+  }
+
+  /** A create/update made elsewhere arrived over SignalR (our own writes echo back too — upsert makes that harmless). */
+  applyRemote(mission: Mission) {
+    const i = this.missions.findIndex((m) => m.id === mission.id);
+    if (i >= 0) this.missions[i] = mission;
+    else this.missions.push(mission);
+    // Refresh the open read-only view; never overwrite a draft being edited.
+    if (this.current?.id === mission.id && this.view.mode === 'view') this.current = mission;
+  }
+
+  /** A delete made elsewhere arrived over SignalR. */
+  applyRemoteDelete(id: string) {
+    this.missions = this.missions.filter((m) => m.id !== id);
+    if (this.current?.id === id) this.showList();
   }
 }
