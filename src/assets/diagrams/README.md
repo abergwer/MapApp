@@ -116,3 +116,19 @@ stores the mission and returns to the list.
 ![Mission create flow](08-mission-create-flow.png)
 
 Source: [08-mission-create-flow.mmd](08-mission-create-flow.mmd)
+
+---
+
+## 9. Network: REST + SignalR
+
+REST (`missionPanel/api/*.ts`, plain axios) is the only path for reads and
+writes and the source of truth. SignalR (`src/realtime/`, one hub) is a
+one-way "something changed" channel: each server message maps to one
+store action — missions are applied from the payload (`applyRemote`),
+the nested target tree is refetched (`loadTargets`), impact data is
+upserted. On reconnect everything is refetched, so missed pushes never
+leave the client stale.
+
+![Network: REST + SignalR](09-network-rest-signalr.png)
+
+Source: [09-network-rest-signalr.mmd](09-network-rest-signalr.mmd)
