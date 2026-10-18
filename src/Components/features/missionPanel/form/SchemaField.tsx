@@ -1,20 +1,8 @@
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import dayjs, { type Dayjs } from 'dayjs';
 import EntityField from './EntityField';
 import { MISSION_SCHEMA, type EntitySources, type FieldDef } from '../missionSchema';
 import * as styles from '../styles/mission.styles';
-
-/** ISO ⇄ Dayjs for the 24h DateTimePicker. */
-const isoToDay = (iso: string): Dayjs | null => {
-  if (!iso) return null;
-  const d = dayjs(iso);
-  return d.isValid() ? d : null;
-};
-const dayToIso = (d: Dayjs | null) => (d && d.isValid() ? d.toISOString() : '');
 
 export interface SchemaFieldProps {
   field: FieldDef;
@@ -72,28 +60,20 @@ export default function SchemaField({ field, value, error, onChange, entitySourc
       );
     }
 
-    case 'datetime':
+    case 'time':
       return (
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          <DateTimePicker
-            label={field.label}
-            value={isoToDay(value)}
-            onChange={(d) => onChange(dayToIso(d))}
-            ampm={false}
-            format="DD/MM/YYYY HH:mm"
-            minDateTime={dayjs('1000-01-01T00:00')}
-            maxDateTime={dayjs('9999-12-31T23:59')}
-            slotProps={{
-              textField: {
-                size: 'small',
-                required: field.required,
-                error: Boolean(error),
-                helperText: error,
-                sx: styles.field,
-              },
-            }}
-          />
-        </LocalizationProvider>
+        <TextField
+          {...common}
+          type="time"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          slotProps={{
+            htmlInput: {
+              'aria-label': field.label,
+              step: 1,
+            },
+          }}
+        />
       );
 
     case 'number':

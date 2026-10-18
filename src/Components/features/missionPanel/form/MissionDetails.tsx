@@ -37,9 +37,8 @@ const display = (field: FieldDef, values: MissionValues, sources: EntitySources)
         </>
       );
     }
-    case 'datetime': {
-      const d = dayjs(raw);
-      return <Box component="span" sx={styles.detailMono}>{d.isValid() ? formatDate(raw) : raw}</Box>;
+    case 'time': {
+      return <Box component="span" sx={styles.detailMono}>{raw}</Box>;
     }
     case 'number':
       return <Box component="span" sx={styles.detailMono}>{raw}</Box>;

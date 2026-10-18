@@ -6,7 +6,7 @@
  * in the feature needs to change.
  *
  * Field types:
- *  - text / textarea / number / datetime — plain inputs
+ *  - text / textarea / number / time — plain inputs
  *  - select — fixed list of `options`
  *  - entity — pick an entity from the app (targets, drawn shapes, …).
  *             `source` names the list; the host provides it via
@@ -88,5 +88,5 @@ export const MISSION_SCHEMA: readonly FieldDef[] = [
   {key: 'route', type: 'entity', label : 'Route', source: 'route', allowCreate: true},
   { key: 'munitionId', type: 'entity', label: 'Munition', source: 'munition' },
   { key: 'impactDataId', type: 'entity', label: 'Impact data', source: 'impactData', dependsOn : 'munitionId', allowCreate: true },
-  { key: 'startAt', type: 'datetime', label: 'Start' },
+  { key: 'startAt', type: 'time', label: 'Start' },
 ];
