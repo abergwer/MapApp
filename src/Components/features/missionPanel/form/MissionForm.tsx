@@ -54,6 +54,9 @@ function MissionFormImpl({ mission, step }: { mission: Mission | null; step: For
   const setValues = (update: (v: MissionValues) => MissionValues) => store.setDraft(update(values));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
+  // `lockWhenSet` fields are locked once the SAVED mission has a value (not
+  // the live draft — that would freeze the field at the first keystroke).
+  const locked = (f: FieldDef) => Boolean(f.readOnly) || Boolean(f.lockWhenSet && mission?.values[f.key]);
   // Editing an existing mission goes back to its read-only view; create/complete go back to the list.
   const close = () => (step === 'edit' ? store.stopEdit() : store.showList());
 
@@ -110,6 +113,7 @@ function MissionFormImpl({ mission, step }: { mission: Mission | null; step: For
             value={values[field.key] ?? ''}
             error={errors[field.key]}
             entitySources={entitySources}
+            readOnly={locked(field)}
             parentId={field.type === 'entity' && field.dependsOn ? values[field.dependsOn] || undefined : undefined}
             onChange={(next) => {
               setValues((v) => clearDependents({ ...v, [field.key]: next }, field.key));

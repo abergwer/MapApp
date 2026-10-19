@@ -19,6 +19,8 @@ export interface EntityFieldProps {
   error?: string;
   source: EntitySource | undefined;
   allowCreate?: boolean;
+  /** Value is filled in by the app (e.g. server-calculated) — shown, never edited. */
+  readOnly?: boolean;
   /** Value of the field this one depends on ('' = not chosen yet). */
   parentId?: string;
   /** Helper text shown while waiting for the parent field. */
@@ -41,13 +43,16 @@ function EntityFieldImpl({
   error,
   source,
   allowCreate,
+  readOnly,
   parentId,
   disabledHint,
   onChange,
 }: EntityFieldProps) {
   const disabled = Boolean(disabledHint) && !parentId;
+  // Read-only fields stay enabled-looking data sources: options still resolve
+  // so the selected value shows its label, but the input never opens.
   const options: EntityRow[] = disabled ? [] : source?.options(parentId) ?? [];
-  const canCreate = Boolean(allowCreate && (source?.createDialog || source?.add));
+  const canCreate = Boolean(!readOnly && allowCreate && (source?.createDialog || source?.add));
   // Label typed before `Add "…"` while the create dialog is open; null = closed.
   const [creating, setCreating] = useState<string | null>(null);
   // Label of an async `add` still waiting on the user; null = none.
@@ -88,7 +93,7 @@ function EntityFieldImpl({
     <>
       <Autocomplete
         size="small"
-        disabled={disabled}
+        disabled={disabled || readOnly}
         options={options}
         value={selected}
         // The `Add "…"` row is only a label for the dropdown; once picked the
@@ -127,7 +132,7 @@ function EntityFieldImpl({
             label={label}
             required={required}
             error={Boolean(error)}
-            helperText={error ?? (disabled ? disabledHint : undefined)}
+            helperText={error ?? (disabled ? disabledHint : readOnly ? 'Calculated automatically' : undefined)}
             sx={styles.field}
           />
         )}

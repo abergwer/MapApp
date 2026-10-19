@@ -33,6 +33,12 @@ interface BaseField {
   placeholder?: string;
   /** Asked in the first "New mission" step; every other field is filled in after Create. */
   createStep?: boolean;
+  /** Shown but never edited by the user — the value is filled in by the app
+   *  (e.g. calculated on the server). */
+  readOnly?: boolean;
+  /** Becomes read-only once the mission was saved with a value (so it is
+   *  editable while creating, locked when editing). */
+  lockWhenSet?: boolean;
 }
 
 export type FieldDef =
@@ -80,9 +86,9 @@ export type EntitySources = Record<string, EntitySource>;
 export const NAME_KEY = 'name';
 
 export const MISSION_SCHEMA: readonly FieldDef[] = [
-  { key: NAME_KEY, type: 'text', label: 'Mission name', required: true, createStep: true },
+  { key: NAME_KEY, type: 'text', label: 'Mission name', required: true, createStep: true, lockWhenSet: true },
   { key: 'description', type: 'textarea', label: 'Description' },
-  {key : 'region', type: 'select', label: 'Region', options: ["Gaza", "Iran", "Syria"], createStep: true},
+  {key : 'region', type: 'select', label: 'Region', options: ["Gaza", "Iran", "Syria"], createStep: true, lockWhenSet: true},
   { key: 'status', type: 'select', label: 'Status', options: ['Draft', 'Planned', 'Active', 'Completed'], required: true },
   { key: 'targetId', type: 'entity', label: 'Primary target', source: 'target', allowCreate: false },
   { key: 'componentId', type: 'entity', label: 'Component', source: 'component', dependsOn: 'targetId' },

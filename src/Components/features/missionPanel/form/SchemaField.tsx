@@ -12,16 +12,21 @@ export interface SchemaFieldProps {
   entitySources: EntitySources;
   /** For `dependsOn` entity fields: current value of the parent field. */
   parentId?: string;
+  /** Overrides `field.readOnly` — lets the form lock fields conditionally
+   *  (e.g. `lockWhenSet` fields once the mission is saved). */
+  readOnly?: boolean;
 }
 
 /** Renders one schema field (`FieldDef`) as the matching MUI input. Used by
  *  the mission form and by any secondary schema form (e.g. impact data). */
-export default function SchemaField({ field, value, error, onChange, entitySources, parentId }: SchemaFieldProps) {
+export default function SchemaField({ field, value, error, onChange, entitySources, parentId, readOnly }: SchemaFieldProps) {
+  const isReadOnly = readOnly ?? field.readOnly ?? false;
   const common = {
     size: 'small' as const,
     label: field.label,
     required: field.required,
     placeholder: field.placeholder,
+    disabled: isReadOnly,
     error: Boolean(error),
     helperText: error,
     sx: styles.field,
@@ -53,6 +58,7 @@ export default function SchemaField({ field, value, error, onChange, entitySourc
           error={error}
           source={entitySources[field.source]}
           allowCreate={field.allowCreate}
+          readOnly={isReadOnly}
           parentId={parentId}
           disabledHint={parentLabel ? `Choose ${parentLabel.toLowerCase()} first` : undefined}
           onChange={onChange}
