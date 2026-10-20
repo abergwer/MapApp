@@ -54,7 +54,7 @@ describe('EntityService', () => {
     expect(onSave.mock.calls[1][1]).toBe(false);
 
     service.remove('a');
-    expect(onDelete).toHaveBeenCalledWith('a');
+    expect(onDelete).toHaveBeenCalledWith('a', expect.objectContaining({ id: 'a', name: 'Renamed again' }));
 
     // A never-saved draft deletes locally without notifying the host.
     service.create(makeEntityPoint('draft'));
@@ -138,7 +138,7 @@ describe('server-assigned ids', () => {
 
     ackSave({ ...shape, id: 'server-9' });
     await flush();
-    expect(onDelete).toHaveBeenCalledWith('server-9');
+    expect(onDelete).toHaveBeenCalledWith('server-9', expect.objectContaining({ id: 'temp' }));
   });
 
   it('keeps the shape as an unsaved draft when the ack fails or returns nothing', async () => {
