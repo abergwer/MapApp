@@ -246,7 +246,6 @@ export const defRow = (active: boolean): SxProps<Theme> => ({
   mb: 0.5,
   borderRadius: 1.5,
   bgcolor: palette.panel,
-  border: `1px solid ${active ? palette.accent : palette.border}`,
   ...(active && {
     boxShadow: `0 0 8px color-mix(in srgb, ${palette.accent} 40%, transparent)`,
   }),
