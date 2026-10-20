@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material/styles';
-import { palette, fonts } from '../../../layout/styles/tokens';
+import { palette, fonts, glass, glassSurface } from '../../../layout/styles/tokens';
 
 /** Styles for the entities feature (existing-entities list + create grid). */
 
@@ -151,10 +151,9 @@ export const editorCard = (x: number, y: number): SxProps<Theme> => ({
   maxHeight: 'calc(100% - 24px)',
   display: 'flex',
   flexDirection: 'column',
-  borderRadius: 2,
-  bgcolor: palette.panel,
-  border: `1px solid ${palette.borderBright}`,
-  boxShadow: '0 10px 32px rgba(0, 0, 0, 0.45)',
+  borderRadius: 2.5,
+  ...glassSurface,
+  boxShadow: glass.shadow,
   overflow: 'hidden',
 });
 
@@ -166,7 +165,8 @@ export const editorHeader: SxProps<Theme> = {
   py: 0.75,
   cursor: 'move',
   userSelect: 'none',
-  borderBottom: `1px solid ${palette.border}`,
+  bgcolor: glass.bgHeader,
+  borderBottom: `1px solid ${glass.line}`,
 };
 
 export const editorTitle: SxProps<Theme> = {

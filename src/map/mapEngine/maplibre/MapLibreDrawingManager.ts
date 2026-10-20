@@ -296,6 +296,40 @@ export class MapLibreDrawingManager {
     this.draw.delete(id);
   }
 
+  /**
+   * Resume drawing the edited line from one of its endpoints. MapboxDraw's
+   * `draw_line_string` accepts `{ featureId, from }` and extends the
+   * existing feature live; it reports the finished line via `draw.create`
+   * (not `draw.update`), so we forward that to the edit round-trip and then
+   * drop back into `direct_select`.
+   */
+  continueLine(id: string, from: 'start' | 'end'): void {
+    const feature = this.draw.get(id);
+    if (feature?.geometry.type !== 'LineString') return;
+    const coords = feature.geometry.coordinates;
+    // `from` must equal the endpoint exactly, so read it off the native feature.
+    const anchor = from === 'end' ? coords[coords.length - 1] : coords[0];
+
+    // Drawing clicks would otherwise count as background clicks and deselect.
+    this.map.off('click', this.onBackgroundClick);
+    this.draw.changeMode('draw_line_string', { featureId: id, from: anchor });
+
+    const once = (e: any) => {
+      this.map.off('draw.create', once);
+      this.currentCreateHandler = undefined;
+      const shape = featureToShape(e.features?.[0]);
+      if (shape) this.onShapeEdited?.(shape);
+      // Defer past MapboxDraw's own post-create transition to simple_select.
+      requestAnimationFrame(() => {
+        if (this.draw.get(id)) this.draw.changeMode('direct_select', { featureId: id });
+        this.map.on('click', this.onBackgroundClick);
+      });
+    };
+    // Tracked so `cancelDrawing` detaches it like any other pending create.
+    this.currentCreateHandler = once;
+    this.map.on('draw.create', once);
+  }
+
   // ── Round-trip callbacks ─────────────────────────────────────────────
 
   setOnShapeEdited(callback: (shape: MapShape) => void): void {

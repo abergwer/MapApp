@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Box from '@mui/material/Box';
+import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import MenuItem from '@mui/material/MenuItem';
 import Paper from '@mui/material/Paper';
@@ -167,9 +168,12 @@ function EntityEditWindowImpl() {
     window.addEventListener('pointerup', onUp);
   };
 
-  /** Vertex list editor for line / polygon. */
-  const renderVertices = (s: Extract<MapShape, { kind: 'line' | 'polygon' }>) => {
+  /** Vertex list editor for line / polygon / route. */
+  const renderVertices = (s: Extract<MapShape, { positions: [number, number][] }>) => {
     const min = s.kind === 'polygon' ? 3 : 2;
+    /** Resume drawing from the chosen end: the engine extends the edited
+     *  route live and round-trips the result through `onShapeEdited`. */
+    const continueFrom = (from: 'start' | 'end') => engine?.continueLine?.(s.id, from);
     const setAt = (i: number, p: [number, number]) =>
       commit({ ...s, positions: s.positions.map((v, j) => (j === i ? p : v)) });
     const addAfter = (i: number) => {
@@ -183,6 +187,16 @@ function EntityEditWindowImpl() {
 
     return (
       <>
+        {s.kind !== 'polygon' && engine?.continueLine && (
+          <Box sx={styles.editorRow}>
+            <Button size="small" onClick={() => continueFrom('start')} aria-label="Continue from start">
+              Continue from start
+            </Button>
+            <Button size="small" onClick={() => continueFrom('end')} aria-label="Continue from end">
+              Continue from end
+            </Button>
+          </Box>
+        )}
         {s.positions.map((p, i) => (
           <Box key={i} sx={styles.editorRow}>
             <Typography sx={styles.editorRowLabel}>{i + 1}</Typography>
@@ -248,6 +262,9 @@ function EntityEditWindowImpl() {
         );
       case 'line':
       case 'polygon':
+      case 'curvedRoute':
+      case 'exitCurveRoute':
+      case 'entryCurveRoute':
         return renderVertices(shape);
     }
   };

@@ -177,6 +177,10 @@ export class LeafletEngine implements MapEngine {
     this.drawing?.endEdit(id);
   }
 
+  continueLine(id: string, from: 'start' | 'end'): void {
+    this.drawing?.continueLine(id, from);
+  }
+
   setOnShapeEdited(callback: (shape: MapShape) => void): void {
     this.drawing?.setOnShapeEdited(callback);
   }

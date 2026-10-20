@@ -151,6 +151,15 @@ export interface MapEngine {
   endEdit?(id: string): void;
 
   /**
+   * Resume drawing the line/route currently in edit mode (`beginEdit`) from
+   * its first or last vertex — the rubber band extends the existing
+   * geometry live. Completion round-trips through `setOnShapeEdited` and
+   * edit mode resumes. Optional: engines without a draw pipeline can omit it
+   * and the UI hides the affordance.
+   */
+  continueLine?(id: string, from: 'start' | 'end'): void;
+
+  /**
    * Swap the basemap tile source at runtime. `url` is an XYZ tile template
    * (e.g. `https://.../{z}/{x}/{y}.png`). Optional — engines that don't
    * support it can omit the method and the UI hides the affordance.

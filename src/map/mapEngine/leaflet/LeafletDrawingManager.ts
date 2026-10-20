@@ -280,6 +280,48 @@ export class LeafletDrawingManager {
     this.sweepGeomanTempLayers();
   }
 
+  /**
+   * Resume drawing the edited line from one of its endpoints. Geoman has no
+   * public "continue" API, but its Line draw mode keeps a working polyline
+   * (`_layer`) plus one vertex marker per point; seeding those with the
+   * existing route before the first click makes the hint line extend the
+   * route live, exactly like a fresh draw. The editable copy is dropped
+   * meanwhile (the temp line renders the route), and `pm:create` hands back
+   * the full polyline, which round-trips through `onShapeEdited` and
+   * re-enters edit mode.
+   */
+  continueLine(id: string, from: 'start' | 'end'): void {
+    const layer = this.findLayerById(id);
+    if (!(layer instanceof L.Polyline) || layer instanceof L.Polygon) return;
+    const kind = (layer as TaggedLayer)._shapeKind;
+    if (!kind) return;
+    // Geoman always appends at the tail, so draw a "start" continuation on
+    // the reversed route and flip the result back afterwards.
+    const latlngs = [...(layer.getLatLngs() as L.LatLng[])];
+    if (from === 'start') latlngs.reverse();
+
+    this.cancelDrawing();
+    this.endEdit(id);
+    this.map.pm.enableDraw('Line', { hideMiddleMarkers: true });
+
+    const draw = (this.map.pm.Draw as any).Line;
+    for (const ll of latlngs) {
+      draw._layer.addLatLng(ll);
+      draw._createMarker(ll);
+    }
+    draw._layer._latlngInfo = latlngs.map((latlng) => ({ latlng }));
+    draw._setHintLineAfterNewVertex(latlngs[latlngs.length - 1]);
+    draw._setTooltipText();
+
+    this.onceCreate((created) => {
+      const positions = latLngsToCoords(created as L.Polyline);
+      if (from === 'start') positions.reverse();
+      const shape = { id, kind, positions } as MapShape;
+      this.onShapeEdited?.(shape);
+      this.beginEdit(shape);
+    });
+  }
+
   /** Remove every leftover Geoman temp layer (vertex/edit markers). */
   private sweepGeomanTempLayers(): void {
     this.map.eachLayer((layer) => {
