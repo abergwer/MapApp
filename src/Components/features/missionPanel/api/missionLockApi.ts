@@ -1,4 +1,5 @@
 import { api } from './client'
+import  'crypto'
 
 /**
  * Edit lock on one mission. Non-200 is an answer ("someone else holds it"),
