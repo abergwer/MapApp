@@ -1,9 +1,6 @@
 /**
- * Wire-format types for live telemetry shared with the demo server
- * (`server/server.js`). All coordinates are GeoJSON-compatible [lng, lat].
- *
- * Mission planning types (targets, components, attack points, impact data,
- * munitions) live in `src/Components/features/missionPanel`.
+ * Wire-format types shared with the demo server (`server/server.js`).
+ * All coordinates are GeoJSON-compatible [lng, lat].
  */
 
 /** Airborne target (drone or aircraft). */
@@ -27,4 +24,12 @@ export interface Missile {
   roll: number
   speedKts: number
   altitudeFt: number
+}
+
+/** Static intel for one target, fetched on demand via `GET /api/targets/:id`. */
+export interface TargetDetails {
+  id: string
+  callsign: string
+  operator: string
+  status: string
 }
