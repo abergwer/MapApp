@@ -3,6 +3,7 @@ import Paper from '@mui/material/Paper';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
 import { useStores } from '../stores/StoreContext';
+import { glassSurface } from '../Components/layout/styles/tokens';
 import { LOS_COLORS } from './constants';
 
 const WIDTH = 360;
@@ -84,8 +85,12 @@ function LOSProfileChartImpl() {
 
   return (
     <Paper
-      elevation={4}
-      sx={{ p: 1, bgcolor: 'rgba(15, 20, 32, 0.85)', borderRadius: 2 }}
+      elevation={0}
+      sx={{
+        p: 1,
+        borderRadius: 2.5,
+        ...glassSurface,
+      }}
     >
       <Stack spacing={0.5}>
         <Typography variant="caption" sx={{ color: 'grey.300', px: 0.5 }}>

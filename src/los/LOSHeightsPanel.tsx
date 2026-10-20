@@ -1,19 +1,15 @@
-import { useState } from 'react';
 import { observer } from 'mobx-react-lite';
-import Button from '@mui/material/Button';
-import Popover from '@mui/material/Popover';
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
 import TextField from '@mui/material/TextField';
 import InputAdornment from '@mui/material/InputAdornment';
-import Tooltip from '@mui/material/Tooltip';
-import TuneIcon from '@mui/icons-material/Tune';
+import { useTranslation } from 'react-i18next';
 import { useStores } from '../stores/StoreContext';
+import * as styles from './los.styles';
 
-/** LOS settings popover: observer/target heights above ground. */
-function LOSHeightsPanelImpl() {
+/** LOS settings section: observer/target heights above ground. */
+function LOSHeightsFieldsImpl() {
+  const { t } = useTranslation();
   const { losStore } = useStores();
-  const [anchor, setAnchor] = useState<HTMLElement | null>(null);
 
   const heightField = (
     label: string,
@@ -24,7 +20,9 @@ function LOSHeightsPanelImpl() {
       label={label}
       type="number"
       size="small"
+      fullWidth
       value={value}
+      sx={styles.heightField}
       onChange={(e) => {
         const v = Number(e.target.value);
         if (Number.isFinite(v) && v >= 0) onChange(v);
@@ -37,32 +35,12 @@ function LOSHeightsPanelImpl() {
   );
 
   return (
-    <>
-      <Tooltip title="LOS settings (heights)">
-        <Button
-          color="inherit"
-          onClick={(e) => setAnchor(e.currentTarget)}
-          sx={{ minWidth: 0, px: 1 }}
-        >
-          <TuneIcon fontSize="small" />
-        </Button>
-      </Tooltip>
-
-      <Popover
-        open={anchor !== null}
-        anchorEl={anchor}
-        onClose={() => setAnchor(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
-      >
-        <Stack spacing={2} sx={{ p: 2, width: 260 }}>
-          <Typography variant="subtitle2">LOS — heights above ground</Typography>
-          {heightField('Observer', losStore.observerHeightM, losStore.setObserverHeight)}
-          {heightField('Target', losStore.targetHeightM, losStore.setTargetHeight)}
-        </Stack>
-      </Popover>
-    </>
+    <Stack direction="row" spacing={1}>
+      {heightField(t('LOS.panel.observer'), losStore.observerHeightM, losStore.setObserverHeight)}
+      {heightField(t('LOS.panel.target'), losStore.targetHeightM, losStore.setTargetHeight)}
+    </Stack>
   );
 }
 
-const LOSHeightsPanel = observer(LOSHeightsPanelImpl);
-export default LOSHeightsPanel;
+const LOSHeightsFields = observer(LOSHeightsFieldsImpl);
+export default LOSHeightsFields;

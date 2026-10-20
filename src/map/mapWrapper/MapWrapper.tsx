@@ -17,7 +17,6 @@ import MapControls from '../ui/MapControls';
 import EntityEditWindow from '../../Components/features/entities/EntityEditWindow';
 import * as mapStyles from '../ui/styles/map.styles';
 import type { MapShape } from '../../types/shapes';
-import LOSControls from '../../los/LOSControls';
 import LOSProfileChart from '../../los/LOSProfileChart';
 
 const defaultOptions = {
@@ -241,12 +240,6 @@ function MapWrapperImpl({
             <Paper sx={mapStyles.toolCluster}>
               <MapStyleBar />
             </Paper>
-            <Paper sx={mapStyles.toolCluster}>
-             <LOSControls />
-            </Paper>
-            <Paper sx={mapStyles.toolCluster}>
-           <LOSProfileChart />
-            </Paper>
           </Box>
 
           {uiVisibilityStore.brightnessCardVisible && (
@@ -276,6 +269,12 @@ function MapWrapperImpl({
 
         {/* Live coordinate readout: last map click, else the view center. */}
         <CoordinateChip />
+
+        {/* LOS elevation profile (bottom-center, above the coordinate chip);
+            renders nothing until a line-of-sight result is ready. */}
+        <Box sx={mapStyles.losChartWrap}>
+          <LOSProfileChart />
+        </Box>
 
         {/* Floating inspector for the selected entity (name / attributes). */}
         <EntityEditWindow />

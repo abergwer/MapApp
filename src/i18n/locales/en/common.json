@@ -39,6 +39,18 @@
   },
   "LOS": {
     "label": "Line of Sight",
+    "panel": {
+      "subtitle": "Terrain visibility analysis",
+      "lineTitle": "Line of sight",
+      "lineDesc": "Observer to target along a terrain profile",
+      "areaTitle": "Viewshed",
+      "areaDesc": "Visible ground within a drawn area",
+      "heights": "Heights above ground",
+      "observer": "Observer",
+      "target": "Target",
+      "escHint": "to cancel placement",
+      "status": { "idle": "Idle", "placing": "Placing", "computing": "Computing", "ready": "Ready", "error": "Error" }
+    },
     "startPoint": "Start Point",
     "endPoint": "End Point",
     "clear": "Clear",

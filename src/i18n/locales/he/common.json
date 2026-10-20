@@ -39,6 +39,18 @@
     },
     "LOS": {
         "label": "קו ראייה",
+        "panel": {
+            "subtitle": "ניתוח נראות טופוגרפי",
+            "lineTitle": "קו ראייה",
+            "lineDesc": "מהצופה למטרה לאורך פרופיל הקרקע",
+            "areaTitle": "שטח נצפה",
+            "areaDesc": "קרקע נראית בתוך שטח משורטט",
+            "heights": "גבהים מעל פני הקרקע",
+            "observer": "צופה",
+            "target": "מטרה",
+            "escHint": "לביטול המיקום",
+            "status": { "idle": "ממתין", "placing": "ממקם", "computing": "מחשב", "ready": "מוכן", "error": "שגיאה" }
+        },
         "startPoint": "נקודת התחלה",
         "endPoint": "נקודת סיום",
         "clear": "נקה",

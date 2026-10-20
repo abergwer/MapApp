@@ -31,6 +31,7 @@ import MiniMap from './Components/features/mini-map/MiniMap'
 import MiniVideo, { VideoMuteButton } from './Components/features/mini-video/MiniVideo'
 import { useStores } from './stores/StoreContext'
 import MessageDialog from './Components/features/MessageDialog'
+import LOSControls from './los/LOSControls'
 import type { WorkspacePanelId } from './stores/UIVisibilityStore'
 import { LiveDataSocketProvider, liveDataStore, useLiveShapes } from './bridge'
 import { NetworkProvider } from './network'
@@ -83,6 +84,7 @@ function App() {
       node: <TopBarBrand title="Map Engine Orchestrator" subtitle="INTEGRATED OPERATIONS SYSTEM" />,
     },
     { id: 'status', node: <SystemStatusChip /> },
+    { id: 'los', node: <LOSControls /> },
     { id: 'toolbar-toggle', node: <ToolbarToggleButton /> },
     { id: 'theme-toggle', node: <ThemeToggleButton /> },
     { id: 'clock', node: <TopBarClock /> },

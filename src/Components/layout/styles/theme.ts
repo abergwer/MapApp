@@ -48,7 +48,7 @@ export function buildTheme(name: ThemeName): Theme {
         styleOverrides: {
           root: {
             backgroundImage: 'none',
-            border: `1px solid ${p.border}`,
+            border: `1px solid ${alpha(p.textPrimary, 0.1)}`,
           },
         },
       },
@@ -96,16 +96,26 @@ export function buildTheme(name: ThemeName): Theme {
       MuiTooltip: {
         styleOverrides: {
           tooltip: {
-            backgroundColor: p.panelHeader,
+            backgroundColor: alpha(p.panelHeader, 0.85),
+            backdropFilter: 'blur(10px) saturate(140%)',
             color: p.textPrimary,
-            border: `1px solid ${p.border}`,
+            border: `1px solid ${alpha(p.textPrimary, 0.14)}`,
+            borderRadius: 8,
             fontSize: 11,
           },
+          arrow: { color: alpha(p.panelHeader, 0.85) },
         },
       },
       MuiMenu: {
         styleOverrides: {
-          paper: { minWidth: 200, backgroundColor: p.panel },
+          paper: {
+            minWidth: 200,
+            borderRadius: 12,
+            backgroundColor: alpha(p.panel, 0.82),
+            backdropFilter: 'blur(18px) saturate(160%)',
+            border: `1px solid ${alpha(p.textPrimary, 0.16)}`,
+            boxShadow: '0 24px 60px -20px rgba(0, 0, 0, 0.55)',
+          },
         },
       },
       MuiListItemIcon: {

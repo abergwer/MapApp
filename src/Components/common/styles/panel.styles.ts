@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material/styles';
-import { palette, microLabel } from '../../layout/styles/tokens';
+import { palette, microLabel, glass } from '../../layout/styles/tokens';
 
 /**
  * Shared building blocks reused by every feature: the bordered side-rail
@@ -14,6 +14,9 @@ export const panelRoot: SxProps<Theme> = {
   // Fill the dock grid cell so every section uses all the space it has.
   height: 1,
   minHeight: 0,
+  borderRadius: 2,
+  bgcolor: `color-mix(in srgb, ${palette.textPrimary} 3%, transparent)`,
+  border: `1px solid ${glass.line}`,
 };
 
 export const panelHeader: SxProps<Theme> = {
@@ -23,8 +26,8 @@ export const panelHeader: SxProps<Theme> = {
   gap: 1,
   px: 1.5,
   py: 0.75,
-  bgcolor: palette.panelHeader,
-  borderBottom: `1px solid ${palette.border}`,
+  bgcolor: glass.bgHeader,
+  borderBottom: `1px solid ${glass.line}`,
 };
 
 export const panelTitle: SxProps<Theme> = {
@@ -45,12 +48,12 @@ export const panelBody: SxProps<Theme> = {
 /** Icon button inside a tool strip; highlighted while its tool is active.
  *  `color-mix` instead of MUI `alpha()` because the token is a CSS var. */
 export const toolButton = (active: boolean): SxProps<Theme> => ({
-  borderRadius: 0.75,
+  borderRadius: 1.5,
   p: 0.75,
   ...(active && {
     color: palette.accentBright,
-    bgcolor: `color-mix(in srgb, ${palette.accent} 22%, transparent)`,
-    '&:hover': { bgcolor: `color-mix(in srgb, ${palette.accent} 30%, transparent)` },
+    bgcolor: glass.tint(22),
+    '&:hover': { bgcolor: glass.tint(30) },
   }),
 });
 
@@ -60,15 +63,17 @@ export const sectionCard: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
   overflow: 'hidden',
-  borderRadius: 1.5,
+  borderRadius: 2,
   mb: 1.5,
+  bgcolor: `color-mix(in srgb, ${palette.textPrimary} 3%, transparent)`,
+  border: `1px solid ${glass.line}`,
 };
 
 export const sectionHeader: SxProps<Theme> = {
   px: 1.5,
   py: 0.75,
-  bgcolor: palette.panelHeader,
-  borderBottom: `1px solid ${palette.border}`,
+  bgcolor: glass.bgHeader,
+  borderBottom: `1px solid ${glass.line}`,
   ...microLabel,
   fontSize: 10,
   // Reference design: section titles glow in the accent color.
