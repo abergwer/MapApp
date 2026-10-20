@@ -5,16 +5,41 @@
  * design tokens in src/styles/system-ui/tokens.ts (CSS can't import TS).
  */
 .measure-label {
-  background: rgba(12, 17, 25, 0.92);
-  color: #d9e2ee;
-  border: 1px solid #1d2938;
+  background: color-mix(in srgb, var(--ma-panel) 94%, transparent);
+  color: var(--ma-textPrimary);
+  border: 1px solid color-mix(in srgb, var(--ma-textPrimary) 18%, transparent);
   padding: 4px 8px;
-  border-radius: 4px;
+  border-radius: 999px;
   font: 11px/1.2 Consolas, monospace;
   white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 30px -14px rgba(0, 0, 0, 0.5);
   width: auto !important;
   height: auto !important;
   transform: translate(-50%, -50%);
   pointer-events: none;
+}
+
+/*
+ * Native MapLibre chrome. The app renders its own compass + zoom stack
+ * (MapControls), so the built-in navigation control is hidden; the scale
+ * bar is restyled to match the glass overlays.
+ */
+.maplibregl-ctrl-top-right .maplibregl-ctrl-group,
+.maplibregl-ctrl-top-left .maplibregl-ctrl-group {
+  display: none;
+}
+
+.maplibregl-ctrl-scale {
+  background: color-mix(in srgb, var(--ma-panel) 94%, transparent) !important;
+  color: var(--ma-textPrimary) !important;
+  border: 1px solid color-mix(in srgb, var(--ma-textPrimary) 18%, transparent) !important;
+  border-top: none !important;
+  border-radius: 0 0 8px 8px;
+  font: 10px/1.6 Consolas, monospace;
+  padding: 0 6px;
+}
+
+.maplibregl-ctrl-bottom-right,
+.maplibregl-ctrl-bottom-left {
+  margin: 0 12px 10px;
 }

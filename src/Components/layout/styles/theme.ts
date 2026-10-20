@@ -96,8 +96,7 @@ export function buildTheme(name: ThemeName): Theme {
       MuiTooltip: {
         styleOverrides: {
           tooltip: {
-            backgroundColor: alpha(p.panelHeader, 0.85),
-            backdropFilter: 'blur(10px) saturate(140%)',
+            backgroundColor: alpha(p.panelHeader, 0.95),
             color: p.textPrimary,
             border: `1px solid ${alpha(p.textPrimary, 0.14)}`,
             borderRadius: 8,
@@ -111,8 +110,7 @@ export function buildTheme(name: ThemeName): Theme {
           paper: {
             minWidth: 200,
             borderRadius: 12,
-            backgroundColor: alpha(p.panel, 0.82),
-            backdropFilter: 'blur(18px) saturate(160%)',
+            backgroundColor: alpha(p.panel, 0.95),
             border: `1px solid ${alpha(p.textPrimary, 0.16)}`,
             boxShadow: '0 24px 60px -20px rgba(0, 0, 0, 0.55)',
           },

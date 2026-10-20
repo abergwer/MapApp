@@ -126,18 +126,16 @@ export const microLabel = {
  */
 export const glass = {
   /** Translucent fill for bars/rails that sit over the app backdrop. */
-  bg: `color-mix(in srgb, ${palette.panel} 72%, transparent)`,
+  bg: `color-mix(in srgb, ${palette.panel} 92%, transparent)`,
   /** Denser fill for floating overlays that sit over the map. */
-  bgStrong: `color-mix(in srgb, ${palette.panel} 82%, transparent)`,
+  bgStrong: `color-mix(in srgb, ${palette.panel} 94%, transparent)`,
   /** Extra-sheer fill for overlays that should let the map show through. */
-  bgSheer: `color-mix(in srgb, ${palette.panel} 30%, transparent)`,
+  bgSheer: `color-mix(in srgb, ${palette.panel} 55%, transparent)`,
   /** Slightly darker header band inside a glass surface. */
-  bgHeader: `color-mix(in srgb, ${palette.panelHeader} 55%, transparent)`,
+  bgHeader: `color-mix(in srgb, ${palette.panelHeader} 75%, transparent)`,
   /** Hairline + brighter hairline (borders, dividers, inner highlights). */
   line: `color-mix(in srgb, ${palette.textPrimary} 10%, transparent)`,
   lineBright: `color-mix(in srgb, ${palette.textPrimary} 18%, transparent)`,
-  blur: 'blur(18px) saturate(160%)',
-  blurSoft: 'blur(10px) saturate(140%)',
   shadow: '0 24px 60px -20px rgba(0, 0, 0, 0.55)',
   shadowSoft: '0 10px 30px -14px rgba(0, 0, 0, 0.5)',
   /** Accent tint at a given strength (0–100). */
@@ -147,8 +145,6 @@ export const glass = {
 /** sx fragment: a floating glass card (tool clusters, chips, popovers). */
 export const glassSurface = {
   bgcolor: glass.bgStrong,
-  backdropFilter: glass.blur,
-  WebkitBackdropFilter: glass.blur,
   border: `1px solid ${glass.lineBright}`,
   boxShadow: `${glass.shadowSoft}, 0 1px 0 ${glass.lineBright} inset`,
 } as const;
@@ -156,8 +152,6 @@ export const glassSurface = {
 /** sx fragment: a structural glass bar/rail (top bar, docks, status bar). */
 export const glassBar = {
   bgcolor: glass.bg,
-  backdropFilter: glass.blurSoft,
-  WebkitBackdropFilter: glass.blurSoft,
 } as const;
 
 export type Rgba = [number, number, number, number];

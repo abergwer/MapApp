@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material/styles';
-import { palette, fonts, microLabel } from './tokens';
+import { palette, fonts, microLabel, glass, glassBar } from './tokens';
 
 /**
  * App-shell layout: full-viewport command-dashboard grid with a top bar,
@@ -39,6 +39,12 @@ export const appGrid = (
     "left   map right"
   `,
     bgcolor: 'background.default',
+    // Ambient accent glows behind the glass surfaces so the blur has
+    // something to pick up (otherwise frosted panels read as flat).
+    backgroundImage: `
+      radial-gradient(900px 500px at 8% -10%, ${glass.tint(22)}, transparent 70%),
+      radial-gradient(700px 420px at 100% 110%, ${glass.tint(14)}, transparent 70%)
+    `,
     overflow: 'hidden',
   };
 };
@@ -67,9 +73,10 @@ export const collapsedRail = (side: 'left' | 'right'): SxProps<Theme> => ({
   alignItems: 'center',
   gap: 0.75,
   pt: 1,
+  ...glassBar,
   ...(side === 'left'
-    ? { borderRight: `1px solid ${palette.border}` }
-    : { borderLeft: `1px solid ${palette.border}` }),
+    ? { borderRight: `1px solid ${glass.line}` }
+    : { borderLeft: `1px solid ${glass.line}` }),
 });
 
 /** View icon inside the collapsed left rail (reference design): the active
@@ -95,7 +102,8 @@ export const leftPanelRoot: SxProps<Theme> = {
   minHeight: 0,
   display: 'flex',
   flexDirection: 'row',
-  borderRight: `1px solid ${palette.border}`,
+  ...glassBar,
+  borderRight: `1px solid ${glass.line}`,
   overflow: 'hidden',
 };
 
@@ -109,8 +117,8 @@ export const leftIconRail: SxProps<Theme> = {
   alignItems: 'center',
   gap: 1.75,
   pt: 1,
-  borderRight: `1px solid ${palette.border}`,
-  bgcolor: palette.panelHeader,
+  borderRight: `1px solid ${glass.line}`,
+  bgcolor: glass.bgHeader,
 };
 
 /** Content column next to the rail (hidden while collapsed). */
@@ -130,8 +138,8 @@ export const leftPanelHeader: SxProps<Theme> = {
   gap: 1,
   px: 1.5,
   py: 1,
-  bgcolor: `color-mix(in srgb, ${palette.accent} 10%, ${palette.panelHeader})`,
-  borderBottom: `1px solid ${palette.border}`,
+  bgcolor: glass.tint(8),
+  borderBottom: `1px solid ${glass.line}`,
 };
 
 export const leftPanelBody: SxProps<Theme> = {
@@ -154,10 +162,11 @@ export const viewTitle: SxProps<Theme> = {
 export const navCollapseButton: SxProps<Theme> = {
   width: 28,
   height: 28,
-  borderRadius: 1,
-  border: `1px solid ${palette.border}`,
-  bgcolor: palette.panel,
+  borderRadius: 1.5,
+  border: `1px solid ${glass.line}`,
+  bgcolor: `color-mix(in srgb, ${palette.textPrimary} 5%, transparent)`,
   flexShrink: 0,
+  '&:hover': { borderColor: glass.lineBright },
 };
 
 // ── Top bar clock chip ─────────────────────────────────────────────────
@@ -168,9 +177,9 @@ export const clockChip: SxProps<Theme> = {
   gap: 0.75,
   px: 1.25,
   py: 0.5,
-  borderRadius: 1,
-  border: `1px solid ${palette.border}`,
-  bgcolor: palette.panel,
+  borderRadius: 99,
+  border: `1px solid ${glass.line}`,
+  bgcolor: `color-mix(in srgb, ${palette.textPrimary} 5%, transparent)`,
 };
 
 export const clockTime: SxProps<Theme> = {
@@ -193,7 +202,8 @@ export const dockRoot: SxProps<Theme> = {
   minHeight: 0,
   display: 'flex',
   flexDirection: 'column',
-  borderLeft: `1px solid ${palette.border}`,
+  ...glassBar,
+  borderLeft: `1px solid ${glass.line}`,
   overflow: 'hidden',
   position: 'relative',
 };
@@ -218,7 +228,8 @@ export const dockHeader: SxProps<Theme> = {
   pl: 1.5,
   pr: 0.5,
   py: 0.25,
-  borderBottom: `1px solid ${palette.border}`,
+  borderBottom: `1px solid ${glass.line}`,
+  bgcolor: glass.bgHeader,
   ...microLabel,
   fontSize: 10,
   color: 'text.secondary',
@@ -247,8 +258,11 @@ export const topBar: SxProps<Theme> = {
   gap: 2,
   px: 2,
   py: 1,
-  bgcolor: palette.panelHeader,
-  borderBottom: `1px solid ${palette.border}`,
+  ...glassBar,
+  borderBottom: `1px solid ${glass.line}`,
+  boxShadow: `0 1px 0 ${glass.lineBright} inset`,
+  position: 'relative',
+  zIndex: 2,
 };
 
 export const brandMark: SxProps<Theme> = {
@@ -256,10 +270,10 @@ export const brandMark: SxProps<Theme> = {
   height: 34,
   display: 'grid',
   placeItems: 'center',
-  borderRadius: 1,
-  color: palette.accentBright,
-  bgcolor: `color-mix(in srgb, ${palette.accent} 14%, transparent)`,
-  border: `1px solid ${palette.borderBright}`,
+  borderRadius: 2,
+  color: '#fff',
+  backgroundImage: `linear-gradient(135deg, ${palette.accentBright}, ${palette.accent})`,
+  boxShadow: `0 6px 18px -6px ${glass.tint(80)}`,
 };
 
 export const brandTitle: SxProps<Theme> = {
@@ -282,9 +296,9 @@ export const topChip: SxProps<Theme> = {
   gap: 0.75,
   px: 1.25,
   py: 0.5,
-  borderRadius: 1,
-  border: `1px solid ${palette.border}`,
-  bgcolor: palette.panel,
+  borderRadius: 99,
+  border: `1px solid ${glass.line}`,
+  bgcolor: `color-mix(in srgb, ${palette.textPrimary} 5%, transparent)`,
   ...microLabel,
   fontSize: 10,
 };
@@ -304,8 +318,8 @@ export const statusBar: SxProps<Theme> = {
   display: 'flex',
   alignItems: 'stretch',
   px: 1,
-  bgcolor: palette.panelHeader,
-  borderTop: `1px solid ${palette.border}`,
+  ...glassBar,
+  borderTop: `1px solid ${glass.line}`,
 };
 
 export const statusCell: SxProps<Theme> = {
@@ -315,7 +329,7 @@ export const statusCell: SxProps<Theme> = {
   gap: 0.25,
   px: 2,
   py: 0.75,
-  borderRight: `1px solid ${palette.border}`,
+  borderRight: `1px solid ${glass.line}`,
   '&:last-of-type': { borderRight: 'none' },
 };
 
