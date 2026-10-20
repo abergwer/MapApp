@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@mui/material/styles';
-import { palette, fonts } from '../../../Components/layout/styles/tokens';
+import { palette, fonts, glass, glassSurface } from '../../../Components/layout/styles/tokens';
 
 /** Styles for the map feature: map frame, toolbar clusters, brightness card. */
 
@@ -8,9 +8,10 @@ export const mapFrame: SxProps<Theme> = {
   flex: 1,
   minWidth: 0,
   minHeight: 0,
-  borderRadius: 1,
+  borderRadius: 2.5,
   overflow: 'hidden',
-  border: `1px solid ${palette.border}`,
+  border: `1px solid ${glass.lineBright}`,
+  boxShadow: glass.shadow,
   display: 'flex',
 };
 
@@ -45,15 +46,22 @@ export const coordChip: SxProps<Theme> = {
   zIndex: 1050,
   pointerEvents: 'none',
   px: 1.5,
-  py: 0.4,
-  borderRadius: 1,
-  bgcolor: palette.overlay,
-  border: `1px solid ${palette.border}`,
-  backdropFilter: 'blur(4px)',
+  py: 0.5,
+  borderRadius: 99,
+  ...glassSurface,
   fontFamily: fonts.mono,
   fontSize: 12,
   color: 'text.primary',
   whiteSpace: 'nowrap',
+};
+
+/** Host for the LOS elevation profile (bottom-center, above the coord chip). */
+export const losChartWrap: SxProps<Theme> = {
+  position: 'absolute',
+  bottom: 44,
+  left: '50%',
+  transform: 'translateX(-50%)',
+  zIndex: 1050,
 };
 
 /** Row of bordered tool clusters (reference design groups). */
@@ -71,10 +79,8 @@ export const toolCluster: SxProps<Theme> = {
   gap: 0.25,
   px: 0.5,
   py: 0.4,
-  borderRadius: 1.5,
-  bgcolor: palette.overlay,
-  border: `1px solid ${palette.borderBright}`,
-  backdropFilter: 'blur(4px)',
+  borderRadius: 2,
+  ...glassSurface,
 };
 
 /** Always-visible brightness card under the toolbar. */
@@ -82,10 +88,8 @@ export const brightnessCard: SxProps<Theme> = {
   width: 220,
   px: 1.5,
   py: 1,
-  borderRadius: 1.5,
-  bgcolor: palette.overlay,
-  border: `1px solid ${palette.borderBright}`,
-  backdropFilter: 'blur(4px)',
+  borderRadius: 2,
+  ...glassSurface,
 };
 
 export const brightnessHeader: SxProps<Theme> = {
@@ -114,14 +118,12 @@ export const compassCircle: SxProps<Theme> = {
   width: 64,
   height: 64,
   borderRadius: '50%',
-  bgcolor: palette.overlay,
-  border: `1px solid ${palette.borderBright}`,
-  backdropFilter: 'blur(4px)',
+  ...glassSurface,
   cursor: 'pointer',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
+  transition: 'border-color 160ms ease',
   '&:hover': { borderColor: palette.accent },
 };
 
@@ -146,21 +148,20 @@ export const controlStack: SxProps<Theme> = {
   display: 'flex',
   flexDirection: 'column',
   gap: 0.5,
-  borderRadius: 1.5,
+  borderRadius: 2,
   p: 0.5,
-  bgcolor: palette.overlay,
-  border: `1px solid ${palette.borderBright}`,
-  backdropFilter: 'blur(4px)',
+  ...glassSurface,
 };
 
 export const controlButton = (active = false): SxProps<Theme> => ({
   width: 30,
   height: 30,
-  borderRadius: 1,
+  borderRadius: 1.5,
   fontSize: 11,
   fontWeight: 700,
   color: active ? palette.accentBright : 'text.primary',
-  border: `1px solid ${active ? palette.accent : palette.border}`,
-  bgcolor: active ? `color-mix(in srgb, ${palette.accent} 20%, transparent)` : 'transparent',
-  '&:hover': { borderColor: palette.accent },
+  border: `1px solid ${active ? glass.tint(55) : 'transparent'}`,
+  bgcolor: active ? glass.tint(16) : 'transparent',
+  transition: 'background-color 160ms ease, border-color 160ms ease',
+  '&:hover': { bgcolor: active ? glass.tint(22) : `color-mix(in srgb, ${palette.textPrimary} 7%, transparent)` },
 });
