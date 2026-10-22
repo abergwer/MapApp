@@ -12,7 +12,7 @@
  */
 
 // ── Domain: editable map entities ──────────────────────────────────────
-export type { MapShape } from '../stores/shapes';
+export type { MapShape } from './shapes';
 
 // ── Domain: live-feed targets ─────────────────────────────────────────
 export type { AirCraftTarget } from '../stores/AirCraftStore';
@@ -31,7 +31,7 @@ export type {
 export type { BaseMap } from '../stores/MapStyleStore';
 
 // ── Service layer: entity CRUD hooks ──────────────────────────────────
-export type { EntityHooks } from '../stores/EntityService';
+export type { EntityHooks } from '../Components/features/entities/EntityService';
 
 // ── Map engine abstraction ────────────────────────────────────────────
 export type {

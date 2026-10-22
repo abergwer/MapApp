@@ -135,37 +135,34 @@ function cubicBezier(start: LngLat, c1: LngLat, c2: LngLat, end: LngLat, t: numb
   ];
 }
 
-// ── Route turn styles ────────────────────────────────────────────────────
+// ── Route corners ────────────────────────────────────────────────────────
 //
 // Every route type is just a rule applied at each interior waypoint. The
 // per-corner builders below each return the points that *replace* one
 // waypoint, so pieces can be concatenated and the gaps between them are
 // straight segments.
 
-/** How a route behaves at one interior waypoint. */
-export type TurnStyle = 'sharp' | 'rounded' | 'exit' | 'entry';
-
-/** All turn styles, in display order. */
-export const TURN_STYLES: readonly TurnStyle[] = ['sharp', 'rounded', 'exit', 'entry'];
-
-/** Resize a turn list to `count` entries, filling gaps with 'sharp'. */
-export function fitTurns(turns: readonly TurnStyle[] | undefined, count: number): TurnStyle[] {
-  return Array.from({ length: count }, (_, i) => turns?.[i] ?? 'sharp');
-}
-
-export interface TurnOptions {
-  /** 'rounded': fillet size as a fraction of the shorter adjacent leg (0..0.5). */
-  radiusFraction?: number;
-  /** 'exit': how far along the outgoing leg the curve straightens out (0..1). */
-  exitFraction?: number;
-  /** 'entry': how far back along the incoming leg the curve begins (0..1). */
-  entryFraction?: number;
-  /** Samples per curve (higher = smoother). */
-  steps?: number;
-}
-
 const clamp = (value: number, min: number, max: number) =>
   Math.min(max, Math.max(min, value));
+
+/**
+ * Replace every interior waypoint of a polyline with the points returned by
+ * `corner(prev, waypoint, next)`. Endpoints are never moved; lines with fewer
+ * than 3 points are returned unchanged.
+ */
+function replaceCorners(
+  positions: LngLat[],
+  corner: (prev: LngLat, waypoint: LngLat, next: LngLat) => LngLat[],
+): LngLat[] {
+  if (positions.length < 3) return positions.slice();
+  const lastIndex = positions.length - 1;
+  const path: LngLat[] = [positions[0]];
+  for (let i = 1; i < lastIndex; i++) {
+    path.push(...corner(positions[i - 1], positions[i], positions[i + 1]));
+  }
+  path.push(positions[lastIndex]);
+  return path;
+}
 
 /**
  * Fillet that cuts the corner. Backs off `cutIn` (fraction of the incoming
@@ -252,90 +249,6 @@ function entryCurveCorner(
 }
 
 /**
- * Route whose turn style can differ at every waypoint. `turns[i]` is the
- * style at `positions[i]`; missing entries default to 'sharp' and the first
- * and last waypoints are always plain endpoints.
- *
- * Neighbouring turns share the leg between them. If together they would use
- * more than the whole leg (e.g. a long exit curve followed by a long entry
- * curve) both are scaled back proportionally so the curves never cross.
- * Lines with fewer than 3 points are returned unchanged.
- */
-export function mixedRoutePath(
-  positions: LngLat[],
-  turns: readonly TurnStyle[],
-  opts?: TurnOptions,
-): LngLat[] {
-  const radiusFraction = clamp(opts?.radiusFraction ?? 0.25, 0, 0.5);
-  const exitFraction = clamp(opts?.exitFraction ?? 0.3, 0, 1);
-  const entryFraction = clamp(opts?.entryFraction ?? 0.3, 0, 1);
-  const steps = Math.max(2, opts?.steps ?? 16);
-  const lastIndex = positions.length - 1;
-  if (positions.length < 3) return positions.slice();
-
-  const styleAt = (i: number): TurnStyle => turns[i] ?? 'sharp';
-
-  // How much of the legs on either side each corner wants, as fractions of
-  // that leg: [share of the incoming leg, share of the outgoing leg].
-  const demand: [number, number][] = positions.map((corner, i) => {
-    if (i === 0 || i === lastIndex) return [0, 0];
-    switch (styleAt(i)) {
-      case 'rounded': {
-        // A fraction of the *shorter* leg, expressed per leg.
-        const legIn = distanceKm(positions[i - 1], corner);
-        const legOut = distanceKm(corner, positions[i + 1]);
-        if (legIn <= 1e-9 || legOut <= 1e-9) return [0, 0];
-        const cutKm = radiusFraction * Math.min(legIn, legOut);
-        return [cutKm / legIn, cutKm / legOut];
-      }
-      case 'exit':
-        return [0, exitFraction];
-      case 'entry':
-        return [entryFraction, 0];
-      default:
-        return [0, 0];
-    }
-  });
-
-  // Each leg is shared by the corner before it and the corner after it.
-  for (let i = 0; i < lastIndex; i++) {
-    const total = demand[i][1] + demand[i + 1][0];
-    if (total > 1) {
-      demand[i][1] /= total;
-      demand[i + 1][0] /= total;
-    }
-  }
-
-  // Endpoints are never moved; every interior corner is replaced by its piece.
-  const path: LngLat[] = [positions[0]];
-  for (let i = 1; i < lastIndex; i++) {
-    const prev = positions[i - 1];
-    const corner = positions[i];
-    const next = positions[i + 1];
-    const [shareIn, shareOut] = demand[i];
-    switch (styleAt(i)) {
-      case 'rounded':
-        path.push(...roundedCorner(prev, corner, next, shareIn, shareOut, steps));
-        break;
-      case 'exit':
-        path.push(...exitCurveCorner(prev, corner, next, shareOut, steps));
-        break;
-      case 'entry':
-        path.push(...entryCurveCorner(prev, corner, next, shareIn, steps));
-        break;
-      default:
-        path.push(corner);
-    }
-  }
-  path.push(positions[lastIndex]);
-  return path;
-}
-
-/** The same turn style at every waypoint. */
-const uniformTurns = (positions: LngLat[], style: TurnStyle): TurnStyle[] =>
-  positions.map(() => style);
-
-/**
  * Round every turn of a polyline while keeping the legs straight (a fillet at
  * each interior waypoint, cutting the corner). `radiusFraction` is the fillet
  * size as a fraction of the shorter adjacent leg (0 = sharp, 0.5 = maximum).
@@ -344,9 +257,15 @@ export function roundedCornerPath(
   positions: LngLat[],
   opts?: { radiusFraction?: number; steps?: number },
 ): LngLat[] {
-  return mixedRoutePath(positions, uniformTurns(positions, 'rounded'), {
-    radiusFraction: opts?.radiusFraction,
-    steps: opts?.steps ?? 12,
+  const radiusFraction = clamp(opts?.radiusFraction ?? 0.25, 0, 0.5);
+  const steps = Math.max(2, opts?.steps ?? 12);
+  return replaceCorners(positions, (prev, corner, next) => {
+    // A fraction of the *shorter* leg, expressed per leg.
+    const legIn = distanceKm(prev, corner);
+    const legOut = distanceKm(corner, next);
+    if (legIn <= 1e-9 || legOut <= 1e-9) return [corner];
+    const cutKm = radiusFraction * Math.min(legIn, legOut);
+    return roundedCorner(prev, corner, next, cutKm / legIn, cutKm / legOut, steps);
   });
 }
 
@@ -358,10 +277,11 @@ export function exitCurvePath(
   positions: LngLat[],
   opts?: { fraction?: number; steps?: number },
 ): LngLat[] {
-  return mixedRoutePath(positions, uniformTurns(positions, 'exit'), {
-    exitFraction: opts?.fraction,
-    steps: opts?.steps,
-  });
+  const fraction = clamp(opts?.fraction ?? 0.3, 0, 1);
+  const steps = Math.max(2, opts?.steps ?? 16);
+  return replaceCorners(positions, (prev, corner, next) =>
+    exitCurveCorner(prev, corner, next, fraction, steps),
+  );
 }
 
 /**
@@ -372,10 +292,11 @@ export function entryCurvePath(
   positions: LngLat[],
   opts?: { fraction?: number; steps?: number },
 ): LngLat[] {
-  return mixedRoutePath(positions, uniformTurns(positions, 'entry'), {
-    entryFraction: opts?.fraction,
-    steps: opts?.steps,
-  });
+  const fraction = clamp(opts?.fraction ?? 0.3, 0, 1);
+  const steps = Math.max(2, opts?.steps ?? 16);
+  return replaceCorners(positions, (prev, corner, next) =>
+    entryCurveCorner(prev, corner, next, fraction, steps),
+  );
 }
 
 /**

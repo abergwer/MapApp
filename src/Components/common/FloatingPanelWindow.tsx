@@ -11,7 +11,7 @@ import PictureInPictureIcon from '@mui/icons-material/PictureInPicture';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../stores/StoreContext';
 import type { WorkspacePanelId } from '../../stores/UIVisibilityStore';
-import * as styles from '../../styles/features/video.styles';
+import * as styles from '../features/mini-video/styles/video.styles';
 
 const MIN_W = 240;
 const MIN_H = 190;
@@ -22,6 +22,8 @@ interface FloatingPanelWindowProps {
   /** Workspace panel whose mode/rect this window renders. */
   id: WorkspacePanelId;
   title: string;
+  /** Extra header buttons, rendered before the standard window actions. */
+  headerAction?: ReactNode;
   children: ReactNode;
 }
 
@@ -31,7 +33,7 @@ interface FloatingPanelWindowProps {
  * standard window actions (full view / dock / close). Position and size
  * persist in UIVisibilityStore so the window comes back where it was left.
  */
-function FloatingPanelWindowImpl({ id, title, children }: FloatingPanelWindowProps) {
+function FloatingPanelWindowImpl({ id, title, headerAction, children }: FloatingPanelWindowProps) {
   const { uiVisibilityStore: ui } = useStores();
   const rootRef = useRef<HTMLDivElement>(null);
   const { mode, rect } = ui.panels[id];
@@ -86,6 +88,7 @@ function FloatingPanelWindowImpl({ id, title, children }: FloatingPanelWindowPro
       <Box sx={styles.floatHeader} onPointerDown={startDrag}>
         <Typography sx={styles.floatTitle}>{title}</Typography>
         <Box sx={{ display: 'flex' }} onPointerDown={(e) => e.stopPropagation()}>
+          {headerAction}
           <Tooltip title={maximized ? 'Restore window' : 'Full view'} arrow>
             <IconButton
               size="small"

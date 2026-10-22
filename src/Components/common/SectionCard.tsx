@@ -6,7 +6,7 @@ import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
-import * as styles from '../../styles/common-ui/panel.styles';
+import * as styles from './styles/panel.styles';
 
 interface SectionCardProps {
   title: string;

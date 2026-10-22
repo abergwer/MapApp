@@ -80,4 +80,3 @@ export function startMaplibreRouteDraw(
     document.removeEventListener('keydown', onKeyDown);
   };
 }
-

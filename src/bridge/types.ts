@@ -26,3 +26,11 @@ export interface Missile {
   altitudeFt: number
 }
 
+/** Static intel for one target, fetched on demand via `GET /api/targets/:id`. */
+export interface TargetDetails {
+  id: string
+  callsign: string
+  operator: string
+  status: string
+}
+

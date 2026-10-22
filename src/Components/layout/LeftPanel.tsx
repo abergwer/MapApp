@@ -6,7 +6,7 @@ import Typography from '@mui/material/Typography';
 import { observer } from 'mobx-react-lite';
 import { useStores } from '../../stores/StoreContext';
 import type { LeftViewId } from '../../stores/UIVisibilityStore';
-import * as layout from '../../styles/system-ui/layout.styles';
+import * as layout from './styles/layout.styles';
 
 /** A view selectable from the left icon rail. */
 export interface LeftPanelView {

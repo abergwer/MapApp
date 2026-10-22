@@ -1,5 +1,5 @@
 import { makeAutoObservable } from 'mobx';
-import { newShapeId, type MapShape } from './shapes';
+import { newShapeId, type MapShape } from '../types/shapes';
 
 // Re-exported so existing consumers can keep importing `MapShape` /
 // `newShapeId` from `DrawingToolStore` without churn. New code should
@@ -14,11 +14,9 @@ export type DrawTool =
   | 'circle'
   | 'ellipse'
   | 'sector'
-  | 'route'
   | 'curvedRoute'
   | 'exitCurveRoute'
-  | 'entryCurveRoute'
-  | 'mixedRoute';
+  | 'entryCurveRoute';
 
 export type MeasureTool = 'distance' | 'area';
 
@@ -31,6 +29,8 @@ export interface Measurement {
 
 export class DrawingToolStore {
   activeDrawTool: DrawTool | null = null;
+  /** Entity-definition id being drawn (see `toolDefs.toggleDrawEntity`). */
+  activeDefId: string | null = null;
   activeMeasureTool: MeasureTool | null = null;
   /**
    * The id of the shape currently selected for editing, or null. This is the
@@ -41,6 +41,10 @@ export class DrawingToolStore {
   selectedId: string | null = null;
   completedShapes: MapShape[] = [];
   measurements: Measurement[] = [];
+  /** Ids with local changes the server hasn't been sent yet (drafts and
+   *  dirty edits). Marked by EntityService; cleared on save. Deliberately
+   *  NOT part of undo/redo snapshots. */
+  unsavedIds = new Set<string>();
 
   /**
    * Undo/redo as whole-array snapshots. Shapes are treated as immutable
@@ -56,13 +60,14 @@ export class DrawingToolStore {
     makeAutoObservable(this);
   }
 
-  setActiveDrawTool(tool: DrawTool | null) {
+  setActiveDrawTool(tool: DrawTool | null, defId: string | null = null) {
     // Activating a draw tool must clear any pending edit selection. Otherwise
     // the first click on the map (starting the new draw) is treated as a
     // background click by the engine's edit-mode click handler, which
     // deselects the old shape and calls `endEdit`, aborting the new draw.
     if (tool !== null) this.selectedId = null;
     this.activeDrawTool = tool;
+    this.activeDefId = tool === null ? null : defId;
   }
 
   setActiveMeasureTool(tool: MeasureTool | null) {
@@ -71,6 +76,18 @@ export class DrawingToolStore {
 
   setSelectedId(id: string | null) {
     this.selectedId = id;
+  }
+
+  markUnsaved(id: string) {
+    this.unsavedIds.add(id);
+  }
+
+  markSaved(id: string) {
+    this.unsavedIds.delete(id);
+  }
+
+  isUnsaved(id: string): boolean {
+    return this.unsavedIds.has(id);
   }
 
   /** The shape currently selected for editing, if any. */
@@ -121,10 +138,30 @@ export class DrawingToolStore {
     const idx = this.completedShapes.findIndex((s) => s.id === id);
     if (idx === -1) return;
     this.completedShapes.splice(idx, 1);
+    this.unsavedIds.delete(id);
+  }
+
+  /** Re-key a shape after the host assigns its authoritative id (e.g. a
+   *  server-generated id returned by the create ack). Also rewrites the
+   *  undo/redo snapshots so time-travel never resurrects the temp id. */
+  replaceShapeId(oldId: string, newId: string) {
+    const swap = (arr: MapShape[]) =>
+      arr.map((s) => {
+        if (s.id === oldId) return { ...s, id: newId };
+        // Children keep pointing at the re-keyed parent.
+        if (s.parentId === oldId) return { ...s, parentId: newId };
+        return s;
+      });
+    this.completedShapes = swap(this.completedShapes);
+    this.past = this.past.map(swap);
+    this.future = this.future.map(swap);
+    if (this.selectedId === oldId) this.selectedId = newId;
+    if (this.unsavedIds.delete(oldId)) this.unsavedIds.add(newId);
   }
 
   clearShapes() {
     this.completedShapes = [];
+    this.unsavedIds.clear();
   }
 
     /**
@@ -138,6 +175,7 @@ export class DrawingToolStore {
     this.selectedId = null;
     this.past = [];
     this.future = [];
+    this.unsavedIds.clear();
   }
 
   recordMeasurement(measurement: Omit<Measurement, 'timestamp'>) {

@@ -1,5 +1,5 @@
 import { makeAutoObservable } from 'mobx';
-import type { ThemeName } from '../styles/system-ui/tokens';
+import type { ThemeName } from '../Components/layout/styles/tokens';
 
 /** Active UI theme ('dark' = Night Ops, 'light' = Day Ops). */
 export class ThemeStore {

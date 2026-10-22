@@ -1,4 +1,4 @@
-import { newShapeId } from '../src/stores/shapes';
+import { newShapeId } from '../src/types/shapes';
 
 describe('shapes.newShapeId', () => {
   it('returns a non-empty string', () => {

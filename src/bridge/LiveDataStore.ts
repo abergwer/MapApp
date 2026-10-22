@@ -17,12 +17,12 @@ export class LiveDataStore {
   /** Target picked on the map; drives the `TargetCard` overlay. */
   selectedTarget: { kind: TargetKind; id: string } | null = null
   /**
-   * Drawn shapes hydrated once from the WS `shapeSnapshot` frame (same
-   * `MapShape` union the app uses). Passed to `MapWrapper`'s `shapes` prop
-   * by `useLiveShapes`; after hydration the map is authoritative.
+   * Drawn shapes hydrated once from `GET /api/shapes` (same `MapShape`
+   * union the app uses). Passed to `MapWrapper`'s `shapes` prop by
+   * `useLiveShapes`; after hydration the map is authoritative.
    */
   shapes: MapShape[] = []
-  /** True once the initial `shapeSnapshot` has been applied. */
+  /** True once the initial shape read has been applied. */
   shapesHydrated = false
 
   constructor() {
@@ -67,10 +67,10 @@ export class LiveDataStore {
   }
 
   /**
-   * Applies the server's shape snapshot exactly once. Reconnect snapshots
-   * are ignored — swapping the array reference mid-session would re-hydrate
-   * the map and wipe its selection/undo history, and the server state
-   * already reflects the map's edits (they are pushed on every change).
+   * Applies the server's shapes exactly once. Refetches are ignored —
+   * swapping the array reference mid-session would re-hydrate the map and
+   * wipe its selection/undo history, and the server state already reflects
+   * the map's edits (they are pushed on every change).
    */
   hydrateShapes(shapes: MapShape[]) {
     if (this.shapesHydrated) return

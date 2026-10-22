@@ -3,7 +3,7 @@ import Box from '@mui/material/Box';
 import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import type { SxProps, Theme } from '@mui/material/styles';
-import { panelRoot, panelHeader, panelTitle, panelBody } from '../../styles/common-ui/panel.styles';
+import { panelRoot, panelHeader, panelTitle, panelBody } from './styles/panel.styles';
 
 interface PanelProps {
   title: string;

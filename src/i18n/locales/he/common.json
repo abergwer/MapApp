@@ -24,8 +24,7 @@
             "route": "מסלול",
             "curvedRoute": "מסלול מעוקל",
             "exitCurveRoute": "מסלול עיקול יציאה",
-            "entryCurveRoute": "מסלול עיקול כניסה",
-            "mixedRoute": "מסלול משולב"
+            "entryCurveRoute": "מסלול עיקול כניסה"
         },
         "measure": {
             "measure": "מדידה",
@@ -37,14 +36,6 @@
     "MapStyleBar": {
         "minimap": "מפת התמצאות",
         "video": "וידאו"
-    },
-    "routeTurns": {
-        "title": "פניות במסלול",
-        "waypoint": "נקודת ציון {{n}}",
-        "sharp": "חדה",
-        "rounded": "מעוגלת",
-        "exit": "עיקול יציאה",
-        "entry": "עיקול כניסה"
     },
     "LOS": {
         "label": "קו ראייה",
